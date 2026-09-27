@@ -28,6 +28,7 @@ package-lock.json
 webpack.config.js
 eslint.config.js
 .prettierrc.js
+.stylelintignore
 
 # Tests and test tooling
 tests

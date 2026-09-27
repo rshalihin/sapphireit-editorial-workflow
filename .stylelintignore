@@ -1,0 +1,9 @@
+# Replaces the @wordpress/scripts default, so it repeats that list first.
+# By default, all `node_modules` are ignored.
+build
+vendor
+
+# Generated output: coverage reports, Playwright artifacts, release zips.
+coverage
+artifacts
+dist

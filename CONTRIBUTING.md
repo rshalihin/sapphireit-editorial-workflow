@@ -163,7 +163,7 @@ A PR should say:
   results, including anything you could not run.
 - Any decision it changes in `01-decisions-and-conventions.md`.
 
-CI must be green on every matrix leg (PHP 7.4/8.1/8.3 × WP 6.5/latest, plus the
+CI must be green on every matrix leg (PHP 7.4/8.1/8.3 × WP 6.8/latest, plus the
 JS and E2E jobs) before review.
 
 ## Security

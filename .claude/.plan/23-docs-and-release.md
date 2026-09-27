@@ -33,7 +33,7 @@ React Gutenberg UI → REST API → PHP Workflow Engine
 ```
 
 Sections: Features · Screenshots (sidebar, dashboard, timeline, bulk actions) ·
-Requirements (WP 6.5+, PHP 7.4+) · Installation · Quick start (the six statuses
+Requirements (WP 6.8+, PHP 7.4+) · Installation · Quick start (the six statuses
 and who can do what) · Architecture summary linking ARCHITECTURE.md ·
 Extensibility (hooks table from D10) · Development · Roadmap (name the Pro
 features as roadmap, not vapour) · License.
@@ -99,7 +99,7 @@ description, Installation, FAQ, Screenshots, Changelog, Upgrade Notice.
   && npm run build && npm run env:start`, and reach a working workflow in under
   10 minutes following DEVELOPMENT.md.
 - Every hook in D10 appears in the README extensibility table with a signature.
-- The zip installs and activates cleanly on a fresh WP 6.5 and WP latest, with
+- The zip installs and activates cleanly on a fresh WP 6.8 and WP latest, with
   `WP_DEBUG` on and no notices.
 - Version string identical in all four locations.
 - Screenshots/GIFs exist for sidebar, dashboard, timeline and bulk actions.

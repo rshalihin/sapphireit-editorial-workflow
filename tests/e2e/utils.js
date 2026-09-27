@@ -104,22 +104,60 @@ export async function loginAs( page, username, password = PASSWORD ) {
 /**
  * Opens a post in the block editor with the Content Workflow sidebar open.
  *
- * @param {Object} page   Playwright page.
- * @param {number} postId Post id.
+ * @param {Object}  page                   Playwright page.
+ * @param {number}  postId                 Post id.
+ * @param {Object}  [options]              Options.
+ * @param {boolean} [options.waitForPanel] Wait for the loaded panel; pass
+ *                                         false when the load is expected to
+ *                                         fail or stall.
  * @return {Promise<Object>} Locator of the sidebar panel.
  */
-export async function openWorkflowSidebar( page, postId ) {
-	await page.goto( `/wp-admin/post.php?post=${ postId }&action=edit` );
-	await page.waitForFunction(
-		() => !! window.wp?.data?.select( 'core/editor' )?.getCurrentPostId()
-	);
+export async function openWorkflowSidebar(
+	page,
+	postId,
+	{ waitForPanel = true } = {}
+) {
+	const editorReady = () =>
+		page.waitForFunction(
+			() =>
+				!! window.wp?.data?.select( 'core/editor' )?.getCurrentPostId()
+		);
 
-	// Users created by the specs would otherwise see the welcome guide.
+	await page.goto( `/wp-admin/post.php?post=${ postId }&action=edit` );
+	await editorReady();
+
+	// `releasePostLock()` does not delete the previous user's lock: core
+	// backdates it so it still holds for about five seconds. A user who
+	// arrives inside that window gets the "already being edited" dialog, so
+	// take the post over the way a person would.
+	if (
+		await page.evaluate( () =>
+			window.wp.data.select( 'core/editor' ).isPostLocked()
+		)
+	) {
+		// Core takes the lock and redirects back to the plain edit URL, so
+		// follow the link (relative to wp-admin) with goto() rather than waiting
+		// for its URL.
+		const takeOver = await page
+			.locator( '.editor-post-locked-modal' )
+			.getByText( 'Take over', { exact: true } )
+			.getAttribute( 'href' );
+		await page.goto( new URL( takeOver, page.url() ).href );
+		await editorReady();
+	}
+
+	// Users created by the specs would otherwise see the welcome guide. Older
+	// cores keep a guide that is already open, so close it as well.
 	await page.evaluate( () =>
 		window.wp.data
 			.dispatch( 'core/preferences' )
 			.set( 'core/edit-post', 'welcomeGuide', false )
 	);
+	const guide = page.locator( '.components-guide' );
+	if ( await guide.isVisible() ) {
+		await page.keyboard.press( 'Escape' );
+	}
+	await expect( guide ).toHaveCount( 0 );
 
 	const toggle = page
 		.getByRole( 'region', { name: 'Editor top bar' } )
@@ -131,7 +169,11 @@ export async function openWorkflowSidebar( page, postId ) {
 
 	const panel = page.locator( '.sit-cwm-sidebar' );
 
-	await expect( panel ).toBeVisible();
+	// The panel replaces its spinner only once `GET /workflow` answers, which
+	// on a cold local server can take longer than the default 5 s.
+	if ( waitForPanel ) {
+		await expect( panel ).toBeVisible( { timeout: 20000 } );
+	}
 
 	return panel;
 }

@@ -12,6 +12,9 @@ const defaultConfig = require( '@wordpress/scripts/config/eslint.config.cjs' );
 module.exports = [
 	...defaultConfig,
 
+	// Generated output: coverage reports, Playwright artifacts, release zips.
+	{ ignores: [ 'coverage/**', 'artifacts/**', 'dist/**' ] },
+
 	// Jest globals and test rules for everything under tests/js/.
 	...wpPlugin.configs[ 'test-unit' ].map( ( config ) => ( {
 		...config,

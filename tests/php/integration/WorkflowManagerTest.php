@@ -295,6 +295,59 @@ final class WorkflowManagerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A write the database refuses is reported as a 500, never as success:
+	 * nothing is logged and no action fires for a change that did not stick.
+	 *
+	 * @return void
+	 */
+	public function test_storage_failure_is_reported_and_leaves_no_trace() {
+		$author = $this->make_user( 'author' );
+		$editor = $this->make_user( 'editor' );
+		$post   = $this->make_post( $author, 'review' );
+
+		$refuse = static function ( $check, $object_id, $meta_key ) {
+			return 0 === strpos( $meta_key, '_sit_cwm_' ) ? false : $check;
+		};
+		add_filter( 'update_post_metadata', $refuse, 10, 3 );
+		add_filter( 'add_post_metadata', $refuse, 10, 3 );
+
+		$results = array(
+			'transition'      => $this->workflow->transition( $post, 'review', 'approved', $editor ),
+			'assign_reviewer' => $this->workflow->assign_reviewer( $post, $editor, $editor ),
+			'set_due_date'    => $this->workflow->set_due_date( $post, '2026-10-01', $editor ),
+		);
+
+		remove_filter( 'update_post_metadata', $refuse, 10 );
+		remove_filter( 'add_post_metadata', $refuse, 10 );
+
+		foreach ( $results as $method => $result ) {
+			$this->assertWPError( $result, $method );
+			$this->assertSame( 'sit_cwm_update_failed', $result->get_error_code(), $method );
+			$this->assertSame( 500, $result->get_error_data()['status'], $method );
+		}
+
+		$this->assertSame( 'review', $this->posts->get_status( $post ) );
+		$this->assertSame( 0, $this->activity->count_for_post( $post ) );
+		$this->assertSame( array(), $this->fired );
+	}
+
+	/**
+	 * An existing user without the review capability cannot be assigned.
+	 *
+	 * @return void
+	 */
+	public function test_reviewer_must_hold_the_review_capability() {
+		$editor = $this->make_user( 'editor' );
+		$post   = $this->make_post( $this->make_user( 'author' ), 'review' );
+
+		$result = $this->workflow->assign_reviewer( $post, $this->make_user( 'author' ), $editor );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'sit_cwm_invalid_user', $result->get_error_code() );
+		$this->assertSame( 0, $this->posts->get_reviewer_id( $post ) );
+	}
+
+	/**
 	 * Authorization precedes reviewer validation, so an unauthorized user
 	 * cannot tell existing user ids from missing ones.
 	 *

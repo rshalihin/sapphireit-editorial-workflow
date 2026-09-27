@@ -467,12 +467,13 @@ audit logs.
 ### 7. `@wordpress/dataviews` is bundled, not a core script
 
 It is not registered by every supported WordPress version, so it ships inside
-`dashboard.js` (192 KiB gzipped). DataViews 19 also externalizes to `wp-theme`
-and `wp-private-apis`, whose availability on WordPress 6.5 is
-[still unverified](DEVELOPMENT.md#bundle-size-and-wordpressdataviews).
+`dashboard.js`. The bundled copy still unlocks core's private APIs
+(`wp-private-apis`, `wp-components`), so the DataViews version bounds the
+minimum WordPress version: `11.3.0` is pinned exactly and works on 6.8+
+([details](DEVELOPMENT.md#bundle-size-and-wordpressdataviews)).
 
-*Pro follow-up:* none needed — it resolves itself as the minimum supported
-version rises.
+*Pro follow-up:* none needed — newer DataViews become usable as the minimum
+supported version rises.
 
 ---
 
@@ -679,7 +680,7 @@ existence check, and applies to single and bulk requests alike.
   a file under the plugin directory (checked with `is_readable()`), and
   `Assets` requires `*.asset.php` only for the hard-coded `ENTRIES`.
 
-### Verification (2026-09-15)
+### Verification (re-run 2026-09-27; first pass 2026-09-15)
 
 - `composer lint` (WordPress, WordPress-Extra, WordPress-Docs,
   PHPCompatibilityWP): **0 errors, 0 warnings**.
@@ -689,19 +690,31 @@ existence check, and applies to single and bulk requests alike.
     `$_(GET|POST|REQUEST)`, `unserialize(`, `eval(`: no matches.
   - `current_user_can(`: E1 only, plus two docblock mentions.
   - `$wpdb->query(`: E2 only.
-- **Not run in this pass:** PHPUnit (including the 19.4 negative suite in
-  `tests/php/integration/NegativeSuiteTest.php`), Jest and Playwright. They
-  were written but not executed.
-- **Subscriber probe:** not yet performed against a live site. Expected
-  statuses, derived from the permission callbacks, to be confirmed and recorded
-  in the PR:
+  - Role names (`'editor'`, `'administrator'`, …) outside
+    `Capabilities::role_map()`: none; the only `'author'` matches are the
+    post-author field.
+  - ABSPATH guard: present in all 29 files under `includes/` and `admin/` and
+    in the main file; `uninstall.php` checks `WP_UNINSTALL_PLUGIN`.
+- Test suites, all green: PHPUnit unit (104) and integration (199, including
+  the 19.4 negative suite in `tests/php/integration/NegativeSuiteTest.php` and
+  the route/schema contract in `REST/SchemaContractTest.php`), Jest (164) and
+  Playwright. Coverage is recorded in DEVELOPMENT.md → Coverage.
+- **Subscriber probe:** `tests/e2e/subscriber-probe.spec.js`, run over HTTP
+  against a WordPress 7.1.2 site with a real login cookie and `wp_rest` nonce.
+  Every body was also checked for the probed post titles and the author's
+  login and email; none appeared. The draft is unreadable for a subscriber,
+  the published post is readable. Measured:
 
-  | Route | Method | Logged out | Subscriber |
-  |---|---|---|---|
-  | `/posts/{id}/workflow` | GET, POST | 401 | 404 if the post is not readable, else 403 |
-  | `/posts/{id}/activity` | GET | 401 | 404 if the post is not readable, else 403 |
-  | `/posts/{id}/comments` | POST | 401 | 404 if the post is not readable, else 403 |
-  | `/posts` | GET | 401 | 403 |
-  | `/posts/batch` | POST | 401 | 403 |
-  | `/statuses` | GET | 401 | 403 |
-  | `/users` | GET | 401 | 403 |
+  | Route | Method | Logged out | Subscriber, draft post | Subscriber, published post |
+  |---|---|---|---|---|
+  | `/posts/{id}/workflow` | GET | 401 `rest_forbidden` | 404 `sit_cwm_not_managed` | 403 `sit_cwm_forbidden` |
+  | `/posts/{id}/workflow` | POST | 401 `rest_forbidden` | 404 `sit_cwm_not_managed` | 403 `sit_cwm_forbidden` |
+  | `/posts/{id}/activity` | GET | 401 `rest_forbidden` | 404 `sit_cwm_not_managed` | 403 `sit_cwm_forbidden` |
+  | `/posts/{id}/comments` | POST | 401 `rest_forbidden` | 404 `sit_cwm_not_managed` | 403 `sit_cwm_forbidden` |
+  | `/posts` | GET | 401 `rest_forbidden` | 403 `sit_cwm_forbidden` | — |
+  | `/posts/batch` | POST | 401 `rest_forbidden` | 403 `sit_cwm_forbidden` | — |
+  | `/statuses` | GET | 401 `rest_forbidden` | 403 `sit_cwm_forbidden` | — |
+  | `/users` | GET | 401 `rest_forbidden` | 403 `sit_cwm_forbidden` | — |
+
+  A logged-in cookie sent without the nonce is treated as logged out
+  (401 `rest_forbidden`), so a cross-site request cannot act as the user.

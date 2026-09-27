@@ -404,6 +404,171 @@ final class PermissionManagerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The status registry is shown to users who edit content or manage the
+	 * plugin, never to subscribers or logged-out visitors.
+	 *
+	 * @return void
+	 */
+	public function test_view_statuses_needs_edit_posts_or_manage() {
+		$this->assertTrue( $this->permissions->can_view_statuses( $this->make_user( 'administrator' ) ) );
+		$this->assertTrue( $this->permissions->can_view_statuses( $this->make_user( 'contributor' ) ) );
+		$this->assertFalse( $this->permissions->can_view_statuses( $this->make_user( 'subscriber' ) ) );
+		$this->assertFalse( $this->permissions->can_view_statuses( 0 ) );
+		$this->assertFalse( $this->permissions->can_view_statuses( PHP_INT_MAX ) );
+
+		$manager = $this->make_user( 'subscriber' );
+		get_userdata( $manager )->add_cap( Capabilities::MANAGE_WORKFLOWS );
+
+		$this->assertTrue( $this->permissions->can_view_statuses( $manager ) );
+	}
+
+	/**
+	 * The dashboard lists only enabled types the user can edit; enabled types
+	 * that are not registered are skipped.
+	 *
+	 * @return void
+	 */
+	public function test_dashboard_post_types_follow_edit_capabilities() {
+		$author = $this->make_user( 'author' );
+		$editor = $this->make_user( 'editor' );
+
+		$this->assertSame( array( 'post' ), $this->permissions->dashboard_post_types( $author ) );
+		$this->assertSame( array( 'post', 'page' ), $this->permissions->dashboard_post_types( $editor ) );
+		$this->assertSame( array(), $this->permissions->dashboard_post_types( $this->make_user( 'subscriber' ) ) );
+		$this->assertSame( array(), $this->permissions->dashboard_post_types( 0 ) );
+		$this->assertTrue( $this->permissions->can_view_dashboard( $author ) );
+		$this->assertFalse( $this->permissions->can_view_dashboard( 0 ) );
+
+		$add_unregistered = static function ( $types ) {
+			$types[] = 'sit_cwm_unregistered';
+			return $types;
+		};
+		add_filter( 'sit_cwm_enabled_post_types', $add_unregistered );
+
+		$this->assertSame( array( 'post', 'page' ), $this->permissions->dashboard_post_types( $editor ) );
+
+		remove_filter( 'sit_cwm_enabled_post_types', $add_unregistered );
+	}
+
+	/**
+	 * Seeing every post needs `edit_others_*` on every requested type, so a
+	 * mixed query is as strict as its most restricted type.
+	 *
+	 * @return void
+	 */
+	public function test_see_all_posts_needs_edit_others_on_every_type() {
+		$editor = $this->make_user( 'editor' );
+		$author = $this->make_user( 'author' );
+
+		$this->assertTrue( $this->permissions->can_see_all_posts( array( 'post', 'page' ), $editor ) );
+		$this->assertFalse( $this->permissions->can_see_all_posts( array( 'post' ), $author ) );
+		$this->assertFalse( $this->permissions->can_see_all_posts( array(), $editor ), 'An empty list grants nothing.' );
+		$this->assertFalse( $this->permissions->can_see_all_posts( array( 'post', 'sit_cwm_unregistered' ), $editor ) );
+		$this->assertFalse( $this->permissions->can_see_all_posts( array( 42 ), $editor ), 'Non-string types are refused.' );
+		$this->assertFalse( $this->permissions->can_see_all_posts( array( 'post' ), 0 ) );
+
+		// An editor who lost `edit_others_pages` is scoped on a mixed query.
+		get_userdata( $editor )->add_cap( 'edit_others_pages', false );
+
+		$this->assertTrue( $this->permissions->can_see_all_posts( array( 'post' ), $editor ) );
+		$this->assertFalse( $this->permissions->can_see_all_posts( array( 'post', 'page' ), $editor ) );
+	}
+
+	/**
+	 * Only reviewer assigners and plugin managers may enumerate reviewers;
+	 * for one post, the post's own assignment check decides.
+	 *
+	 * @return void
+	 */
+	public function test_list_reviewers_is_limited_to_assigners() {
+		$editor = $this->make_user( 'editor' );
+		$author = $this->make_user( 'author' );
+		$post   = $this->make_post( $author );
+
+		$this->assertTrue( $this->permissions->can_list_reviewers( 0, $editor ) );
+		$this->assertTrue( $this->permissions->can_list_reviewers( 0, $this->make_user( 'administrator' ) ) );
+		$this->assertFalse( $this->permissions->can_list_reviewers( 0, $author ) );
+		$this->assertFalse( $this->permissions->can_list_reviewers( 0, $this->make_user( 'subscriber' ) ) );
+		$this->assertFalse( $this->permissions->can_list_reviewers( 0, 0 ) );
+
+		$this->assertTrue( $this->permissions->can_list_reviewers( $post, $editor ) );
+		$this->assertFalse( $this->permissions->can_list_reviewers( $post, $author ) );
+
+		$manager = $this->make_user( 'subscriber' );
+		get_userdata( $manager )->add_cap( Capabilities::MANAGE_WORKFLOWS );
+
+		$this->assertTrue( $this->permissions->can_list_reviewers( 0, $manager ) );
+	}
+
+	/**
+	 * Reviewers for a post must also be able to open it, which depends on
+	 * its type and post status.
+	 *
+	 * @return void
+	 */
+	public function test_reviewer_capabilities_match_what_edit_post_needs() {
+		$author = $this->make_user( 'author' );
+
+		$this->assertSame( array( Capabilities::REVIEW_CONTENT ), $this->permissions->reviewer_capabilities( 0 ) );
+		$this->assertSame( array( Capabilities::REVIEW_CONTENT ), $this->permissions->reviewer_capabilities( PHP_INT_MAX ) );
+
+		$this->assertSame(
+			array( Capabilities::REVIEW_CONTENT, 'edit_others_posts' ),
+			$this->permissions->reviewer_capabilities( $this->make_post( $author ) )
+		);
+
+		$published = self::factory()->post->create(
+			array(
+				'post_author' => $author,
+				'post_status' => 'publish',
+			)
+		);
+		$this->assertSame(
+			array( Capabilities::REVIEW_CONTENT, 'edit_others_posts', 'edit_published_posts' ),
+			$this->permissions->reviewer_capabilities( $published )
+		);
+
+		$private_page = self::factory()->post->create(
+			array(
+				'post_author' => $author,
+				'post_status' => 'private',
+				'post_type'   => 'page',
+			)
+		);
+		$this->assertSame(
+			array( Capabilities::REVIEW_CONTENT, 'edit_others_pages', 'edit_private_pages' ),
+			$this->permissions->reviewer_capabilities( $private_page )
+		);
+
+		// A post type outside the workflow adds nothing.
+		( new Settings() )->update( array( 'post_types' => array( 'page' ) ) );
+
+		$this->assertSame( array( Capabilities::REVIEW_CONTENT ), $this->permissions->reviewer_capabilities( $published ) );
+	}
+
+	/**
+	 * The read gate behind every 404: logged out, missing, unmanaged or
+	 * unreadable posts are all refused.
+	 *
+	 * @return void
+	 */
+	public function test_read_post_gate() {
+		$author = $this->make_user( 'author' );
+		$post   = $this->make_post( $author );
+
+		$this->assertTrue( $this->permissions->can_read_post( $post, $author ) );
+		$this->assertTrue( $this->permissions->can_read_post( $post, $this->make_user( 'editor' ) ) );
+		$this->assertFalse( $this->permissions->can_read_post( $post, $this->make_user( 'subscriber' ) ), 'Drafts are private to editors.' );
+		$this->assertFalse( $this->permissions->can_read_post( $post, 0 ) );
+		$this->assertFalse( $this->permissions->can_read_post( PHP_INT_MAX, $author ) );
+		$this->assertFalse( $this->permissions->can_read_post( 0, $author ) );
+
+		( new Settings() )->update( array( 'post_types' => array( 'page' ) ) );
+
+		$this->assertFalse( $this->permissions->can_read_post( $post, $author ), 'Unmanaged post types are not workflow content.' );
+	}
+
+	/**
 	 * Asserts every post-scoped method denies.
 	 *
 	 * @param int      $post_id Post id.

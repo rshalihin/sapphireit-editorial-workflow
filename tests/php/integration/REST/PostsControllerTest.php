@@ -35,6 +35,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @covers \Sit_Cwm\REST\PostsController
  * @covers \Sit_Cwm\Content\PostRepository::query_posts
+ * @covers \Sit_Cwm\Content\PostRepository::dashboard_meta_query
+ * @covers \Sit_Cwm\Content\PostRepository::status_order_sql
  */
 final class PostsControllerTest extends WP_UnitTestCase {
 

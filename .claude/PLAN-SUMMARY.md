@@ -5,7 +5,7 @@ are meant to be built **in numeric order** — each one is a self-contained chan
 and later steps assume earlier ones are already done. See `00-INDEX.md` for
 the authoritative dependency table and progress checklist.
 
-## Milestones (how the 25 steps group together)
+## Milestones (how the 24 steps group together)
 
 | Milestone | Steps | What it delivers |
 |-----------|-------|------------------|
@@ -13,7 +13,7 @@ the authoritative dependency table and progress checklist.
 | **M2 — API** | 11–12 | A complete backend usable from `curl`/wp-cli without React |
 | **M3 — Editor UX** | 13–15 | Gutenberg sidebar + activity timeline |
 | **M4 — Dashboard** | 16–18 | Admin DataViews table, filters, bulk actions, settings |
-| **M5 — Ship** | 19–24 | Tests, security, performance, polish, docs, Pro-readiness |
+| **M5 — Ship** | 19–23 | Tests, security, performance, polish, docs |
 
 ---
 
@@ -201,16 +201,6 @@ test commands and measured perf numbers), a WordPress.org-style
 `readme.txt`, and the actual release mechanics (version bump in 4 places,
 build, changelog, zip, tag).
 
-## 24 — Pro extension points audit
-Writes **no Pro code** — instead proves every planned Pro feature (email,
-Slack, multiple workflows, checklist gating, editorial calendar, advanced
-audit log) can be built as a separate add-on without editing a single Free
-core file. Finds and fixes missing "seams": adding post-id context to
-filters, letting a permission veto carry an `WP_Error` reason (not just a
-bool), adding a dashboard query-args filter, and exposing the service
-container. Verifies all of this with a disposable "probe" add-on plugin
-that must achieve six behaviors with zero core edits.
-
 ---
 
 ## Out of scope for v1.0 (do not build)
@@ -218,5 +208,5 @@ that must achieve six behaviors with zero core edits.
 Email notifications, Slack integration, editorial calendar, multiple
 workflows, role-configurable workflows, checklist gating, a rules engine,
 AI features, team management, and a custom post type for managed content.
-Step 24 only verifies the *hooks* exist for these — it does not implement
-them.
+Pro plans, including the former step 24 (Pro extension points audit), live
+in `.claude/pro/` and are not part of the Free build.

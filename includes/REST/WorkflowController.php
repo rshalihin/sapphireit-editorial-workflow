@@ -135,6 +135,7 @@ class WorkflowController extends AbstractController {
 					'callback'            => array( $this, 'get_statuses' ),
 					'permission_callback' => array( $this, 'get_statuses_permissions_check' ),
 				),
+				'schema' => array( $this, 'get_statuses_schema' ),
 			)
 		);
 	}
@@ -401,15 +402,7 @@ class WorkflowController extends AbstractController {
 			return $this->add_additional_fields_schema( $this->schema );
 		}
 
-		$transition = array(
-			'type'       => 'object',
-			'properties' => array(
-				'slug'        => array( 'type' => 'string' ),
-				'label'       => array( 'type' => 'string' ),
-				'is_forward'  => array( 'type' => 'boolean' ),
-				'is_rollback' => array( 'type' => 'boolean' ),
-			),
-		);
+		$transition = $this->transition_schema();
 
 		$this->schema = array(
 			'$schema'    => 'http://json-schema.org/draft-04/schema#',
@@ -495,6 +488,72 @@ class WorkflowController extends AbstractController {
 		);
 
 		return $this->add_additional_fields_schema( $this->schema );
+	}
+
+	/**
+	 * Status registry schema, published by `OPTIONS /statuses`.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return array
+	 */
+	public function get_statuses_schema() {
+		return array(
+			'$schema'    => 'http://json-schema.org/draft-04/schema#',
+			'title'      => 'sit-cwm-statuses',
+			'type'       => 'object',
+			'properties' => array(
+				'default_status' => array(
+					'description' => __( 'Status of managed content that has none stored yet.', 'sit-cwm' ),
+					'type'        => 'string',
+					'readonly'    => true,
+				),
+				'statuses'       => array(
+					'description' => __( 'Registered workflow statuses, in display order.', 'sit-cwm' ),
+					'type'        => 'array',
+					'readonly'    => true,
+					'items'       => array(
+						'type'       => 'object',
+						'properties' => array(
+							'slug'        => array( 'type' => 'string' ),
+							'label'       => array( 'type' => 'string' ),
+							'description' => array( 'type' => 'string' ),
+							'color'       => array( 'type' => 'string' ),
+							'order'       => array( 'type' => 'integer' ),
+							'is_final'    => array( 'type' => 'boolean' ),
+						),
+					),
+				),
+				'transitions'    => array(
+					'description'          => __( 'Transition map: source status slug to the moves the workflow allows from it, whoever the user is.', 'sit-cwm' ),
+					'type'                 => 'object',
+					'readonly'             => true,
+					'additionalProperties' => array(
+						'type'  => 'array',
+						'items' => $this->transition_schema(),
+					),
+				),
+			),
+		);
+	}
+
+	/**
+	 * Schema of one transition, shared by the workflow and statuses routes.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return array
+	 */
+	private function transition_schema(): array {
+		return array(
+			'type'       => 'object',
+			'properties' => array(
+				'slug'        => array( 'type' => 'string' ),
+				'label'       => array( 'type' => 'string' ),
+				'is_forward'  => array( 'type' => 'boolean' ),
+				'is_rollback' => array( 'type' => 'boolean' ),
+			),
+		);
 	}
 
 	/**

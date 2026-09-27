@@ -84,9 +84,9 @@ captured.
 
 | | |
 |---|---|
-| WordPress | 6.5 or newer |
+| WordPress | 6.8 or newer |
 | PHP | 7.4 or newer |
-| Tested up to | WordPress 6.7 |
+| Tested up to | WordPress 7.1 |
 
 The plugin loads no PHP 7.4+ syntax before checking `PHP_VERSION`, so on an
 older PHP it shows an admin notice instead of fataling.

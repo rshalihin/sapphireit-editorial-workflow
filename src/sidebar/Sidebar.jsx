@@ -13,12 +13,8 @@ import {
 } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 import {
-	PluginSidebar as EditPostPluginSidebar,
-	PluginSidebarMoreMenuItem as EditPostPluginSidebarMoreMenuItem,
-} from '@wordpress/edit-post';
-import {
-	PluginSidebar as EditorPluginSidebar,
-	PluginSidebarMoreMenuItem as EditorPluginSidebarMoreMenuItem,
+	PluginSidebar,
+	PluginSidebarMoreMenuItem,
 	store as editorStore,
 } from '@wordpress/editor';
 import { useState } from '@wordpress/element';
@@ -51,13 +47,6 @@ export const PLUGIN_NAME = 'sit-cwm-sidebar';
  * @type {string}
  */
 const SIDEBAR_NAME = 'workflow';
-
-// WordPress 6.6 moved the sidebar slots to `@wordpress/editor`; the
-// `@wordpress/edit-post` exports are only read on older versions, which avoids
-// their deprecation notice where the new ones exist.
-const PluginSidebar = EditorPluginSidebar || EditPostPluginSidebar;
-const PluginSidebarMoreMenuItem =
-	EditorPluginSidebarMoreMenuItem || EditPostPluginSidebarMoreMenuItem;
 
 /**
  * Shown when the post has no workflow.

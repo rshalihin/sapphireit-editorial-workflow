@@ -44,6 +44,7 @@ test suites.
 | `composer test` | PHP unit tests (no WordPress, no database) |
 | `composer test:setup` | Download core + create the test database, once |
 | `composer test:integration` | PHP integration tests (**drops all tables** in its database) |
+| `composer test:coverage` | Both PHP suites with coverage, checked against the release minimums (needs Xdebug; see [Coverage](#coverage)) |
 | `npm run build` / `npm run start` | Production build / watch mode |
 | `npm run lint:js` / `npm run lint:css` / `npm run format` | ESLint / stylelint / wp-prettier |
 | `npm run test:unit` | Jest |
@@ -81,8 +82,8 @@ is its only data hook and `src/api/client.js` its only `apiFetch` caller
 transitions are allowed — buttons come from `available_transitions`.
 
 `PluginSidebar` / `PluginSidebarMoreMenuItem` are read from `@wordpress/editor`
-(WordPress 6.6+) and fall back to `@wordpress/edit-post` on 6.5, so the bundle
-depends on both `wp-editor` and `wp-edit-post`.
+(WordPress 6.6+; the minimum is 6.8), so the bundle depends on `wp-editor` and
+not on `wp-edit-post`.
 
 ### Admin dashboard
 
@@ -285,22 +286,58 @@ npm run test:e2e:local -- --base-url=http://flow-manager.test
   `tests/e2e/`. The specs delete the posts and users they create before and
   after running, so they can run repeatedly against the same wp-env.
 - CI (`.github/workflows/ci.yml`) runs phpcs, PHP unit and integration tests
-  on PHP 7.4 / 8.1 / 8.3 × WordPress 6.5 / latest, then JS lint, Jest and a
+  on PHP 7.4 / 8.1 / 8.3 × WordPress 6.8 / latest, then JS lint, Jest and a
   build that must not change `assets/build/`, and E2E on a single leg with
   artifacts uploaded on failure.
 
 ### Coverage
 
-Not measured yet: it needs Xdebug or PCOV and a run of
-`vendor/bin/phpunit --testsuite integration --coverage-text`. Record the
-numbers here against the release minimums:
+```sh
+composer test:coverage        # needs Xdebug; writes coverage/ (git-ignored)
+npm run test:unit -- --coverage
+```
+
+`composer test:coverage` runs both PHP suites with line coverage, then the
+`WorkflowManager` tests again with `--path-coverage`, and
+`bin/coverage-report.php` checks the minimums below, exiting non-zero when one
+is missed. The HTML report lands in `coverage/html/`. Branch coverage needs
+Xdebug (PCOV cannot measure branches). Path coverage is limited to one
+test class because on the whole suite it grows exponentially with the
+`if`s in a method and does not finish.
+
+Tests declare `@covers`, so a line counts only when a test aimed at that
+class ran it. A test that exercises private helpers of the method it covers
+names them too (e.g. `PostRepository::dashboard_meta_query`).
+
+With Laragon, where Xdebug is not in `php.ini`, load it for this run only.
+Composer normally restarts itself without Xdebug, and its child processes
+inherit that:
+
+```powershell
+New-Item -ItemType Directory -Force $env:TEMP\php-xdebug | Out-Null
+Set-Content $env:TEMP\php-xdebug\xdebug.ini 'zend_extension=xdebug'
+$env:PHP_INI_SCAN_DIR = "$env:TEMP\php-xdebug"; $env:COMPOSER_ALLOW_XDEBUG = '1'
+php composer.phar test:coverage
+Remove-Item Env:PHP_INI_SCAN_DIR, Env:COMPOSER_ALLOW_XDEBUG
+```
+
+Measured 2026-09-27 (Xdebug 3.5.3, PHP 8.3, WordPress 6.9 test library):
 
 | Area | Minimum | Measured |
 |---|---|---|
-| `includes/Workflow/` | 90 % lines, 100 % of branches in `can_transition` / `transition` | — |
-| `includes/Activity/`, `includes/Content/` | 80 % lines | — |
-| `includes/REST/` | every route: happy path, unauthenticated, unauthorized, invalid input | — |
-| JS hooks | loading / success / error each | — |
+| `includes/Workflow/` | 90 % lines | **95.5 %** (553/579) |
+| `WorkflowManager` status-change path: `can_transition`, `check_transition`, `transition`, `validate_transition`, `check_post`, `resolve_user_id` | 100 % of branches | **100 %** (1/1, 4/4, 5/5, 11/11, 5/5, 3/3) |
+| `includes/Activity/` | 80 % lines | **92.2 %** (201/218) |
+| `includes/Content/` | 80 % lines | **95.3 %** (342/359) |
+| `includes/REST/` | every route: happy path, unauthenticated, unauthorized, invalid input | **met**: 401 / 403 / 400 cases per controller in `tests/php/integration/REST/`; `/statuses` takes no input. `SchemaContractTest` checks every route's response against its `OPTIONS` schema |
+| JS hooks | loading / success / error each | **met**: `useWorkflow`, `useActivity`, `usePosts`, `useBulkAction`, `useUsers`, `useReviewerOptions` |
+| JS components | render + one interaction each | **met** in Jest for the sidebar controls, dialogs, row and bulk modals. `Sidebar.jsx` and the dashboard shell (`App.jsx`, `WorkflowDataViews.jsx`) are rendered and driven by the Playwright specs instead |
+
+Overall: PHP 93.5 % of lines (unit + integration); Jest 91.7 % of lines
+(164 tests) over the files the tests load.
+
+Writing the schema contract test found that `GET /sit-cwm/v1/statuses`
+published no schema; it now has one (`WorkflowController::get_statuses_schema()`).
 
 ## Performance
 
@@ -319,21 +356,63 @@ with random statuses, reviewers and due dates, and activity rows spread over
 90 days. Seeded posts carry `_sit_cwm_seed`, so they can be deleted with
 `wp post delete $(wp post list --post_type=any --post_status=any --meta_key=_sit_cwm_seed --format=ids) --force`.
 
-Read REST numbers from Query Monitor's `x-qm-*` headers (log in and send the
-`wp_rest` nonce) or its admin bar panel on the dashboard page.
+Then measure every budget in one go (it writes to seeded posts, so use a
+scratch site):
+
+```sh
+wp --exec="define( 'SAVEQUERIES', true );" eval-file bin/measure.php admin 50       # add `sql` to list every query
+```
+
+`bin/measure.php` runs each path through `rest_do_request()` from an empty
+object cache, after loading what every request's bootstrap loads anyway
+(autoloaded options, the current user, core's REST routes). It prints
+queries, time, peak memory and repeated SQL per path, the `EXPLAIN` of the
+timeline and last-activity queries, and whether each budget holds. Query
+Monitor's `x-qm-*` headers or admin bar panel give the same counts per HTTP
+request, bootstrap included.
 
 ### Budgets
 
-| Path | Budget | Measured (500 posts / 5 000 activity rows) |
-|---|---|---|
-| `GET /sit-cwm/v1/posts?per_page=100` | ≤ 8 queries, < 300 ms | — |
-| `GET /posts/<id>/workflow` | ≤ 5 queries | — |
-| `GET /posts/<id>/activity?per_page=20` | ≤ 4 queries | — |
-| `POST /posts/<id>/workflow` | ≤ 10 queries | — |
-| `POST /posts/batch` (50 posts) | linear, no per-post user query | — |
-| Dashboard first paint | < 1.5 s | — |
+Measured 2026-09-27 on the Laragon scratch site (WordPress 7.1.2, MySQL
+8.0.30; `bin/measure.php` under PHP 8.3 CLI), no persistent object cache:
 
-Not measured yet: fill the column in from a seeded wp-env run.
+| Path | Budget | 500 posts / 5 050 activity rows | 1 000 posts / 10 157 activity rows |
+|---|---|---|---|
+| `GET /sit-cwm/v1/posts?per_page=100` | ≤ 8 queries, < 300 ms | **6 queries**, 71 ms, 0.8 MB, no repeated SQL | **6 queries**, 92 ms, 0.8 MB |
+| `GET /posts/<id>/workflow` | ≤ 5 queries | **4**, 3 ms | **4**, 3 ms |
+| `GET /posts/<id>/activity?per_page=20` | ≤ 4 queries | **4**, 4 ms | **4**, 2 ms |
+| `POST /posts/<id>/workflow` (status change) | ≤ 10 queries | **10**, 16 ms | **10**, 14 ms |
+| `POST /posts/batch`, `set_due_date` | linear, no per-post user query | 10 posts: 44 queries, 51 ms; 50 posts: 204, 245 ms | 10 posts: 44; 50 posts: 204, 259 ms |
+| Dashboard first paint (rows visible) | < 1.5 s | — | **missed on this machine:** 2.06 s at 20 rows, 2.60 s at 100 (Chromium, median of 5) |
+
+- Doubling the data changed no per-request query count, only time.
+- **Long histories:** the table above was taken before the last-activity
+  query was rewritten (see Timeline index). After the rewrite, on the
+  1 000-post seed plus one post with a 3 012-row history on the first page:
+  `GET /posts?per_page=100` runs 6 queries in 96 ms (8.3 s before).
+- **Batch:** 4 queries per post, all writes: the meta lookup and update
+  `update_post_meta()` makes, a read-back of the value just written
+  (`set_due_date()` verifies it stuck), and the activity insert. Posts,
+  meta and users are loaded once up front (queries 1–4); no user query
+  runs per post.
+- **Status change:** the one repeated query is the post's meta, read before
+  the write (validation) and again after it (read-back and the fresh
+  response). It is not a loop.
+- The time budget covers the REST dispatch. Over HTTP each request also pays
+  WordPress's bootstrap. On this machine (Apache with PHP 8.1, no OPcache)
+  that is about 700 ms for any request: core's own `/wp/v2/types` takes
+  650 ms with the plugin inactive and 690 ms with it active. The plugin
+  adds about 40 ms, mostly compiling its classes, which OPcache removes.
+- **Dashboard first paint** is two such requests in a row (the admin page:
+  880 ms, then `GET /posts`: 850 ms) plus about 330 ms of JavaScript and
+  rendering. The plugin's own share (about 90 ms of dispatch and 330 ms of
+  client work) fits the budget. The total does not fit here because of the
+  server's bootstrap time. Re-measure on a server with OPcache (wp-env, or
+  production) before calling this budget met. If it still misses, preloading
+  the first page into the admin HTML (`rest_preload_api_request()` plus
+  `apiFetch.createPreloadingMiddleware()`, as the block editor does) removes
+  one full request.
+
 `tests/php/integration/PerformanceTest.php` enforces the query budgets (not
 the timings) in CI with `$wpdb->num_queries` deltas. For the collection and
 the batch it also checks that the query count does not grow with the number
@@ -368,8 +447,33 @@ WHERE post_id = 123 ORDER BY created_at DESC, id DESC LIMIT 20 OFFSET 0;
 ```
 
 Expect `type: ref`, `key: post_created`. The `id` tiebreak can add
-`Using filesort` over one post's rows only, which stays small. Record the
-output here after running it on the seeded site.
+`Using filesort` over one post's rows only, which stays small.
+
+Measured on the 1 000-post / 10 157-row seed (MySQL 8.0.30), post with the
+longest history:
+
+| id | select_type | table | type | key | ref | rows | Extra |
+|---|---|---|---|---|---|---|---|
+| 1 | SIMPLE | wp_sit_cwm_activity | ref | post_created | const | 27 | Backward index scan |
+
+No filesort: MySQL 8 reads the index backwards and stops at `LIMIT`.
+
+The dashboard's last-activity-per-row query (`ActivityLogger::get_for_posts()`)
+is one `UNION ALL` branch per post on the page, each
+`WHERE post_id = ? ORDER BY created_at DESC, id DESC LIMIT 1`. `EXPLAIN` for
+100 posts, one of them with a 3 012-row history (the `rows` column is the
+optimizer's estimate of matching rows; `LIMIT` stops each branch after one):
+
+| Plan rows | select_type | type | key | ref | Extra |
+|---|---|---|---|---|---|
+| 1 | PRIMARY | ref | post_created | const | Backward index scan |
+| 99 | UNION | ref | post_created | const | Backward index scan |
+| 1 | UNION RESULT | ALL | | | Using temporary; Using filesort (the ≤ 100 result rows) |
+
+Its cost follows the page size, not a post's history. The first version used a
+correlated "count newer rows" subquery, which is quadratic in history: with
+that one 3 000-row post on the page, `GET /posts?per_page=100` took 8.3 s. It
+now takes 96 ms.
 
 ### Front end
 
@@ -390,24 +494,40 @@ as a bundled package: `dashboard.asset.php` has no `wp-dataviews` dependency,
 and the bundle never reads a `wp.dataviews` global (the only `wp-dataviews`
 strings are CSS custom properties).
 
-Measured with the step 16 dashboard (`@wordpress/dataviews` 19.0.0):
+Measured with `@wordpress/dataviews` 11.3.0:
 
 | File | Minified | Gzipped |
 |---|---|---|
-| `dashboard.js` | 831 KiB | 192 KiB |
-| `dashboard.css` (includes DataViews' styles) | 90.7 KiB | 9.5 KiB |
-| `sidebar.js` | 23.7 KiB | 7.8 KiB |
+| `dashboard.js` | 297 KiB | 81 KiB |
+| `dashboard.css` (includes DataViews' styles) | 66.6 KiB | 8.6 KiB |
+| `sidebar.js` | 28.9 KiB | 9.0 KiB |
 
 The budget is < ~300 KB gzipped for the dashboard. Webpack's 244 KiB
 "asset size limit" warning refers to the uncompressed size and is expected.
 
-**Compatibility caveat:** DataViews 19 externalizes to `wp-theme` and
-`wp-private-apis`, which must be registered by core for the dashboard script
-to print. WordPress 7.1 registers both. **Still unverified** against the
-minimum supported version (`Requires at least: 6.5`; wp-env runs 6.7): if
-core does not register `wp-theme` there, the dashboard script is silently not
-printed and the page stays empty. Fix by pinning an older
-`@wordpress/dataviews` or raising the minimum.
+### Why DataViews is pinned at 11.3.0
+
+The bundled DataViews is not self-contained: it opts into core's
+`wp-private-apis` and unlocks private components from core's `wp-components`,
+so the DataViews version decides the oldest WordPress the dashboard runs on.
+Checked against real core builds on a scratch site:
+
+| WordPress | DataViews 11.3.0 | DataViews 19 |
+|---|---|---|
+| 6.5 | throws: core rejects the private-APIs consent string | not printed (`wp-theme`, `react-jsx-runtime` unregistered) |
+| 6.6, 6.7 | throws: `Menu.TriggerButton` missing from core components | not printed (`wp-theme`) |
+| 6.8, 6.9, 7.0 | works | not printed (`wp-theme`) |
+| 7.1 | works | works |
+
+Every release with `DataForm` needs at least the 6.6 consent string, and 12.0+
+depends on `@wordpress/ui`, which imports `@wordpress/theme` (`wp-theme`,
+registered from 7.1 only). Hence `Requires at least: 6.8` and an exact pin in
+`package.json`. When a script dependency is missing, WordPress drops the
+script without a notice and the page stays empty, so
+`tests/php/integration/AssetCompatTest.php` fails the build if either
+`*.asset.php` names a handle the minimum version does not register. Before
+bumping DataViews, rebuild, run that test and load the dashboard on the
+minimum version.
 
 ## Screenshots
 
@@ -459,7 +579,7 @@ and Upgrade Notice sections.
 
 ### 4. Green CI on every leg
 
-PHP 7.4 / 8.1 / 8.3 × WordPress 6.5 / latest, plus the JS and end-to-end jobs.
+PHP 7.4 / 8.1 / 8.3 × WordPress 6.8 / latest, plus the JS and end-to-end jobs.
 No exceptions, no "just this once".
 
 ### 5. Build and inspect the zip

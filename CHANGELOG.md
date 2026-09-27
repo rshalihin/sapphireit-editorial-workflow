@@ -66,7 +66,7 @@ First public release. Free v1.0 feature scope, complete.
 
 - Full translation coverage with the `sit-cwm` text domain and a generated POT.
 - PHPUnit (unit + integration), Jest and Playwright suites; CI across
-  PHP 7.4/8.1/8.3 × WordPress 6.5/latest.
+  PHP 7.4/8.1/8.3 × WordPress 6.8/latest.
 - `assets/build/` committed, so the plugin runs from a clone or zip with no
   build step.
 

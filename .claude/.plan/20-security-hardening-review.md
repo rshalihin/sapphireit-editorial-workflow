@@ -8,50 +8,54 @@ publish content.
 
 ## 20.1 Audit checklist — walk every file, tick every line
 
+> Done 2026-09-15, re-verified 2026-09-27. Evidence per item: ARCHITECTURE.md →
+> "Security review (step 20)"; exceptions E1–E4 listed there; subscriber probe results in
+> its Verification section.
+
 **Authorization**
-- [ ] No `permission_callback => '__return_true'` anywhere (grep).
-- [ ] Every REST route checks, in order: authentication → capability → access to
+- [x] No `permission_callback => '__return_true'` anywhere (grep).
+- [x] Every REST route checks, in order: authentication → capability → access to
       *this* post → transition validity.
-- [ ] No `current_user_can()` outside `PermissionManager` (grep `includes/`,
+- [x] No `current_user_can()` outside `PermissionManager` (grep `includes/`,
       `admin/`; template rendering may use it for display only — list exceptions
       explicitly in ARCHITECTURE.md).
-- [ ] No role-name checks (`'editor'`, `'administrator'`) outside
+- [x] No role-name checks (`'editor'`, `'administrator'`) outside
       `Capabilities::role_map()`.
-- [ ] `edit_post`/`publish_post` meta-cap checks use the post id, never the bare
+- [x] `edit_post`/`publish_post` meta-cap checks use the post id, never the bare
       `edit_posts` primitive, for per-post decisions.
-- [ ] Bulk paths re-check per post (step 17).
+- [x] Bulk paths re-check per post (step 17).
 
 **Input**
-- [ ] Every REST arg has `type` + `sanitize_callback` (+ `enum`/`validate_callback`
+- [x] Every REST arg has `type` + `sanitize_callback` (+ `enum`/`validate_callback`
       where the domain is closed).
-- [ ] `wp_unslash()` before every sanitize on `$_POST`/`$_GET`/`$_REQUEST`.
-- [ ] `absint()` for ids; no `intval()` on user ids that could go negative.
-- [ ] Date input validated by round-trip parse, not regex alone.
-- [ ] Comment bodies `wp_kses_post` + length-capped.
-- [ ] Unknown request fields ignored, never persisted.
+- [x] `wp_unslash()` before every sanitize on `$_POST`/`$_GET`/`$_REQUEST`.
+- [x] `absint()` for ids; no `intval()` on user ids that could go negative.
+- [x] Date input validated by round-trip parse, not regex alone.
+- [x] Comment bodies `wp_kses_post` + length-capped.
+- [x] Unknown request fields ignored, never persisted.
 
 **Output**
-- [ ] Every echo in `admin/` and any template escaped at the point of output.
-- [ ] JSON to JS via `wp_json_encode()`; nothing interpolated into inline script
+- [x] Every echo in `admin/` and any template escaped at the point of output.
+- [x] JSON to JS via `wp_json_encode()`; nothing interpolated into inline script
       strings.
-- [ ] No `dangerouslySetInnerHTML` in `src/` (grep).
-- [ ] Error messages never leak post titles/content to users who cannot see them.
+- [x] No `dangerouslySetInnerHTML` in `src/` (grep).
+- [x] Error messages never leak post titles/content to users who cannot see them.
 
 **Database**
-- [ ] Every custom query uses `$wpdb->prepare()`; placeholder lists for `IN ()`
+- [x] Every custom query uses `$wpdb->prepare()`; placeholder lists for `IN ()`
       built with `array_fill()` + `implode()`, never `implode( ',', $ids )` of
       raw input.
-- [ ] `ORDER BY`/`LIMIT` from whitelists and `%d`.
-- [ ] Table name only from `Database::table_name()`.
-- [ ] Every deliberate `phpcs:ignore` for DB sniffs has a why-comment.
+- [x] `ORDER BY`/`LIMIT` from whitelists and `%d`.
+- [x] Table name only from `Database::table_name()`.
+- [x] Every deliberate `phpcs:ignore` for DB sniffs has a why-comment.
 
 **General**
-- [ ] No `eval()`, no variable `include`/`require`, no `unserialize()` of stored
+- [x] No `eval()`, no variable `include`/`require`, no `unserialize()` of stored
       data (`context` is JSON).
-- [ ] `ABSPATH` guard at the top of every PHP file (script-scan the tree).
-- [ ] `uninstall.php` guarded by `WP_UNINSTALL_PLUGIN`.
-- [ ] Nonces on any non-REST admin form/AJAX handler.
-- [ ] No secrets, keys or emails in the bootstrap JS object.
+- [x] `ABSPATH` guard at the top of every PHP file (script-scan the tree).
+- [x] `uninstall.php` guarded by `WP_UNINSTALL_PLUGIN`.
+- [x] Nonces on any non-REST admin form/AJAX handler.
+- [x] No secrets, keys or emails in the bootstrap JS object.
 
 ## 20.2 Information-disclosure rules
 

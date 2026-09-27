@@ -422,8 +422,12 @@ final class ActivityLogger implements Bootable {
 	 * Latest entries for many posts in a single query, for the dashboard's
 	 * "last activity" column.
 	 *
-	 * Uses a correlated count instead of window functions so it runs on every
-	 * MySQL/MariaDB version WordPress supports.
+	 * One `UNION ALL` branch per post, each an index-ordered read of
+	 * `post_created` limited to `$per_post` rows, so the cost follows the page
+	 * size and never a post's history length. (A correlated "count newer
+	 * rows" subquery is quadratic in history: one post with 3 000 entries
+	 * made a dashboard page take 8 s.) Needs no window functions, so it runs
+	 * on every MySQL/MariaDB version WordPress supports.
 	 *
 	 * @since 1.0.0
 	 *
@@ -444,14 +448,19 @@ final class ActivityLogger implements Bootable {
 			return $result;
 		}
 
-		$table        = $this->database->table_name();
-		$placeholders = implode( ', ', array_fill( 0, count( $ids ), '%d' ) );
+		$table    = $this->database->table_name();
+		$branches = implode( ' UNION ALL ', array_fill( 0, count( $ids ), '( SELECT * FROM %i WHERE post_id = %d ORDER BY created_at DESC, id DESC LIMIT %d )' ) );
+		$values   = array();
+
+		foreach ( $ids as $post_id ) {
+			array_push( $values, $table, $post_id, $per_post );
+		}
 
 		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin's own table; caching is a documented follow-up.
 			$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Values are passed as one array.
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $placeholders is a list of %d placeholders.
-				"SELECT a.* FROM %i AS a WHERE a.post_id IN ({$placeholders}) AND ( SELECT COUNT(*) FROM %i AS b WHERE b.post_id = a.post_id AND ( b.created_at > a.created_at OR ( b.created_at = a.created_at AND b.id > a.id ) ) ) < %d ORDER BY a.post_id ASC, a.created_at DESC, a.id DESC",
-				array_merge( array( $table ), $ids, array( $table, $per_post ) )
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $branches is a list of fixed branches with %i/%d placeholders.
+				"{$branches} ORDER BY post_id ASC, created_at DESC, id DESC",
+				$values
 			)
 		);
 

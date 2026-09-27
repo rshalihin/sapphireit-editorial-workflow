@@ -7,6 +7,10 @@
 	<exclude-pattern>/vendor/*</exclude-pattern>
 	<exclude-pattern>/node_modules/*</exclude-pattern>
 	<exclude-pattern>/assets/build/*</exclude-pattern>
+	<!-- Generated output: coverage reports (serialized PHP), Playwright, release zips. -->
+	<exclude-pattern>/coverage/*</exclude-pattern>
+	<exclude-pattern>/artifacts/*</exclude-pattern>
+	<exclude-pattern>/dist/*</exclude-pattern>
 
 	<arg name="extensions" value="php"/>
 	<arg name="colors"/>
@@ -15,7 +19,7 @@
 
 	<!-- Environment. -->
 	<config name="testVersion" value="7.4-"/>
-	<config name="minimum_wp_version" value="6.5"/>
+	<config name="minimum_wp_version" value="6.8"/>
 
 	<!-- Standards. -->
 	<rule ref="WordPress">

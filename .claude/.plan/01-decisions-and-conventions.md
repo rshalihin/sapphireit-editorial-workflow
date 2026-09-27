@@ -205,7 +205,14 @@ decision, receives the computed bool + context), `sit_cwm_enabled_post_types`,
 
 ## D11 — Versions and environment
 
-- `Requires at least: 6.5`, `Requires PHP: 7.4`, `Tested up to: 6.7`.
+- `Requires at least: 6.8`, `Requires PHP: 7.4`, `Tested up to: 7.1`.
+  Raised from 6.5 during completion: every `@wordpress/dataviews` release with
+  `DataForm` needs core private APIs that WP 6.5–6.7 lack (6.5 rejects the
+  private-APIs consent string; 6.6/6.7 lack `Menu.TriggerButton`), and 12.0+
+  pulls in `@wordpress/ui` → `wp-theme`, which only 7.1 registers.
+  `@wordpress/dataviews` is pinned **exactly** at `11.3.0`, verified on WP
+  6.8, 6.9, 7.0 and 7.1. Do not bump it without re-checking
+  `dashboard.asset.php` against the minimum (`AssetCompatTest`).
 - Plugin version `1.0.0` in the header, `SIT_CWM_VERSION`, and `package.json` —
   kept in lockstep, bumped only in step 23.
 - Build: `@wordpress/scripts`. Source `src/`, output `assets/build/` (tracked in

@@ -22,6 +22,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @covers \Sit_Cwm\REST\PostsController::get_items
  * @covers \Sit_Cwm\Content\PostRepository::query_posts
+ * @covers \Sit_Cwm\Content\PostRepository::dashboard_meta_query
+ * @covers \Sit_Cwm\Content\PostRepository::unfinished_status_clause
  */
 final class OverdueFilterTest extends TestCase {
 

@@ -46,42 +46,40 @@ naming, class-style, and data-shape decisions that every later step assumes.
 | 21 | [Performance pass (N+1)](21-performance-pass.md) | quality | 16, 17 |
 | 22 | [UX polish + i18n](22-ux-polish-i18n.md) | UX | 14–18 |
 | 23 | [Docs + release](23-docs-and-release.md) | release | all |
-| 24 | [Pro extension points audit](24-pro-extension-points.md) | architecture | all |
 
 ## Progress tracker
 
 Tick a box only when that step's acceptance criteria all pass.
 
 - [x] 02 Repo scaffold and tooling  _(activation check run on local Laragon WP 7.1, not wp-env)_
-- [ ] 03 Plugin bootstrap / Core
-- [ ] 04 Data model + activation
-- [ ] 05 StatusManager
-- [ ] 06 TransitionManager
-- [ ] 07 Capabilities + PermissionManager
-- [ ] 08 PostMeta + PostRepository
-- [ ] 09 ActivityLogger
-- [ ] 10 WorkflowManager
-- [ ] 11 REST: WorkflowController
-- [ ] 12 REST: Activity + Users + collection
-- [ ] 13 JS build setup
-- [ ] 14 Gutenberg sidebar
-- [ ] 15 Activity timeline UI
-- [ ] 16 Admin dashboard (DataViews)
-- [ ] 17 Filters + bulk actions
-- [ ] 18 Settings page
-- [ ] 19 Testing sweep
-- [ ] 20 Security hardening review
-- [ ] 21 Performance pass
-- [ ] 22 UX polish + i18n
+- [x] 03 Plugin bootstrap / Core
+- [x] 04 Data model + activation
+- [x] 05 StatusManager
+- [x] 06 TransitionManager
+- [x] 07 Capabilities + PermissionManager
+- [x] 08 PostMeta + PostRepository
+- [x] 09 ActivityLogger
+- [x] 10 WorkflowManager
+- [x] 11 REST: WorkflowController
+- [x] 12 REST: Activity + Users + collection
+- [x] 13 JS build setup
+- [x] 14 Gutenberg sidebar
+- [x] 15 Activity timeline UI
+- [x] 16 Admin dashboard (DataViews)
+- [x] 17 Filters + bulk actions
+- [x] 18 Settings page
+- [ ] 19 Testing sweep  _(suites written and green: PHPUnit unit 104 + integration 184, Jest 131; open: coverage not measured — needs Xdebug/PCOV, `DEVELOPMENT.md` table still "—")_
+- [ ] 20 Security hardening review  _(checklist, greps and negative suite done; open: logged-in subscriber probe against a live site, see `ARCHITECTURE.md`)_
+- [ ] 21 Performance pass  _(batch loading and query-count tests done; open: seeded timings and `EXPLAIN` output not recorded in `DEVELOPMENT.md`)_
+- [ ] 22 UX polish + i18n  _(RTL, `.pot`, confirmations and e2e specs done; open: manual keyboard-only, screen-reader and axe passes)_
 - [x] 23 Docs + release  _(docs, screenshots, zip tooling and release.yml done and verified locally; the tag push, the clean-WP install check and the full CI matrix are the developer's)_
-- [ ] 24 Pro extension points audit
 
 ## Out of scope for v1.0 (do not build)
 
 Email, Slack, editorial calendar, multiple workflows, role-configurable
 workflows, checklist gating, rules engine, AI, team management, a custom post
-type for managed content. Step 24 verifies that the hooks exist so these land
-as add-ons later — it does **not** implement them.
+type for managed content. Pro plans (including the former step 24, the Pro
+extension points audit) live in `../pro/` and are not part of this build.
 
 ## Milestones
 
@@ -92,4 +90,4 @@ as add-ons later — it does **not** implement them.
 - **M3 — Editor UX (steps 13–15).** Gutenberg sidebar + timeline.
 - **M4 — Dashboard (steps 16–18).** DataViews table, filters, bulk actions,
   settings.
-- **M5 — Ship (steps 19–24).** Tests, security, performance, polish, docs.
+- **M5 — Ship (steps 19–23).** Tests, security, performance, polish, docs.

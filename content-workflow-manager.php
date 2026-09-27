@@ -4,7 +4,7 @@
  * Plugin URI:        https://github.com/shappire-it/content-workflow-manager
  * Description:       Adds an editorial approval workflow (Draft, Writing, Review, Needs Changes, Approved, Published) with reviewers, due dates, comments and activity history to posts, pages and custom post types.
  * Version:           1.0.0
- * Requires at least: 6.5
+ * Requires at least: 6.8
  * Requires PHP:      7.4
  * Author:            Shappire IT
  * License:           GPL-2.0-or-later

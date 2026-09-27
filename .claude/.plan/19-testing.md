@@ -71,7 +71,7 @@ verify the summary notice and the resulting rows.
 
 ## 19.5 CI
 
-`.github/workflows/ci.yml`, matrix PHP 7.4 / 8.1 / 8.3 × WP 6.5 / latest:
+`.github/workflows/ci.yml`, matrix PHP 7.4 / 8.1 / 8.3 × WP 6.8 / latest:
 - `composer install`, `composer lint`, `composer test`
 - `npm ci`, `npm run lint:js`, `npm run test:unit`, `npm run build`
 - E2E on one matrix leg only (`wp-env` + Playwright), artifacts on failure.
