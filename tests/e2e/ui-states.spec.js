@@ -69,12 +69,17 @@ const snap = async ( page, name ) =>
 	} );
 
 test.describe( 'UI states', () => {
+	// Pages are workflow-enabled too, and a fresh install ships two (Sample
+	// Page, Privacy Policy), which would fill the "nothing in the workflow"
+	// state this spec photographs.
 	test.beforeEach( async ( { requestUtils } ) => {
 		await requestUtils.deleteAllPosts();
+		await requestUtils.deleteAllPages();
 	} );
 
 	test.afterAll( async ( { requestUtils } ) => {
 		await requestUtils.deleteAllPosts();
+		await requestUtils.deleteAllPages();
 	} );
 
 	test( 'dashboard: empty, no matches, error with retry, offline', async ( {

@@ -43,8 +43,9 @@
 }
 
 // Text is never coloured by status: the label carries the meaning and keeps
-// full contrast, the swatch only repeats it. The outline keeps light swatches
-// (e.g. Review) visible on white.
+// full contrast, the swatch only repeats it. The background is pinned to white
+// so every default status colour keeps >= 4.5:1 against it whatever row state
+// DataViews paints behind the badge (DEVELOPMENT.md, "Status badge contrast").
 .sit-cwm-status-badge {
 	display: inline-flex;
 	align-items: center;
@@ -52,6 +53,8 @@
 	padding: 2px 8px;
 	border: 1px solid #ddd;
 	border-radius: 2px;
+	background: #fff;
+	color: #1e1e1e;
 	font-weight: 500;
 	white-space: nowrap;
 }

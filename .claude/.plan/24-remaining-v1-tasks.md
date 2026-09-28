@@ -30,41 +30,65 @@ Work the sections in order. Tick a box only once its evidence is recorded.
 
 ## E — UX / accessibility (step 22), remainder
 
-- [ ] **Badge contrast.** Compute the contrast ratio of every status colour in the StatusManager defaults against its badge background and text colour (`src/dashboard/dashboard.scss`, sidebar styles).
+- [x] **Badge contrast.** Compute the contrast ratio of every status colour in the StatusManager defaults against its badge background and text colour (`src/dashboard/dashboard.scss`, sidebar styles).
   Every pair must be ≥ 4.5:1. Fix any colour that fails, and record the table in `DEVELOPMENT.md`.
-- [ ] **RTL (optional).** Add a scratch mu-plugin on cwm-e2e that sets `text_direction` to `rtl`.
+- [x] **RTL (optional).** Add a scratch mu-plugin on cwm-e2e that sets `text_direction` to `rtl`.
   Screenshot the dashboard and the sidebar, check that `dashboard-rtl.css` loads and the layout mirrors, then remove the mu-plugin.
-- [ ] **i18n.** Run `npm run makepot` and confirm the `.pot` regenerates.
+- [x] **i18n.** Run `npm run makepot` and confirm the `.pot` regenerates.
   Grep `src/**/*.jsx` for user-facing quoted strings that aren't wrapped in `__(` / `_n(` / `sprintf( __(`, and wrap any you find.
-- [ ] **Screen-reader script.** Add a short NVDA + Chrome script to `DEVELOPMENT.md` for the developer to follow. It should cover:
+- [x] **Screen-reader script.** Add a short NVDA + Chrome script to `DEVELOPMENT.md` for the developer to follow. It should cover:
   - the sidebar: status announcement, the Move buttons, the reviewer combobox, the due-date calendar, the ConfirmDialog, and the notices in the live region;
   - the dashboard: table navigation, row actions, the bulk modal, and the result notice.
 
 ## Full re-verification (after E)
 
-- [ ] `composer lint` (phpcs): 0 errors.
-- [ ] PHPUnit unit and integration suites pass. Last run: unit 104, integration 199, plus the tests added since.
-- [ ] `npm run test:unit` (Jest) passes (164+). `npm run lint:js` and `npm run lint:css` are clean.
-- [ ] `composer test:coverage` stays green. This confirms the `ActivityLogger` change didn't lower coverage.
-- [ ] `npm run check:version` passes.
-- [ ] The whole e2e suite (all specs, including probe, a11y, keyboard and ui-states) passes **twice in a row** on cwm-e2e (7.1).
-- [ ] The whole e2e suite passes **once** on cwm-wp65 (6.8).
+- [x] `composer lint` (phpcs): 0 errors.
+- [x] PHPUnit unit and integration suites pass. Last run: unit 104, integration 199, plus the tests added since.
+- [x] `npm run test:unit` (Jest) passes (164+). `npm run lint:js` and `npm run lint:css` are clean.
+- [x] `composer test:coverage` stays green. This confirms the `ActivityLogger` change didn't lower coverage.
+- [x] `npm run check:version` passes.
+- [x] The whole e2e suite (all specs, including probe, a11y, keyboard and ui-states) passes **twice in a row** on cwm-e2e (7.1).
+- [x] The whole e2e suite passes **once** on cwm-wp65 (6.8).
 
 ## F — Release readiness (step 23)
 
-- [ ] Run `npm run build:zip`. Install the zip on **fresh** WP 6.8 and 7.1 sites (`wp plugin install dist/*.zip --activate`) with `WP_DEBUG` and `WP_DEBUG_LOG` on.
+- [x] Run `npm run build:zip`. Install the zip on **fresh** WP 6.8 and 7.1 sites (`wp plugin install dist/*.zip --activate`) with `WP_DEBUG` and `WP_DEBUG_LOG` on.
   Open the dashboard and the sidebar on each, confirm that `debug.log` stays empty and the console is clean, then remove the scratch sites.
-- [ ] CI (`.github/workflows/ci.yml`):
+- [x] CI (`.github/workflows/ci.yml`):
   - make sure the e2e job runs every spec, including the four new ones;
   - optionally add a wp-env e2e leg on WP 6.8 so the compatibility blocker can't come back unnoticed.
-- [ ] Add these to `CHANGELOG.md` `[1.0.0]`:
+- [x] Add these to `CHANGELOG.md` `[1.0.0]`:
   - the `/statuses` route now declares a response schema;
   - the `get_for_posts()` long-history performance fix;
   - the minimum WordPress version is 6.8;
   - `composer test:coverage` and `bin/measure.php` (both dev only).
-- [ ] Tick steps 19, 20, 21 and 22 in `00-INDEX.md` and replace their "open:" notes with the evidence pointers.
-- [ ] Update `.claude/PLAN-SUMMARY.md` to match.
-- [ ] Hand the developer a list of every changed and new file.
+- [x] Tick steps 19, 20, 21 and 22 in `00-INDEX.md` and replace their "open:" notes with the evidence pointers.
+- [x] Update `.claude/PLAN-SUMMARY.md` to match.
+- [x] Hand the developer a list of every changed and new file.
+
+### Evidence (2026-09-28/29)
+
+- **Badge contrast:** Review `#f0b849` (1.80:1) → `#996800` (4.84:1) and Approved `#00a32a` (3.35:1) → `#008a20` (4.51:1).
+  The badge background is fixed to `#fff` and the text to `#1e1e1e` in both stylesheets. Table: `DEVELOPMENT.md` → "Status badge contrast".
+- **RTL:** checked on cwm-e2e. Both `-rtl.css` files load, the layout mirrors at 1440 and 782 px, and the console is clean. The mu-plugin was removed.
+  Note: the mu-plugin must also set `wp_styles()->text_direction`, because core fixes it when `WP_Styles` is built.
+- **i18n:** `npm run makepot` regenerates the `.pot` (+3 strings from the `/statuses` schema). The grep found no unwrapped strings.
+- **Screen-reader script:** `DEVELOPMENT.md` → "Screen-reader script (NVDA + Chrome)".
+- **Re-verification:**
+  - phpcs: 74 files, 0 errors.
+  - PHPUnit: unit 104 and integration 199 pass.
+  - Jest: 164 pass. One expectation was updated for the new Approved colour.
+  - `lint:js` and `lint:css` are clean.
+  - Coverage is green. `Activity/` went up to 92.3 %.
+  - `check:version` passes.
+- **e2e:** the final code passed on cwm-e2e (WP 7.1.2) three times in a row (23:51, 00:04, 00:09) and on cwm-wp65 (WP 6.8) once. Two spec fixes came out of this:
+  - `ui-states.spec.js` now deletes pages too. Pages are workflow-enabled by default, and a fresh install's Sample Page and Privacy Policy broke the empty state. This failed on 6.8 and would also fail in CI.
+  - `utils.js` `loginAs()` waits for core's `wp_attempt_focus()` before typing. Its 200 ms focus-and-select on `#user_login` could land mid-typing and put the password into the username field. That was the cause of the "stalls" at `waitForURL`.
+  - One `keyboard-flow` `toHaveText` failure happened once on cwm-e2e (23:45) and did not reproduce in 12 isolated repeats or in the three later full runs. Its artifacts were overwritten before they could be inspected.
+- **Zip:** the 42-file zip installed and activated on fresh WP 6.8 and 7.1.2 sites (`WP_DEBUG_LOG` on).
+  The dashboard and sidebar rendered, the console had no errors, and `debug.log` stayed empty. The sites and databases were then removed.
+  Note: a fresh Laragon site needs core's `.htaccess` for `/wp-json/`, because wp-cli does not write it.
+- **CI:** the e2e job is now a matrix with WP 6.8 (the `.wp-env.json` pin) and latest (`WP_ENV_CORE`). `npm run test:e2e` picks up every spec. `lint:css` was added to the JS job.
 
 ## G — Developer-only steps
 

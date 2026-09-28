@@ -38,7 +38,7 @@ const renderCell = ( id, item, options ) => {
 beforeEach( () => {
 	window.sitCwm.statuses = [
 		{ slug: 'review', label: 'Review', color: '#dba617' },
-		{ slug: 'approved', label: 'Approved', color: '#00a32a' },
+		{ slug: 'approved', label: 'Approved', color: '#008a20' },
 	];
 	window.sitCwm.postTypes = [
 		{ slug: 'post', label: 'Posts', singularLabel: 'Post' },

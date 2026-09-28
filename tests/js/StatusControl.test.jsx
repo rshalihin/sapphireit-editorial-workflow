@@ -15,7 +15,7 @@ describe( 'StatusControl', () => {
 				slug: 'approved',
 				label: 'Approved',
 				description: 'Cleared for publication.',
-				color: '#00a32a',
+				color: '#008a20',
 				order: 50,
 				is_final: false,
 			},
@@ -32,7 +32,7 @@ describe( 'StatusControl', () => {
 		expect(
 			container.querySelector( '.sit-cwm-status-swatch' ).style
 				.backgroundColor
-		).toBe( 'rgb(0, 163, 42)' );
+		).toBe( 'rgb(0, 138, 32)' );
 	} );
 
 	it( 'falls back to the slug and the default colour for unknown statuses', () => {

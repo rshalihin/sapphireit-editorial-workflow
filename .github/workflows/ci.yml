@@ -109,6 +109,7 @@ jobs:
 
       - run: npm ci
       - run: npm run lint:js
+      - run: npm run lint:css
       - run: npm run test:unit
       - run: npm run build
 
@@ -116,10 +117,25 @@ jobs:
       - name: Check for uncommitted build output
         run: git diff --exit-code -- assets/build
 
+  # Runs every tests/e2e/*.spec.js (screenshots.spec.js skips itself unless
+  # CWM_CAPTURE is set). .wp-env.json pins core to 6.8, the plugin minimum, so
+  # the 6.8 leg guards the DataViews/core compatibility blocker (see
+  # DEVELOPMENT.md, "Why DataViews is pinned at 11.3.0"); WP_ENV_CORE swaps in
+  # the latest release for the other leg.
   e2e:
-    name: End-to-end
+    name: End-to-end / WP ${{ matrix.wp }}
     needs: [ js ]
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - wp: '6.8'
+            core: ''
+          - wp: 'latest'
+            core: 'https://wordpress.org/latest.zip'
+    env:
+      WP_ENV_CORE: ${{ matrix.core }}
     steps:
       - uses: actions/checkout@v4
 
@@ -136,6 +152,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: e2e-artifacts
+          name: e2e-artifacts-wp-${{ matrix.wp }}
           path: artifacts/
           retention-days: 7

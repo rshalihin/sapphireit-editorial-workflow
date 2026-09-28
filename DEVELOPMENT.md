@@ -327,7 +327,7 @@ Measured 2026-09-27 (Xdebug 3.5.3, PHP 8.3, WordPress 6.9 test library):
 |---|---|---|
 | `includes/Workflow/` | 90 % lines | **95.5 %** (553/579) |
 | `WorkflowManager` status-change path: `can_transition`, `check_transition`, `transition`, `validate_transition`, `check_post`, `resolve_user_id` | 100 % of branches | **100 %** (1/1, 4/4, 5/5, 11/11, 5/5, 3/3) |
-| `includes/Activity/` | 80 % lines | **92.2 %** (201/218) |
+| `includes/Activity/` | 80 % lines | **92.3 %** (204/221; re-measured 2026-09-28 after the `get_for_posts()` fix) |
 | `includes/Content/` | 80 % lines | **95.3 %** (342/359) |
 | `includes/REST/` | every route: happy path, unauthenticated, unauthorized, invalid input | **met**: 401 / 403 / 400 cases per controller in `tests/php/integration/REST/`; `/statuses` takes no input. `SchemaContractTest` checks every route's response against its `OPTIONS` schema |
 | JS hooks | loading / success / error each | **met**: `useWorkflow`, `useActivity`, `usePosts`, `useBulkAction`, `useUsers`, `useReviewerOptions` |
@@ -485,6 +485,120 @@ now takes 96 ms.
   query changes.
 - `fields` and `actions` are memoized, and every cell renderer is a `memo`
   component, so selection and hover changes do not re-render unchanged cells.
+
+## Accessibility
+
+Automated checks: `tests/e2e/a11y.spec.js` (axe, 0 violations),
+`keyboard-flow.spec.js` and `ui-states.spec.js`. The manual checks below cover
+what axe cannot.
+
+### Status badge contrast
+
+A badge is the status label in text next to a 10 px colour swatch. The text is
+never coloured by status, and the swatch only repeats the label. The badge
+background is fixed to `#fff` with text `#1e1e1e` in both
+`src/dashboard/dashboard.scss` and `src/sidebar/sidebar.scss`, so the pairs
+below hold whatever row state DataViews paints behind a badge. Every pair must
+be at least 4.5:1 (WCAG relative luminance):
+
+| Status | Colour | Colour vs badge `#fff` | Badge text `#1e1e1e` vs `#fff` |
+|---|---|---|---|
+| Draft | `#757575` | 4.61:1 | 16.67:1 |
+| Writing | `#3858e9` | 5.61:1 | 16.67:1 |
+| Review | `#996800` (was `#f0b849`, 1.80:1) | 4.84:1 | 16.67:1 |
+| Needs Changes | `#d63638` | 4.73:1 | 16.67:1 |
+| Approved | `#008a20` (was `#00a32a`, 3.35:1) | 4.51:1 | 16.67:1 |
+| Published | `#2271b1` | 5.17:1 | 16.67:1 |
+| Fallback (unknown) | `#757575` | 4.61:1 | 16.67:1 |
+
+The unknown-status caution icon (`#8a6100`) is 5.54:1 against `#fff`. Review
+and Approved were moved to the darker WordPress admin palette shades (yellow-50,
+green-50) in `StatusManager::core_statuses()`. A status added through the
+`sit_cwm_statuses` filter keeps its own colour. Re-check this table whenever a
+default colour or the badge styles change.
+
+### RTL
+
+The build emits `dashboard-rtl.css` and `sidebar-rtl.css`, and
+`Core\Assets` marks both styles `rtl: replace`. Checked on cwm-e2e (WP 7.1.2)
+on 2026-09-28 with a scratch mu-plugin that set the locale direction to `rtl`
+on `init`. Core fixes `WP_Styles::$text_direction` when the object is built,
+so the mu-plugin also had to set `wp_styles()->text_direction`. A real RTL
+locale has that direction from the start. Results:
+
+- The dashboard loaded `dashboard-rtl.css` and the editor loaded
+  `sidebar-rtl.css`, not the LTR files.
+- The dashboard mirrors at 1440 px and 782 px: the admin menu is on the right,
+  columns run right to left, and the swatch sits on the outer side of the label.
+  There is no horizontal overflow.
+- The sidebar mirrors: labels, the badge, the Move buttons and the timeline are
+  right-aligned.
+- There were no console errors.
+
+### Screen-reader script (NVDA + Chrome)
+
+Run this by hand before a release. Use NVDA 2024+ with Chrome, a site with a
+few managed posts, and one reviewer user. Start in browse mode. Press
+`NVDA+Space` to switch to focus mode in widgets, and `Insert+F7` to open the
+elements list. After each step, the listed announcement should be heard.
+
+**Editor sidebar** (open a post, then use the editor top bar's
+*Content Workflow* button):
+
+1. **Status.** Tab to the panel and read down with the arrow keys. You should
+   hear "Status", then the status label (for example "Draft") and its
+   description. The swatch is not announced.
+2. **Move buttons.** Tab into the *Workflow actions* group. NVDA announces
+   "Workflow actions, grouping" and then each button as "Move to Writing,
+   button". A rollback reads the same way but is styled as secondary and
+   destructive. Press a forward move that needs no confirmation. You should hear
+   "Workflow status changed to Writing." from the snackbar. Focus stays in the
+   actions group instead of dropping to the page body.
+3. **ConfirmDialog.** Press *Move to Approved* (or a rollback). NVDA announces
+   the dialog title ("Approve content?") and its message. Focus lands inside the
+   dialog, and `Tab` cycles only between *Cancel* and the confirm button.
+   `Escape` closes the dialog and returns focus to the button that opened it.
+   Open it again and confirm. The status notice is announced.
+4. **Reviewer combobox.** Tab to *Reviewer*. NVDA announces "Reviewer, combo
+   box". Type part of a name. The suggestions are read as you arrow through
+   them. Press `Enter` to pick one. You should hear "Reviewer set to {name}."
+   Clear it to hear "Reviewer removed."
+5. **Due-date calendar.** Tab to the due-date button. NVDA announces "Change due
+   date: No due date, button, collapsed". Press `Enter`. The calendar opens with
+   the button expanded. Arrow keys move by day, and each day is read with its
+   full date. Press `Enter` on a day. The popover closes and you should hear
+   "Due date set to {date}." *Clear* announces "Due date removed." An overdue
+   date reads "{date} (overdue)".
+6. **Comment and live region.** Type a comment and press *Add comment*. You
+   should hear "Comment added." The *Activity* panel's hidden `aria-live`
+   region announces the new entry without moving focus. Errors appear as
+   notices. To trigger one, stop the web server and move a status: the error
+   notice is read, and *Retry* is reachable with `Tab`.
+
+**Dashboard** (*Content Workflow → Dashboard*):
+
+7. **Table navigation.** Press `T` to jump to the table. NVDA reads the column
+   count and the column headers. Move with `Ctrl+Alt+Arrow`. Headers are
+   announced as you change column. Empty cells read as their label
+   ("Unassigned", "No due date") instead of a bare dash. The status column reads
+   the label text. Search is labelled "Search content".
+8. **Row actions.** Tab to a row's *Actions* menu button and open it. Items are
+   read as menu items (*Edit*, *Approve*, *Request changes*, …). Pick
+   *Approve*. The modal announces its title "Approve content?" and the question
+   "Move "{title}" from Review to Approved?". The optional comment field reads
+   "Comment (optional)" with its description. Save. The snackbar is announced,
+   and focus returns to the table.
+9. **Bulk modal.** Tick two rows. Their checkboxes are labelled with the post
+   titles. Open the bulk actions menu and choose *Change status*. The modal
+   announces "Change workflow status" and "Change the workflow status of 2
+   selected items." The *New status* select is labelled. Apply.
+10. **Result notice.** The bulk result notice is announced when it appears (for
+    example "2 posts updated."). With a partial failure, *Show details* reads as
+    a collapsed button. Activating it expands the list, and each failure is
+    read as "{title}: {reason}". Dismiss the notice with its close button.
+
+Record any mismatch as an issue with the NVDA speech viewer output
+(*NVDA menu → Tools → Speech viewer*).
 
 ## Bundle size and `@wordpress/dataviews`
 

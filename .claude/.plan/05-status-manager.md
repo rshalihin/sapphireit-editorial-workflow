@@ -23,7 +23,7 @@ tests/php/unit/StatusManagerTest.php
        'slug'        => 'review',
        'label'       => __( 'Review', 'sit-cwm' ),
        'description' => __( 'Awaiting reviewer feedback.', 'sit-cwm' ),
-       'color'       => '#f0b849',   // used by the sidebar + DataViews badge
+       'color'       => '#996800',   // used by the sidebar + DataViews badge
        'order'       => 30,
        'is_final'    => false,
    ],

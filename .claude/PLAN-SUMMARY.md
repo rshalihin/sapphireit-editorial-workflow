@@ -15,6 +15,11 @@ the authoritative dependency table and progress checklist.
 | **M4 — Dashboard** | 16–18 | Admin DataViews table, filters, bulk actions, settings |
 | **M5 — Ship** | 19–23 | Tests, security, performance, polish, docs |
 
+**Progress (2026-09-28):** steps 02–23 are done; see the checklist in
+`00-INDEX.md`. What remains for v1.0 is the developer's part of
+`24-remaining-v1-tasks.md` (section G): commit and push, get CI green, do the
+screen-reader pass from `DEVELOPMENT.md`, then tag `v1.0.0`.
+
 ---
 
 ## 00 — INDEX
@@ -162,6 +167,8 @@ transition/permission logic), adds shared test fixtures/helpers, writes a
 full Playwright end-to-end editorial flow (draft → ... → published) and a
 dashboard E2E spec, a negative/regression suite (the security tests that
 must never silently break), and a CI workflow matrix across PHP/WP versions.
+**Done:** coverage is measured with Xdebug through `composer test:coverage`,
+and the results are in `DEVELOPMENT.md` → "Coverage".
 
 ## 20 — Security hardening review
 A deliberate, checklist-driven, line-by-line audit of the whole codebase
@@ -171,6 +178,8 @@ sanitization, output escaping, safe SQL, no `eval`/`unserialize`, and
 information-disclosure rules (e.g., a post you can't see returns 404, not
 403, so you can't confirm it exists). Ends with grep-based verification and
 a manual "attack" pass logged in in a subscriber session.
+**Done:** that pass is automated as `tests/e2e/subscriber-probe.spec.js`, and
+its results are in `ARCHITECTURE.md`.
 
 ## 21 — Performance pass (kill the N+1)
 Seeds a realistic dataset (500 posts, 5,000 activity rows) and measures real
@@ -179,7 +188,9 @@ must stay ≤ 8 queries regardless of page size). Applies the batch-loading
 fixes planned back in steps 08/09/12 (batch meta cache, batch user lookups,
 batch "last activity" lookups), tunes `WP_Query` usage, and adds a
 regression-guarding PHPUnit test that fails if someone reintroduces a
-per-row query.
+per-row query. **Done:** `bin/measure.php` produces the measurements, and the
+budgets and `EXPLAIN` output are in `DEVELOPMENT.md`. A long activity history no
+longer slows the dashboard (8.3 s → 96 ms).
 
 ## 22 — UX polish, accessibility and i18n
 Makes every state legible: loading, saving, empty, error, forbidden,
@@ -189,7 +200,10 @@ post, revoked permission mid-session, invalid stored status). Adds shared
 confirmation dialogs for destructive/rollback actions, accessibility passes
 (keyboard-only flow, screen reader, contrast, focus management), and full
 internationalization (translatable strings, `.pot` file, RTL support, and
-localized dates).
+localized dates). **Done:** the axe, keyboard and UI-state specs pass. Two
+default badge colours were darkened so every badge is at least 4.5:1 contrast.
+RTL was checked on a live site. `DEVELOPMENT.md` → "Accessibility" holds the
+contrast table and the NVDA script for the developer's screen-reader pass.
 
 ## 23 — Documentation and Free v1.0 release
 Turns the repo into a "portfolio-ready" package: README with

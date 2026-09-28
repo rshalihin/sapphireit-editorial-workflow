@@ -68,10 +68,10 @@ Tick a box only when that step's acceptance criteria all pass.
 - [x] 16 Admin dashboard (DataViews)
 - [x] 17 Filters + bulk actions
 - [x] 18 Settings page
-- [ ] 19 Testing sweep  _(suites written and green: PHPUnit unit 104 + integration 184, Jest 131; open: coverage not measured — needs Xdebug/PCOV, `DEVELOPMENT.md` table still "—")_
-- [ ] 20 Security hardening review  _(checklist, greps and negative suite done; open: logged-in subscriber probe against a live site, see `ARCHITECTURE.md`)_
-- [ ] 21 Performance pass  _(batch loading and query-count tests done; open: seeded timings and `EXPLAIN` output not recorded in `DEVELOPMENT.md`)_
-- [ ] 22 UX polish + i18n  _(RTL, `.pot`, confirmations and e2e specs done; open: manual keyboard-only, screen-reader and axe passes)_
+- [x] 19 Testing sweep  _(PHPUnit unit 104 + integration 199, Jest 164; coverage measured with Xdebug and `composer test:coverage` green: `DEVELOPMENT.md` → "Coverage" — `Workflow/` 95.5 %, 100 % status-change branches; re-verified 2026-09-28, see `24-remaining-v1-tasks.md`)_
+- [x] 20 Security hardening review  _(checklist in `20-security-hardening-review.md` ticked; `tests/e2e/subscriber-probe.spec.js` passes, results in `ARCHITECTURE.md` → "Subscriber probe")_
+- [x] 21 Performance pass  _(`bin/measure.php`; budgets, timings and `EXPLAIN` in `DEVELOPMENT.md` → "Performance"; `get_for_posts()` long-history fix 8.3 s → 96 ms)_
+- [x] 22 UX polish + i18n  _(axe/keyboard/ui-states specs pass; badge contrast table, RTL check and NVDA script in `DEVELOPMENT.md` → "Accessibility"; `.pot` regenerated; the manual screen-reader pass itself is the developer's, step G of `24-remaining-v1-tasks.md`)_
 - [x] 23 Docs + release  _(docs, screenshots, zip tooling and release.yml done and verified locally; the tag push, the clean-WP install check and the full CI matrix are the developer's)_
 
 ## Out of scope for v1.0 (do not build)

@@ -95,8 +95,16 @@ export async function loginAs( page, username, password = PASSWORD ) {
 	await releasePostLock( page );
 	await page.context().clearCookies();
 	await page.goto( '/wp-login.php' );
-	await page.locator( '#user_login' ).fill( username );
+
+	// 200 ms after load, core's wp_attempt_focus() focuses and selects
+	// #user_login. If that lands while the password is being typed, the
+	// password replaces the username and the empty required password field
+	// blocks the submit. Wait for it before typing anything.
+	const userLogin = page.locator( '#user_login' );
+	await expect( userLogin ).toBeFocused();
+	await userLogin.fill( username );
 	await page.locator( '#user_pass' ).fill( password );
+	await expect( userLogin ).toHaveValue( username );
 	await page.locator( '#wp-submit' ).click();
 	await page.waitForURL( '**/wp-admin/**' );
 }

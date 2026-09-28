@@ -150,7 +150,7 @@ final class StatusManagerTest extends TestCase {
 		$this->assertSame( 'Review', $this->manager->label( 'review' ) );
 		$this->assertSame( 'unknown_slug', $this->manager->label( 'unknown_slug' ) );
 		$this->assertNull( $this->manager->get( 'unknown_slug' ) );
-		$this->assertSame( '#f0b849', $this->manager->get( 'review' )['color'] );
+		$this->assertSame( '#996800', $this->manager->get( 'review' )['color'] );
 		$this->assertTrue( $this->manager->is_final( 'published' ) );
 		$this->assertFalse( $this->manager->is_final( 'approved' ) );
 		$this->assertFalse( $this->manager->is_final( 'unknown_slug' ) );

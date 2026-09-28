@@ -13,6 +13,11 @@ Nothing yet.
 
 First public release. Free v1.0 feature scope, complete.
 
+Requires WordPress 6.8 or later and PHP 7.4 or later. 6.8 is the oldest core
+the bundled `@wordpress/dataviews` 11.3.0 runs on, and
+`tests/php/integration/AssetCompatTest.php` fails the build if a built script
+depends on a handle 6.8 does not register.
+
 ### Added
 
 **Workflow engine**
@@ -52,6 +57,17 @@ First public release. Free v1.0 feature scope, complete.
   sanitize callback and a validate callback or enum.
 - Bulk endpoint applies one action to up to 100 posts, re-running the full
   single-item authorization per post.
+- Every route publishes a response schema, including `GET /statuses`, and
+  `SchemaContractTest` checks each response against its `OPTIONS` schema.
+
+**Performance**
+
+- `ActivityLogger::get_for_posts()` (the dashboard's *Last activity* column)
+  reads each post's newest entry with one `LIMIT 1` index scan per post. The
+  first version used a correlated subquery that was quadratic in history. With
+  a 3 000-row history on the page, `GET /posts?per_page=100` drops from 8.3 s to
+  96 ms. Budgets and
+  `EXPLAIN` output are in [DEVELOPMENT.md](DEVELOPMENT.md#performance).
 
 **Editor and admin UI**
 
@@ -61,12 +77,21 @@ First public release. Free v1.0 feature scope, complete.
   filtering, sorting and pagination, row actions and bulk actions.
 - Activity timeline grouped by day.
 - Settings screen for choosing which post types the workflow applies to.
+- Status badges meet 4.5:1 contrast. The default Review (`#996800`) and
+  Approved (`#008a20`) colours are darker than in the pre-release builds.
+  RTL stylesheets are generated and loaded for RTL locales.
 
 **Project**
 
 - Full translation coverage with the `sit-cwm` text domain and a generated POT.
 - PHPUnit (unit + integration), Jest and Playwright suites; CI across
-  PHP 7.4/8.1/8.3 × WordPress 6.8/latest.
+  PHP 7.4/8.1/8.3 × WordPress 6.8/latest, with end-to-end legs on WordPress
+  6.8 and latest. The Playwright suite includes axe, keyboard-only, UI-state and
+  subscriber-probe specs.
+- Dev only: `composer test:coverage` measures line coverage for both PHP suites
+  and `WorkflowManager` branch coverage (Xdebug), and checks them against the
+  release minimums. `bin/measure.php` times the hot REST paths against the
+  performance budgets. Neither ships in the release zip.
 - `assets/build/` committed, so the plugin runs from a clone or zip with no
   build step.
 
