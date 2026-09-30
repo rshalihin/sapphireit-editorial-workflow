@@ -1,15 +1,15 @@
 <?php
 /**
- * Plugin Name:       Content Workflow Manager
- * Plugin URI:        https://github.com/shappire-it/content-workflow-manager
+ * Plugin Name:       SapphireIT Editorial Workflow
+ * Plugin URI:        https://github.com/rshalihin/sapphireit-editorial-workflow
  * Description:       Adds an editorial approval workflow (Draft, Writing, Review, Needs Changes, Approved, Published) with reviewers, due dates, comments and activity history to posts, pages and custom post types.
  * Version:           1.0.0
  * Requires at least: 6.8
  * Requires PHP:      7.4
- * Author:            Shappire IT
+ * Author:            SapphireIT
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       sit-cwm
+ * Text Domain:       sapphireit-editorial-workflow
  * Domain Path:       /languages
  *
  * @package Sit_Cwm
@@ -112,7 +112,7 @@ function sit_cwm_php_version_notice() {
 		esc_html(
 			sprintf(
 				/* translators: 1: Required PHP version, 2: Current PHP version. */
-				__( 'Content Workflow Manager requires PHP %1$s or higher. This site runs PHP %2$s, so the plugin is not loaded.', 'sit-cwm' ),
+				__( 'SapphireIT Editorial Workflow requires PHP %1$s or higher. This site runs PHP %2$s, so the plugin is not loaded.', 'sapphireit-editorial-workflow' ),
 				'7.4',
 				PHP_VERSION
 			)

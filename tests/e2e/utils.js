@@ -110,7 +110,7 @@ export async function loginAs( page, username, password = PASSWORD ) {
 }
 
 /**
- * Opens a post in the block editor with the Content Workflow sidebar open.
+ * Opens a post in the block editor with the Editorial Workflow sidebar open.
  *
  * @param {Object}  page                   Playwright page.
  * @param {number}  postId                 Post id.
@@ -169,7 +169,7 @@ export async function openWorkflowSidebar(
 
 	const toggle = page
 		.getByRole( 'region', { name: 'Editor top bar' } )
-		.getByRole( 'button', { name: 'Content Workflow', exact: true } );
+		.getByRole( 'button', { name: 'Editorial Workflow', exact: true } );
 
 	if ( ( await toggle.getAttribute( 'aria-pressed' ) ) !== 'true' ) {
 		await toggle.click();

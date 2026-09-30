@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Content Workflow Manager are documented here.
+All notable changes to SapphireIT Editorial Workflow are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -12,6 +12,8 @@ Nothing yet.
 ## [1.0.0] - 2026-09-17
 
 First public release. Free v1.0 feature scope, complete.
+
+Plugin renamed from Content Workflow Manager before first release.
 
 Requires WordPress 6.8 or later and PHP 7.4 or later. 6.8 is the oldest core
 the bundled `@wordpress/dataviews` 11.3.0 runs on, and
@@ -83,7 +85,7 @@ depends on a handle 6.8 does not register.
 
 **Project**
 
-- Full translation coverage with the `sit-cwm` text domain and a generated POT.
+- Full translation coverage with the `sapphireit-editorial-workflow` text domain and a generated POT.
 - PHPUnit (unit + integration), Jest and Playwright suites; CI across
   PHP 7.4/8.1/8.3 × WordPress 6.8/latest, with end-to-end legs on WordPress
   6.8 and latest. The Playwright suite includes axe, keyboard-only, UI-state and
@@ -114,5 +116,5 @@ publish the post**. Email, Slack, the editorial calendar, multiple workflows,
 checklist gating, a rules engine and scheduled publishing are roadmap items, not
 omissions.
 
-[Unreleased]: https://github.com/shappire-it/content-workflow-manager/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/shappire-it/content-workflow-manager/releases/tag/v1.0.0
+[Unreleased]: https://github.com/rshalihin/sapphireit-editorial-workflow/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/rshalihin/sapphireit-editorial-workflow/releases/tag/v1.0.0

@@ -47,7 +47,7 @@ export default function App() {
 		<div className="sit-cwm-dashboard">
 			{ /* The page's <h1> is printed by PHP for screen readers. */ }
 			<div className="sit-cwm-dashboard-header" aria-hidden="true">
-				{ __( 'Content Workflow', 'sit-cwm' ) }
+				{ __( 'Editorial Workflow', 'sapphireit-editorial-workflow' ) }
 			</div>
 			<div className="sit-cwm-dashboard-body">
 				<WorkflowDataViews />

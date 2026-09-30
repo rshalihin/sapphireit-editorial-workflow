@@ -1,6 +1,6 @@
 # Architecture
 
-How Content Workflow Manager is put together, and why. Read
+How SapphireIT Editorial Workflow is put together, and why. Read
 [WORKFLOW.md](WORKFLOW.md) first if you want the editorial model rather than
 the code.
 
@@ -668,7 +668,7 @@ existence check, and applies to single and bulk requests alike.
 ### Exceptions (allowed deliberately)
 
 - **E1** `current_user_can( 'activate_plugins' )` in
-  `content-workflow-manager.php`: decides only whether to show the
+  `sapphireit-editorial-workflow.php`: decides only whether to show the
   "PHP too old" notice, runs before the autoloader, not a workflow decision.
 - **E2** `$wpdb->query()` in `Database::drop()` (`DROP TABLE` on the name from
   `table_name()`) and `uninstall.php` (prepared `LIKE` delete of `_sit_cwm_*`

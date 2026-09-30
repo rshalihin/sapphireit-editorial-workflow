@@ -1,11 +1,11 @@
 {
-	"name": "shappire-it/content-workflow-manager",
+	"name": "sapphireit/sapphireit-editorial-workflow",
 	"description": "Editorial approval workflow for WordPress posts, pages and custom post types.",
 	"type": "wordpress-plugin",
 	"license": "GPL-2.0-or-later",
 	"authors": [
 		{
-			"name": "Shappire IT"
+			"name": "SapphireIT"
 		}
 	],
 	"require": {

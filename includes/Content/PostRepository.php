@@ -608,7 +608,11 @@ final class PostRepository implements Bootable {
 
 	/**
 	 * One page of post ids whose reviewer is a given user, across every post
-	 * type and status (including trash), so no stale reference survives.
+	 * type and status (including trash and unregistered types), so no stale
+	 * reference survives.
+	 *
+	 * Reads postmeta directly rather than through `WP_Query`, so query
+	 * filters from other plugins cannot hide a post from the cleanup.
 	 *
 	 * @since 1.0.0
 	 *
@@ -616,24 +620,19 @@ final class PostRepository implements Bootable {
 	 * @return int[]
 	 */
 	private function posts_with_reviewer( int $user_id ): array {
-		$query = new WP_Query(
-			array(
-				'post_type'              => array_values( get_post_types() ),
-				'post_status'            => array_values( get_post_stati() ),
-				'meta_key'               => self::META_REVIEWER, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Rare, bounded cleanup on user deletion.
-				'meta_value'             => (string) $user_id, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Rare, bounded cleanup on user deletion.
-				'fields'                 => 'ids',
-				'posts_per_page'         => self::CLEAR_BATCH_SIZE,
-				'orderby'                => 'ID',
-				'order'                  => 'ASC',
-				'no_found_rows'          => true,
-				'suppress_filters'       => true,
-				'update_post_meta_cache' => false,
-				'update_post_term_cache' => false,
+		global $wpdb;
+
+		// Not cached: each cleanup batch must see the previous batch's deletes.
+		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Rare, bounded cleanup on user deletion; must bypass query filters.
+			$wpdb->prepare(
+				"SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s ORDER BY post_id ASC LIMIT %d",
+				self::META_REVIEWER,
+				(string) $user_id,
+				self::CLEAR_BATCH_SIZE
 			)
 		);
 
-		return array_map( 'intval', $query->posts );
+		return array_map( 'intval', $post_ids );
 	}
 
 	/**

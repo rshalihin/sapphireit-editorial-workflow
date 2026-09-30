@@ -77,11 +77,11 @@ export default function groupByDay( items, now = new Date() ) {
 			let label;
 
 			if ( day === '' ) {
-				label = __( 'Unknown date', 'sit-cwm' );
+				label = __( 'Unknown date', 'sapphireit-editorial-workflow' );
 			} else if ( day === today ) {
-				label = __( 'Today', 'sit-cwm' );
+				label = __( 'Today', 'sapphireit-editorial-workflow' );
 			} else if ( day === yesterday ) {
-				label = __( 'Yesterday', 'sit-cwm' );
+				label = __( 'Yesterday', 'sapphireit-editorial-workflow' );
 			} else {
 				label = formatDate( day );
 			}

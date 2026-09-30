@@ -42,6 +42,29 @@ final class PluginTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The text domain, the main file name and the release zip's top-level
+	 * directory all equal the WordPress.org slug. Plugin Check fails a text
+	 * domain that differs from the slug, so these must not drift apart.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return void
+	 */
+	public function test_text_domain_matches_release_slug() {
+		$root = dirname( SIT_CWM_PLUGIN_FILE );
+
+		// Read, not included: including the script would build a zip.
+		$build_zip = (string) file_get_contents( $root . '/bin/build-zip.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local file.
+		$this->assertSame( 1, preg_match( "/define\(\s*'SIT_CWM_SLUG',\s*'([^']+)'/", $build_zip, $matches ) );
+		$slug = $matches[1];
+
+		$headers = get_file_data( SIT_CWM_PLUGIN_FILE, array( 'text_domain' => 'Text Domain' ) );
+
+		$this->assertSame( $slug, $headers['text_domain'] );
+		$this->assertSame( $slug . '.php', basename( SIT_CWM_PLUGIN_FILE ) );
+	}
+
+	/**
 	 * `boot()` attaches the plugin-level hooks at their priorities.
 	 *
 	 * @since 1.0.0
@@ -52,7 +75,7 @@ final class PluginTest extends WP_UnitTestCase {
 		$plugin = new Plugin( new Container() );
 		$plugin->boot();
 
-		$this->assertSame( 10, has_action( 'init', array( $plugin, 'load_textdomain' ) ) );
+		$this->assertFalse( method_exists( $plugin, 'load_textdomain' ) );
 		$this->assertSame( 20, has_action( 'plugins_loaded', array( $plugin, 'maybe_upgrade_database' ) ) );
 		$this->assertSame( 5, has_action( 'rest_api_init', array( $plugin, 'register_rest_services' ) ) );
 	}

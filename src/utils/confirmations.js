@@ -53,16 +53,16 @@ export function getTransitionConfirmation( transition ) {
 		return {
 			title: sprintf(
 				/* translators: %s: Target workflow status label. */
-				__( 'Move to %s?', 'sit-cwm' ),
+				__( 'Move to %s?', 'sapphireit-editorial-workflow' ),
 				label
 			),
 			message: __(
 				'This sends the content back to an earlier workflow stage.',
-				'sit-cwm'
+				'sapphireit-editorial-workflow'
 			),
 			confirmLabel: sprintf(
 				/* translators: %s: Target workflow status label. */
-				__( 'Move to %s', 'sit-cwm' ),
+				__( 'Move to %s', 'sapphireit-editorial-workflow' ),
 				label
 			),
 			isDestructive: true,
@@ -71,21 +71,24 @@ export function getTransitionConfirmation( transition ) {
 
 	if ( transition.slug === APPROVED ) {
 		return {
-			title: __( 'Approve content?', 'sit-cwm' ),
-			message: __( 'This will mark the content as approved.', 'sit-cwm' ),
-			confirmLabel: __( 'Approve', 'sit-cwm' ),
+			title: __( 'Approve content?', 'sapphireit-editorial-workflow' ),
+			message: __(
+				'This will mark the content as approved.',
+				'sapphireit-editorial-workflow'
+			),
+			confirmLabel: __( 'Approve', 'sapphireit-editorial-workflow' ),
 			isDestructive: false,
 		};
 	}
 
 	if ( getStatusDefinition( transition.slug )?.is_final ) {
 		return {
-			title: __( 'Publish content?', 'sit-cwm' ),
+			title: __( 'Publish content?', 'sapphireit-editorial-workflow' ),
 			message: __(
 				'This will mark the workflow as published and complete the cycle. It does not change the post’s WordPress publish status.',
-				'sit-cwm'
+				'sapphireit-editorial-workflow'
 			),
-			confirmLabel: __( 'Publish', 'sit-cwm' ),
+			confirmLabel: __( 'Publish', 'sapphireit-editorial-workflow' ),
 			isDestructive: false,
 		};
 	}
@@ -93,13 +96,13 @@ export function getTransitionConfirmation( transition ) {
 	return {
 		title: sprintf(
 			/* translators: %s: Target workflow status label. */
-			__( 'Move to %s?', 'sit-cwm' ),
+			__( 'Move to %s?', 'sapphireit-editorial-workflow' ),
 			label
 		),
 		message: '',
 		confirmLabel: sprintf(
 			/* translators: %s: Target workflow status label. */
-			__( 'Move to %s', 'sit-cwm' ),
+			__( 'Move to %s', 'sapphireit-editorial-workflow' ),
 			label
 		),
 		isDestructive: false,

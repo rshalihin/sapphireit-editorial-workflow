@@ -57,7 +57,7 @@ export default function ReviewerControl( {
 				</div>
 			) }
 			<ComboboxControl
-				label={ __( 'Reviewer', 'sit-cwm' ) }
+				label={ __( 'Reviewer', 'sapphireit-editorial-workflow' ) }
 				value={ String( currentId ) }
 				options={ options }
 				onChange={ handleChange }

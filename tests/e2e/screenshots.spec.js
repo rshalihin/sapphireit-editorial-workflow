@@ -272,7 +272,7 @@ test.describe( 'Documentation screenshots', () => {
 		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-settings' );
 
 		await expect(
-			page.getByRole( 'heading', { name: 'Content Workflow Settings' } )
+			page.getByRole( 'heading', { name: 'Editorial Workflow Settings' } )
 		).toBeVisible();
 
 		await page.screenshot( {

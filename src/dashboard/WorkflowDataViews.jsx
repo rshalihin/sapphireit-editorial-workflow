@@ -135,18 +135,18 @@ function EmptyState() {
 
 	return (
 		<div className="sit-cwm-dashboard-empty">
-			<p>{ __( 'No content is in the workflow yet.', 'sit-cwm' ) }</p>
+			<p>{ __( 'No content is in the workflow yet.', 'sapphireit-editorial-workflow' ) }</p>
 			<p className="sit-cwm-dashboard-empty-hint">
 				{ __(
 					'Content of the workflow-enabled post types appears here as soon as it is created.',
-					'sit-cwm'
+					'sapphireit-editorial-workflow'
 				) }
 			</p>
 			{ href && (
 				<a className="button button-primary" href={ href }>
 					{ sprintf(
 						/* translators: %s: Singular post type label, e.g. "Post". */
-						__( 'Add new %s', 'sit-cwm' ),
+						__( 'Add new %s', 'sapphireit-editorial-workflow' ),
 						type.singularLabel
 					) }
 				</a>
@@ -168,11 +168,11 @@ function NoMatches( { onClear } ) {
 			<p>
 				{ __(
 					'No content matches the current search and filters.',
-					'sit-cwm'
+					'sapphireit-editorial-workflow'
 				) }
 			</p>
 			<Button __next40pxDefaultSize variant="secondary" onClick={ onClear }>
-				{ __( 'Clear all filters', 'sit-cwm' ) }
+				{ __( 'Clear all filters', 'sapphireit-editorial-workflow' ) }
 			</Button>
 		</div>
 	);
@@ -187,7 +187,7 @@ function NoMatches( { onClear } ) {
 function LoadFailed() {
 	return (
 		<div className="sit-cwm-dashboard-empty">
-			<p>{ __( 'Content could not be loaded.', 'sit-cwm' ) }</p>
+			<p>{ __( 'Content could not be loaded.', 'sapphireit-editorial-workflow' ) }</p>
 		</div>
 	);
 }
@@ -287,7 +287,7 @@ export default function WorkflowDataViews() {
 					status="error"
 					isDismissible={ false }
 					actions={ [
-						{ label: __( 'Retry', 'sit-cwm' ), onClick: refresh },
+						{ label: __( 'Retry', 'sapphireit-editorial-workflow' ), onClick: refresh },
 					] }
 				>
 					{ error.message }
@@ -298,7 +298,7 @@ export default function WorkflowDataViews() {
 					{ isRefreshing && (
 						<span className="sit-cwm-dashboard-refreshing">
 							<Spinner />
-							{ __( 'Refreshing…', 'sit-cwm' ) }
+							{ __( 'Refreshing…', 'sapphireit-editorial-workflow' ) }
 						</span>
 					) }
 					{ isFiltered && (
@@ -307,7 +307,7 @@ export default function WorkflowDataViews() {
 							variant="tertiary"
 							onClick={ clearFilters }
 						>
-							{ __( 'Clear all filters', 'sit-cwm' ) }
+							{ __( 'Clear all filters', 'sapphireit-editorial-workflow' ) }
 						</Button>
 					) }
 				</div>
@@ -325,7 +325,7 @@ export default function WorkflowDataViews() {
 				getItemId={ getItemId }
 				isLoading={ isLoading }
 				config={ CONFIG }
-				searchLabel={ __( 'Search content', 'sit-cwm' ) }
+				searchLabel={ __( 'Search content', 'sapphireit-editorial-workflow' ) }
 				empty={ empty }
 				onReset={
 					isDefaultView ? false : () => setView( DEFAULT_VIEW )

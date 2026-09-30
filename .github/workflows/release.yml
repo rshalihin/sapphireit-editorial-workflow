@@ -68,7 +68,7 @@ jobs:
       - name: Verify the zip contents
         run: |
           set -euo pipefail
-          SLUG=content-workflow-manager
+          SLUG=sapphireit-editorial-workflow
           ZIP="dist/${SLUG}.zip"
 
           unzip -l "$ZIP"
@@ -84,7 +84,7 @@ jobs:
             "${SLUG}/assets/build/dashboard.js"
             "${SLUG}/assets/build/dashboard.asset.php"
             "${SLUG}/assets/build/dashboard.css"
-            "${SLUG}/languages/sit-cwm.pot"
+            "${SLUG}/languages/${SLUG}.pot"
           )
           for path in "${required[@]}"; do
             if ! unzip -l "$ZIP" | grep -qF " ${path}"; then
@@ -115,14 +115,14 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf verify && mkdir verify
-          unzip -q dist/content-workflow-manager.zip -d verify
+          unzip -q dist/sapphireit-editorial-workflow.zip -d verify
           find verify -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
           echo "All shipped PHP files parse on PHP 7.4."
 
       - uses: actions/upload-artifact@v4
         with:
-          name: content-workflow-manager-${{ env.VERSION }}
-          path: dist/content-workflow-manager.zip
+          name: sapphireit-editorial-workflow-${{ env.VERSION }}
+          path: dist/sapphireit-editorial-workflow.zip
           retention-days: 30
 
       # Published as a draft: the maintainer installs it into a clean WordPress
@@ -131,8 +131,8 @@ jobs:
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
-          name: Content Workflow Manager ${{ env.VERSION }}
-          files: dist/content-workflow-manager.zip
+          name: SapphireIT Editorial Workflow ${{ env.VERSION }}
+          files: dist/sapphireit-editorial-workflow.zip
           generate_release_notes: true
           draft: true
           fail_on_unmatched_files: true

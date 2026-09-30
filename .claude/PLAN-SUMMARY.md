@@ -1,4 +1,4 @@
-# Content Workflow Manager — Build Plan Report
+# SapphireIT Editorial Workflow — Build Plan Report
 
 Plain-language explanation of what each file in `.claude/.plan/` does. Files
 are meant to be built **in numeric order** — each one is a self-contained change,

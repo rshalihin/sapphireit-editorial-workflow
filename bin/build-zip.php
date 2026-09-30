@@ -4,7 +4,7 @@
  * Builds the distributable plugin zip from the working tree.
  *
  * Everything listed in `.distignore` is left out; everything else is added
- * under a `content-workflow-manager/` top-level directory, which is what
+ * under a `sapphireit-editorial-workflow/` top-level directory, which is what
  * WordPress expects when the zip is uploaded through Plugins → Add New.
  *
  * The same script runs locally and in `.github/workflows/release.yml`, so the
@@ -13,8 +13,8 @@
  * WordPress.
  *
  * Usage:
- *   php bin/build-zip.php                    # → content-workflow-manager.zip
- *   php bin/build-zip.php --out=dist         # → dist/content-workflow-manager.zip
+ *   php bin/build-zip.php                    # → dist/sapphireit-editorial-workflow.zip
+ *   php bin/build-zip.php --out=build        # → build/sapphireit-editorial-workflow.zip
  *   php bin/build-zip.php --list             # print what would ship, build nothing
  *
  * Exit code 0 on success, 1 on failure.
@@ -42,7 +42,7 @@ if ( ! defined( 'SIT_CWM_SLUG' ) ) {
 	 *
 	 * @since 1.0.0
 	 */
-	define( 'SIT_CWM_SLUG', 'content-workflow-manager' );
+	define( 'SIT_CWM_SLUG', 'sapphireit-editorial-workflow' );
 }
 
 /**
@@ -162,7 +162,7 @@ function sit_cwm_zip_relative( string $root, string $path ): string {
 }
 
 /**
- * Resolves `--out=`, defaulting to the plugin root.
+ * Resolves `--out=`, defaulting to `dist/` under the plugin root.
  *
  * @since 1.0.0
  *
@@ -179,13 +179,13 @@ function sit_cwm_zip_out_dir( string $root, array $args ): string {
 		$out = rtrim( str_replace( '\\', '/', substr( $arg, 6 ) ), '/' );
 
 		if ( '' === $out ) {
-			return $root;
+			return $root . '/dist';
 		}
 
 		return preg_match( '#^([A-Za-z]:)?/#', $out ) ? $out : $root . '/' . $out;
 	}
 
-	return $root;
+	return $root . '/dist';
 }
 
 /**

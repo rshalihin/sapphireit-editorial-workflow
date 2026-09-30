@@ -96,7 +96,7 @@ class UserController extends AbstractController {
 
 		return array(
 			'search'   => array(
-				'description'       => __( 'Limit to users whose name matches.', 'sit-cwm' ),
+				'description'       => __( 'Limit to users whose name matches.', 'sapphireit-editorial-workflow' ),
 				'type'              => 'string',
 				'maxLength'         => 100,
 				'validate_callback' => 'rest_validate_request_arg',
@@ -104,7 +104,7 @@ class UserController extends AbstractController {
 			),
 			'per_page' => $pagination['per_page'],
 			'post_id'  => array(
-				'description'       => __( 'Limit to users who can review this post.', 'sit-cwm' ),
+				'description'       => __( 'Limit to users who can review this post.', 'sapphireit-editorial-workflow' ),
 				'type'              => 'integer',
 				'minimum'           => 1,
 				'validate_callback' => 'rest_validate_request_arg',
@@ -269,17 +269,17 @@ class UserController extends AbstractController {
 			'type'       => 'object',
 			'properties' => array(
 				'id'     => array(
-					'description' => __( 'User ID.', 'sit-cwm' ),
+					'description' => __( 'User ID.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'integer',
 					'readonly'    => true,
 				),
 				'name'   => array(
-					'description' => __( 'Display name.', 'sit-cwm' ),
+					'description' => __( 'Display name.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
 				'avatar' => array(
-					'description' => __( 'Avatar URL.', 'sit-cwm' ),
+					'description' => __( 'Avatar URL.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'format'      => 'uri',
 					'readonly'    => true,

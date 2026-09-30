@@ -74,10 +74,10 @@ export function actorName( entry ) {
 	}
 
 	if ( ! entry.user && entry.user_id === 0 ) {
-		return __( 'System', 'sit-cwm' );
+		return __( 'System', 'sapphireit-editorial-workflow' );
 	}
 
-	return __( 'Someone', 'sit-cwm' );
+	return __( 'Someone', 'sapphireit-editorial-workflow' );
 }
 
 /**
@@ -100,7 +100,7 @@ function sentenceTemplate( entry ) {
 			if ( entry.old_label && entry.new_label ) {
 				return sprintf(
 					/* translators: 1: user name, 2: previous status, 3: new status */
-					__( '%1$s changed status from %2$s to %3$s', 'sit-cwm' ),
+					__( '%1$s changed status from %2$s to %3$s', 'sapphireit-editorial-workflow' ),
 					actor,
 					from,
 					to
@@ -109,7 +109,7 @@ function sentenceTemplate( entry ) {
 
 			return sprintf(
 				/* translators: 1: user name, 2: new status */
-				__( '%1$s set the status to %2$s', 'sit-cwm' ),
+				__( '%1$s set the status to %2$s', 'sapphireit-editorial-workflow' ),
 				actor,
 				to
 			);
@@ -117,7 +117,7 @@ function sentenceTemplate( entry ) {
 		case 'reviewer_assigned':
 			return sprintf(
 				/* translators: 1: user name, 2: reviewer name */
-				__( '%1$s assigned %2$s as reviewer', 'sit-cwm' ),
+				__( '%1$s assigned %2$s as reviewer', 'sapphireit-editorial-workflow' ),
 				actor,
 				to
 			);
@@ -126,7 +126,7 @@ function sentenceTemplate( entry ) {
 			if ( entry.old_label ) {
 				return sprintf(
 					/* translators: 1: user name, 2: reviewer name */
-					__( '%1$s removed %2$s as reviewer', 'sit-cwm' ),
+					__( '%1$s removed %2$s as reviewer', 'sapphireit-editorial-workflow' ),
 					actor,
 					from
 				);
@@ -134,14 +134,14 @@ function sentenceTemplate( entry ) {
 
 			return sprintf(
 				/* translators: %s: user name */
-				__( '%s removed the reviewer', 'sit-cwm' ),
+				__( '%s removed the reviewer', 'sapphireit-editorial-workflow' ),
 				actor
 			);
 
 		case 'due_date_set':
 			return sprintf(
 				/* translators: 1: user name, 2: due date */
-				__( '%1$s set the due date to %2$s', 'sit-cwm' ),
+				__( '%1$s set the due date to %2$s', 'sapphireit-editorial-workflow' ),
 				actor,
 				to
 			);
@@ -149,21 +149,21 @@ function sentenceTemplate( entry ) {
 		case 'due_date_cleared':
 			return sprintf(
 				/* translators: %s: user name */
-				__( '%s removed the due date', 'sit-cwm' ),
+				__( '%s removed the due date', 'sapphireit-editorial-workflow' ),
 				actor
 			);
 
 		case 'comment_added':
 			return sprintf(
 				/* translators: %s: user name */
-				__( '%s commented', 'sit-cwm' ),
+				__( '%s commented', 'sapphireit-editorial-workflow' ),
 				actor
 			);
 
 		default:
 			return sprintf(
 				/* translators: 1: user name, 2: activity label, e.g. "Status changed" */
-				__( '%1$s: %2$s', 'sit-cwm' ),
+				__( '%1$s: %2$s', 'sapphireit-editorial-workflow' ),
 				actor,
 				'<label />'
 			);

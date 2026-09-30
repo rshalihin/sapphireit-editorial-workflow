@@ -1,5 +1,5 @@
 /**
- * The "Content Workflow" editor sidebar.
+ * The "Editorial Workflow" editor sidebar.
  */
 
 /**
@@ -58,8 +58,8 @@ function Unavailable() {
 		<PanelBody>
 			<Notice status="info" isDismissible={ false }>
 				{ __(
-					'Workflow is not available for this post type. An administrator can enable it in the Content Workflow settings.',
-					'sit-cwm'
+					'Workflow is not available for this post type. An administrator can enable it in the Editorial Workflow settings.',
+					'sapphireit-editorial-workflow'
 				) }
 			</Notice>
 		</PanelBody>
@@ -81,7 +81,7 @@ function LoadError( { error, onRetry } ) {
 				<Notice status="warning" isDismissible={ false }>
 					{ __(
 						'You don’t have permission to view the workflow of this content.',
-						'sit-cwm'
+						'sapphireit-editorial-workflow'
 					) }
 				</Notice>
 			</PanelBody>
@@ -95,7 +95,7 @@ function LoadError( { error, onRetry } ) {
 				isDismissible={ false }
 				actions={ [
 					{
-						label: __( 'Retry', 'sit-cwm' ),
+						label: __( 'Retry', 'sapphireit-editorial-workflow' ),
 						onClick: onRetry,
 						variant: 'secondary',
 					},
@@ -136,7 +136,7 @@ function WorkflowPanel( { postId } ) {
 			<div className="sit-cwm-sidebar-loading">
 				<Spinner />
 				<VisuallyHidden>
-					{ __( 'Loading workflow…', 'sit-cwm' ) }
+					{ __( 'Loading workflow…', 'sapphireit-editorial-workflow' ) }
 				</VisuallyHidden>
 			</div>
 		);
@@ -172,7 +172,7 @@ function WorkflowPanel( { postId } ) {
 				>
 					{ __(
 						'This content was deleted or is no longer part of the workflow. Workflow controls are disabled.',
-						'sit-cwm'
+						'sapphireit-editorial-workflow'
 					) }
 				</Notice>
 			) }
@@ -187,7 +187,7 @@ function WorkflowPanel( { postId } ) {
 						isNetworkError( error )
 							? [
 									{
-										label: __( 'Retry', 'sit-cwm' ),
+										label: __( 'Retry', 'sapphireit-editorial-workflow' ),
 										onClick: () => {
 											clearError();
 											refresh();
@@ -212,7 +212,7 @@ function WorkflowPanel( { postId } ) {
 						/* translators: %s: Default workflow status label, e.g. "Draft". */
 						__(
 							'This content had a workflow status that is no longer available, so it is treated as %s. Use the workflow actions below to continue.',
-							'sit-cwm'
+							'sapphireit-editorial-workflow'
 						),
 						workflow.status_label
 					) }
@@ -227,7 +227,7 @@ function WorkflowPanel( { postId } ) {
 				>
 					{ __(
 						'You can follow this workflow, but your role doesn’t allow you to change it.',
-						'sit-cwm'
+						'sapphireit-editorial-workflow'
 					) }
 				</Notice>
 			) }
@@ -235,7 +235,7 @@ function WorkflowPanel( { postId } ) {
 			{ isRefreshing && (
 				<div className="sit-cwm-sidebar-refreshing">
 					<Spinner />
-					<span>{ __( 'Refreshing…', 'sit-cwm' ) }</span>
+					<span>{ __( 'Refreshing…', 'sapphireit-editorial-workflow' ) }</span>
 				</div>
 			) }
 
@@ -263,7 +263,7 @@ function WorkflowPanel( { postId } ) {
 				/>
 			</PanelBody>
 
-			<PanelBody title={ __( 'Workflow actions', 'sit-cwm' ) }>
+			<PanelBody title={ __( 'Workflow actions', 'sapphireit-editorial-workflow' ) }>
 				<TransitionActions
 					transitions={ workflow.available_transitions }
 					onTransition={ updateStatus }
@@ -273,7 +273,7 @@ function WorkflowPanel( { postId } ) {
 			</PanelBody>
 
 			{ capabilities.can_comment && (
-				<PanelBody title={ __( 'Comment', 'sit-cwm' ) }>
+				<PanelBody title={ __( 'Comment', 'sapphireit-editorial-workflow' ) }>
 					<CommentForm
 						onSubmit={ addComment }
 						isSaving={ isSaving }
@@ -284,7 +284,7 @@ function WorkflowPanel( { postId } ) {
 
 			{ /* Not mounted at all without the capability, so no request is made. */ }
 			{ capabilities.can_view_activity && (
-				<PanelBody title={ __( 'Activity', 'sit-cwm' ) }>
+				<PanelBody title={ __( 'Activity', 'sapphireit-editorial-workflow' ) }>
 					<ActivityTimeline
 						postId={ postId }
 						version={ activityVersion }
@@ -310,7 +310,7 @@ export default function Sidebar() {
 		};
 	}, [] );
 
-	const title = __( 'Content Workflow', 'sit-cwm' );
+	const title = __( 'Editorial Workflow', 'sapphireit-editorial-workflow' );
 
 	return (
 		<>

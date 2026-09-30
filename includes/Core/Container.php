@@ -74,7 +74,7 @@ final class Container {
 
 		if ( ! $this->has( $id ) ) {
 			throw new InvalidArgumentException(
-				sprintf( 'Content Workflow Manager: no service registered with id "%s".', $id ) // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Developer-facing exception message, never rendered as HTML.
+				sprintf( 'SapphireIT Editorial Workflow: no service registered with id "%s".', $id ) // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Developer-facing exception message, never rendered as HTML.
 			);
 		}
 

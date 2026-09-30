@@ -367,7 +367,7 @@ final class WorkflowManager {
 		if ( 0 !== $reviewer_id && $this->posts->sanitize_reviewer_id( $reviewer_id ) !== $reviewer_id ) {
 			return new WP_Error(
 				'sit_cwm_invalid_user',
-				__( 'The selected reviewer does not exist.', 'sit-cwm' ),
+				__( 'The selected reviewer does not exist.', 'sapphireit-editorial-workflow' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -375,7 +375,7 @@ final class WorkflowManager {
 		if ( 0 !== $reviewer_id && ! $this->permissions->can_be_reviewer( $reviewer_id ) ) {
 			return new WP_Error(
 				'sit_cwm_invalid_user',
-				__( 'The selected user is not allowed to review content.', 'sit-cwm' ),
+				__( 'The selected user is not allowed to review content.', 'sapphireit-editorial-workflow' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -427,7 +427,7 @@ final class WorkflowManager {
 		if ( '' !== $date && $this->posts->sanitize_due_date( $date ) !== $date ) {
 			return new WP_Error(
 				'sit_cwm_invalid_date',
-				__( 'The due date must be a valid date in YYYY-MM-DD format.', 'sit-cwm' ),
+				__( 'The due date must be a valid date in YYYY-MM-DD format.', 'sapphireit-editorial-workflow' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -486,7 +486,7 @@ final class WorkflowManager {
 		if ( '' === trim( wp_strip_all_tags( $message ) ) ) {
 			return new WP_Error(
 				'sit_cwm_empty_comment',
-				__( 'The comment cannot be empty.', 'sit-cwm' ),
+				__( 'The comment cannot be empty.', 'sapphireit-editorial-workflow' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -535,7 +535,7 @@ final class WorkflowManager {
 		if ( $this->posts->get_status( $post_id ) !== $from ) {
 			return new WP_Error(
 				'sit_cwm_status_conflict',
-				__( 'The workflow status was changed by someone else. Reload and try again.', 'sit-cwm' ),
+				__( 'The workflow status was changed by someone else. Reload and try again.', 'sapphireit-editorial-workflow' ),
 				array( 'status' => 409 )
 			);
 		}
@@ -543,7 +543,7 @@ final class WorkflowManager {
 		if ( ! $this->statuses->exists( $to ) ) {
 			return new WP_Error(
 				'sit_cwm_invalid_status',
-				__( 'The requested workflow status does not exist.', 'sit-cwm' ),
+				__( 'The requested workflow status does not exist.', 'sapphireit-editorial-workflow' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -551,7 +551,7 @@ final class WorkflowManager {
 		if ( ! $this->transitions->is_valid( $from, $to ) ) {
 			return new WP_Error(
 				'sit_cwm_invalid_transition',
-				__( 'This workflow transition is not allowed.', 'sit-cwm' ),
+				__( 'This workflow transition is not allowed.', 'sapphireit-editorial-workflow' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -581,7 +581,7 @@ final class WorkflowManager {
 
 		return new WP_Error(
 			'sit_cwm_not_managed',
-			__( 'No workflow was found for this content.', 'sit-cwm' ),
+			__( 'No workflow was found for this content.', 'sapphireit-editorial-workflow' ),
 			array( 'status' => 404 )
 		);
 	}
@@ -634,7 +634,7 @@ final class WorkflowManager {
 	private function forbidden(): WP_Error {
 		return new WP_Error(
 			'sit_cwm_forbidden',
-			__( 'You are not allowed to perform this workflow action.', 'sit-cwm' ),
+			__( 'You are not allowed to perform this workflow action.', 'sapphireit-editorial-workflow' ),
 			array( 'status' => 403 )
 		);
 	}
@@ -649,7 +649,7 @@ final class WorkflowManager {
 	private function update_failed(): WP_Error {
 		return new WP_Error(
 			'sit_cwm_update_failed',
-			__( 'The workflow could not be saved. Please try again.', 'sit-cwm' ),
+			__( 'The workflow could not be saved. Please try again.', 'sapphireit-editorial-workflow' ),
 			array( 'status' => 500 )
 		);
 	}

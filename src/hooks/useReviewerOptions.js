@@ -46,7 +46,10 @@ export default function useReviewerOptions( {
 
 	const options = useMemo( () => {
 		const list = [
-			{ value: UNASSIGNED, label: __( '— Unassigned —', 'sit-cwm' ) },
+			{
+				value: UNASSIGNED,
+				label: __( '— Unassigned —', 'sapphireit-editorial-workflow' ),
+			},
 		];
 		const added = new Set();
 		const add = ( user ) => {

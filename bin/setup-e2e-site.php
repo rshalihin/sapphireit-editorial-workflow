@@ -188,7 +188,7 @@ if ( '' !== $sit_cwm_url && rtrim( site_url(), '/' ) !== $sit_cwm_url ) {
 // 2. The plugin has to be active for the sidebar, dashboard and REST routes.
 // Its folder may be a symlink or junction, so the path is built from the
 // target site's plugin directory rather than from this file's real location.
-$sit_cwm_plugin = basename( $sit_cwm_root ) . '/content-workflow-manager.php';
+$sit_cwm_plugin = basename( $sit_cwm_root ) . '/sapphireit-editorial-workflow.php';
 
 if ( ! is_file( WP_PLUGIN_DIR . '/' . $sit_cwm_plugin ) ) {
 	sit_cwm_fail(

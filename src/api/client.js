@@ -122,7 +122,10 @@ export function normalizeError( error ) {
 	if ( ! error || typeof error !== 'object' ) {
 		return {
 			code: 'unknown_error',
-			message: __( 'An unknown error occurred.', 'sit-cwm' ),
+			message: __(
+				'An unknown error occurred.',
+				'sapphireit-editorial-workflow'
+			),
 			status: 0,
 		};
 	}
@@ -137,7 +140,7 @@ export function normalizeError( error ) {
 			code,
 			message: __(
 				'Couldn’t reach the server. Check your connection and try again.',
-				'sit-cwm'
+				'sapphireit-editorial-workflow'
 			),
 			status: 0,
 		};
@@ -156,7 +159,10 @@ export function normalizeError( error ) {
 		message:
 			typeof error.message === 'string' && error.message
 				? error.message
-				: __( 'An unknown error occurred.', 'sit-cwm' ),
+				: __(
+						'An unknown error occurred.',
+						'sapphireit-editorial-workflow'
+					),
 		status,
 	};
 }
@@ -287,7 +293,7 @@ function getCollectionPage( path, signal ) {
 					code: 'invalid_json',
 					message: __(
 						'The response is not a valid JSON response.',
-						'sit-cwm'
+						'sapphireit-editorial-workflow'
 					),
 					status: response.status || 0,
 				};

@@ -28,7 +28,7 @@ export default function StatusBadge( { status, label, isUnknown = false } ) {
 	const color = definition?.color || FALLBACK_STATUS_COLOR;
 	const unknownText = __(
 		'The previous workflow status is no longer available.',
-		'sit-cwm'
+		'sapphireit-editorial-workflow'
 	);
 
 	return (

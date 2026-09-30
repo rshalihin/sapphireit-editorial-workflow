@@ -113,7 +113,7 @@ class BatchController extends AbstractController {
 	private function get_batch_args(): array {
 		return array(
 			'post_ids' => array(
-				'description'       => __( 'IDs of the posts to update; duplicates are processed once.', 'sit-cwm' ),
+				'description'       => __( 'IDs of the posts to update; duplicates are processed once.', 'sapphireit-editorial-workflow' ),
 				'type'              => 'array',
 				'required'          => true,
 				'minItems'          => 1,
@@ -126,7 +126,7 @@ class BatchController extends AbstractController {
 				'sanitize_callback' => array( $this, 'sanitize_post_ids' ),
 			),
 			'action'   => array(
-				'description'       => __( 'Bulk action to apply.', 'sit-cwm' ),
+				'description'       => __( 'Bulk action to apply.', 'sapphireit-editorial-workflow' ),
 				'type'              => 'string',
 				'required'          => true,
 				'enum'              => array_keys( BulkProcessor::ACTIONS ),
@@ -134,7 +134,7 @@ class BatchController extends AbstractController {
 				'sanitize_callback' => 'sanitize_key',
 			),
 			'payload'  => array(
-				'description'          => __( 'Action payload: status, reviewer_id or due_date, matching the action.', 'sit-cwm' ),
+				'description'          => __( 'Action payload: status, reviewer_id or due_date, matching the action.', 'sapphireit-editorial-workflow' ),
 				'type'                 => 'object',
 				'required'             => true,
 				'properties'           => array(
@@ -202,7 +202,7 @@ class BatchController extends AbstractController {
 			return new WP_Error(
 				'sit_cwm_invalid_payload',
 				/* translators: %s: Payload key, e.g. "status". */
-				sprintf( __( 'The payload must include %s for this action.', 'sit-cwm' ), $key ),
+				sprintf( __( 'The payload must include %s for this action.', 'sapphireit-editorial-workflow' ), $key ),
 				array( 'status' => 400 )
 			);
 		}
@@ -213,7 +213,7 @@ class BatchController extends AbstractController {
 			if ( '' !== $date && $this->posts->sanitize_due_date( $date ) !== $date ) {
 				return new WP_Error(
 					'sit_cwm_invalid_date',
-					__( 'The due date must be a valid date in YYYY-MM-DD format.', 'sit-cwm' ),
+					__( 'The due date must be a valid date in YYYY-MM-DD format.', 'sapphireit-editorial-workflow' ),
 					array( 'status' => 400 )
 				);
 			}
@@ -312,13 +312,13 @@ class BatchController extends AbstractController {
 			'type'       => 'object',
 			'properties' => array(
 				'succeeded' => array(
-					'description' => __( 'IDs of the posts that were updated.', 'sit-cwm' ),
+					'description' => __( 'IDs of the posts that were updated.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'array',
 					'items'       => array( 'type' => 'integer' ),
 					'readonly'    => true,
 				),
 				'failed'    => array(
-					'description' => __( 'Posts that were not updated, with the reason.', 'sit-cwm' ),
+					'description' => __( 'Posts that were not updated, with the reason.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'array',
 					'readonly'    => true,
 					'items'       => array(
@@ -332,7 +332,7 @@ class BatchController extends AbstractController {
 					),
 				),
 				'items'     => array(
-					'description' => __( 'Fresh workflow state of every updated post.', 'sit-cwm' ),
+					'description' => __( 'Fresh workflow state of every updated post.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'array',
 					'items'       => array( 'type' => 'object' ),
 					'readonly'    => true,

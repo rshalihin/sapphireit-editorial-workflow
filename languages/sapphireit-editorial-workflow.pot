@@ -1,25 +1,25 @@
-# Copyright (C) 2026 Shappire IT
+# Copyright (C) 2026 SapphireIT
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Content Workflow Manager 1.0.0\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/content-workflow-manager\n"
+"Project-Id-Version: SapphireIT Editorial Workflow 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/sapphireit-editorial-workflow\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-28T16:34:29+00:00\n"
+"POT-Creation-Date: 2026-09-30T17:49:12+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.9.0\n"
-"X-Domain: sit-cwm\n"
+"X-Domain: sapphireit-editorial-workflow\n"
 
 #. Plugin Name of the plugin
-msgid "Content Workflow Manager"
+msgid "SapphireIT Editorial Workflow"
 msgstr ""
 
 #. Plugin URI of the plugin
-msgid "https://github.com/shappire-it/content-workflow-manager"
+msgid "https://github.com/rshalihin/sapphireit-editorial-workflow"
 msgstr ""
 
 #. Description of the plugin
@@ -27,16 +27,14 @@ msgid "Adds an editorial approval workflow (Draft, Writing, Review, Needs Change
 msgstr ""
 
 #. Author of the plugin
-msgid "Shappire IT"
+msgid "SapphireIT"
 msgstr ""
 
 #: admin/Dashboard.php:130
 #: admin/Dashboard.php:197
-#: assets/build/dashboard.js:187
-#: assets/build/sidebar.js:22
 #: src/dashboard/App.jsx:50
 #: src/sidebar/Sidebar.jsx:313
-msgid "Content Workflow"
+msgid "Editorial Workflow"
 msgstr ""
 
 #: admin/Dashboard.php:147
@@ -50,7 +48,7 @@ msgstr ""
 
 #: admin/Settings.php:134
 #: admin/Settings.php:270
-msgid "Content Workflow Settings"
+msgid "Editorial Workflow Settings"
 msgstr ""
 
 #: admin/Settings.php:135
@@ -58,7 +56,7 @@ msgid "Settings"
 msgstr ""
 
 #: admin/Settings.php:186
-msgid "Content Workflow Manager settings."
+msgid "SapphireIT Editorial Workflow settings."
 msgstr ""
 
 #: admin/Settings.php:195
@@ -133,11 +131,6 @@ msgstr ""
 
 #: admin/Settings.php:440
 msgid "Content types that do not exist were ignored."
-msgstr ""
-
-#. translators: 1: Required PHP version, 2: Current PHP version.
-#: content-workflow-manager.php:115
-msgid "Content Workflow Manager requires PHP %1$s or higher. This site runs PHP %2$s, so the plugin is not loaded."
 msgstr ""
 
 #: includes/Content/PostMeta.php:135
@@ -558,47 +551,148 @@ msgstr ""
 msgid "This workflow transition is not allowed."
 msgstr ""
 
-#. translators: 1: Current page number, 2: Total number of pages.
-#: assets/build/dashboard.js:151
-#: assets/build/sidebar.js:13
-#: src/components/ConfirmDialog.jsx:62
-#: src/dashboard/modals/ModalActions.jsx:38
-msgid "Cancel"
+#. translators: 1: Required PHP version, 2: Current PHP version.
+#: sapphireit-editorial-workflow.php:115
+msgid "SapphireIT Editorial Workflow requires PHP %1$s or higher. This site runs PHP %2$s, so the plugin is not loaded."
 msgstr ""
 
-#. translators: %d: Number of fields that need attention
-#: assets/build/dashboard.js:157
-#: assets/build/sidebar.js:18
-#: src/dashboard/modals/useRowMutation.js:68
-#: src/hooks/useWorkflow.js:198
-msgid "This post changed elsewhere — refreshed."
-msgstr ""
-
-#: assets/build/dashboard.js:157
-#: assets/build/dashboard.js:187
-#: assets/build/sidebar.js:1
 #: src/api/client.js:125
 #: src/api/client.js:159
 #: src/hooks/useBulkAction.js:93
 msgid "An unknown error occurred."
 msgstr ""
 
-#: assets/build/dashboard.js:157
-#: assets/build/sidebar.js:1
 #: src/api/client.js:138
 msgid "Couldn’t reach the server. Check your connection and try again."
 msgstr ""
 
-#: assets/build/dashboard.js:157
-#: assets/build/sidebar.js:13
-#: src/hooks/useReviewerOptions.js:49
-msgid "— Unassigned —"
+#: src/api/client.js:288
+msgid "The response is not a valid JSON response."
 msgstr ""
 
-#: assets/build/dashboard.js:157
-#: assets/build/dashboard.js:160
-#: assets/build/dashboard.js:187
-#: assets/build/sidebar.js:13
+#: src/components/ActivityItem.jsx:77
+msgid "System"
+msgstr ""
+
+#: src/components/ActivityItem.jsx:80
+msgid "Someone"
+msgstr ""
+
+#. translators: 1: user name, 2: previous status, 3: new status
+#: src/components/ActivityItem.jsx:103
+msgid "%1$s changed status from %2$s to %3$s"
+msgstr ""
+
+#. translators: 1: user name, 2: new status
+#: src/components/ActivityItem.jsx:112
+msgid "%1$s set the status to %2$s"
+msgstr ""
+
+#. translators: 1: user name, 2: reviewer name
+#: src/components/ActivityItem.jsx:120
+msgid "%1$s assigned %2$s as reviewer"
+msgstr ""
+
+#. translators: 1: user name, 2: reviewer name
+#: src/components/ActivityItem.jsx:129
+msgid "%1$s removed %2$s as reviewer"
+msgstr ""
+
+#. translators: %s: user name
+#: src/components/ActivityItem.jsx:137
+msgid "%s removed the reviewer"
+msgstr ""
+
+#. translators: 1: user name, 2: due date
+#: src/components/ActivityItem.jsx:144
+msgid "%1$s set the due date to %2$s"
+msgstr ""
+
+#. translators: %s: user name
+#: src/components/ActivityItem.jsx:152
+msgid "%s removed the due date"
+msgstr ""
+
+#. translators: %s: user name
+#: src/components/ActivityItem.jsx:159
+msgid "%s commented"
+msgstr ""
+
+#. translators: 1: user name, 2: activity label, e.g. "Status changed"
+#: src/components/ActivityItem.jsx:166
+msgid "%1$s: %2$s"
+msgstr ""
+
+#: src/components/ActivityTimeline.jsx:43
+msgid "Loading activity…"
+msgstr ""
+
+#. translators: %d: Number of new activity entries.
+#: src/components/ActivityTimeline.jsx:93
+msgid "%d new activity entry."
+msgid_plural "%d new activity entries."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/components/ActivityTimeline.jsx:145
+#: src/dashboard/WorkflowDataViews.jsx:290
+#: src/sidebar/Sidebar.jsx:98
+#: src/sidebar/Sidebar.jsx:190
+msgid "Retry"
+msgstr ""
+
+#: src/components/ActivityTimeline.jsx:154
+msgid "No activity yet."
+msgstr ""
+
+#: src/components/ActivityTimeline.jsx:156
+msgid "Status changes, reviewer assignments, due dates and comments will appear here."
+msgstr ""
+
+#: src/components/ActivityTimeline.jsx:167
+msgid "Updating…"
+msgstr ""
+
+#: src/components/ActivityTimeline.jsx:193
+msgid "Load more"
+msgstr ""
+
+#: src/components/ConfirmDialog.jsx:62
+#: src/dashboard/modals/ModalActions.jsx:38
+msgid "Cancel"
+msgstr ""
+
+#: src/dashboard/actions.jsx:40
+#: src/dashboard/actions.jsx:73
+#: src/utils/confirmations.js:76
+msgid "Approve"
+msgstr ""
+
+#: src/dashboard/actions.jsx:51
+#: src/dashboard/actions.jsx:80
+msgid "Request changes"
+msgstr ""
+
+#: src/dashboard/actions.jsx:61
+msgid "Edit"
+msgstr ""
+
+#: src/dashboard/actions.jsx:74
+#: src/utils/confirmations.js:74
+msgid "Approve content?"
+msgstr ""
+
+#: src/dashboard/actions.jsx:81
+msgid "Request changes?"
+msgstr ""
+
+#. translators: %d: Number of selected items.
+#: src/dashboard/bulk/AssignReviewerModal.jsx:72
+msgid "Set the reviewer of %d selected item."
+msgid_plural "Set the reviewer of %d selected items."
+msgstr[0] ""
+msgstr[1] ""
+
 #: src/dashboard/bulk/AssignReviewerModal.jsx:85
 #: src/dashboard/fields.js:245
 #: src/dashboard/modals/ReviewerModal.jsx:82
@@ -606,48 +700,7 @@ msgstr ""
 msgid "Reviewer"
 msgstr ""
 
-#: assets/build/dashboard.js:157
-#: assets/build/dashboard.js:159
-#: assets/build/dashboard.js:167
-#: assets/build/dashboard.js:176
-#: assets/build/dashboard.js:183
-#: src/dashboard/bulk/shared.jsx:110
-#: src/dashboard/fields.js:80
-#: src/dashboard/modals/DueDateModal.jsx:54
-#: src/dashboard/modals/ReviewerModal.jsx:95
-#: src/dashboard/modals/TransitionModal.jsx:92
-msgid "(no title)"
-msgstr ""
-
-#. translators: %s: Post title.
-#: assets/build/dashboard.js:158
-#: src/dashboard/modals/ReviewerModal.jsx:109
-msgid "Reviewer assigned to “%s”."
-msgstr ""
-
-#. translators: %s: Post title.
-#: assets/build/dashboard.js:159
-#: src/dashboard/modals/ReviewerModal.jsx:114
-msgid "Reviewer removed from “%s”."
-msgstr ""
-
-#: assets/build/dashboard.js:159
-#: assets/build/dashboard.js:169
-#: src/dashboard/modals/DueDateModal.jsx:104
-#: src/dashboard/modals/ReviewerModal.jsx:140
-msgid "Save"
-msgstr ""
-
-#. translators: %d: Number of selected items.
-#: assets/build/dashboard.js:160
-#: src/dashboard/bulk/AssignReviewerModal.jsx:72
-msgid "Set the reviewer of %d selected item."
-msgid_plural "Set the reviewer of %d selected items."
-msgstr[0] ""
-msgstr[1] ""
-
 #. translators: %d: Number of items.
-#: assets/build/dashboard.js:161
 #: src/dashboard/bulk/AssignReviewerModal.jsx:104
 msgid "Remove the reviewer from %d item?"
 msgid_plural "Remove the reviewer from %d items?"
@@ -655,22 +708,17 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: Reviewer display name, 2: Number of items.
-#: assets/build/dashboard.js:162
 #: src/dashboard/bulk/AssignReviewerModal.jsx:114
 msgid "Assign %1$s as reviewer of %2$d item?"
 msgid_plural "Assign %1$s as reviewer of %2$d items?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/dashboard.js:162
 #: src/dashboard/bulk/AssignReviewerModal.jsx:129
 msgid "No reviewers are available."
 msgstr ""
 
 #. translators: %d: Number of items.
-#: assets/build/dashboard.js:163
-#: assets/build/dashboard.js:167
-#: assets/build/dashboard.js:174
 #: src/dashboard/bulk/AssignReviewerModal.jsx:139
 #: src/dashboard/bulk/ChangeStatusModal.jsx:152
 #: src/dashboard/bulk/SetDueDateModal.jsx:167
@@ -679,42 +727,70 @@ msgid_plural "Yes, update %d items"
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/dashboard.js:163
-#: assets/build/dashboard.js:167
-#: assets/build/dashboard.js:174
 #: src/dashboard/bulk/AssignReviewerModal.jsx:147
 #: src/dashboard/bulk/ChangeStatusModal.jsx:160
 #: src/dashboard/bulk/SetDueDateModal.jsx:177
 msgid "Apply"
 msgstr ""
 
-#: assets/build/dashboard.js:163
+#: src/dashboard/bulk/BulkActions.jsx:38
+msgid "Change status"
+msgstr ""
+
+#: src/dashboard/bulk/BulkActions.jsx:39
+msgid "Change workflow status"
+msgstr ""
+
+#: src/dashboard/bulk/BulkActions.jsx:49
+#: src/dashboard/bulk/BulkActions.jsx:50
+msgid "Assign reviewer"
+msgstr ""
+
+#: src/dashboard/bulk/BulkActions.jsx:58
+#: src/dashboard/bulk/BulkActions.jsx:59
+msgid "Set due date"
+msgstr ""
+
+#: src/dashboard/bulk/BulkActions.jsx:101
+msgid "Hide details"
+msgstr ""
+
+#: src/dashboard/bulk/BulkActions.jsx:102
+msgid "Show details"
+msgstr ""
+
+#. translators: 1: Post title, 2: Reason it was not updated.
+#: src/dashboard/bulk/BulkActions.jsx:110
+msgctxt "bulk action failure"
+msgid "%1$s: %2$s"
+msgstr ""
+
+#. translators: %d: Post ID.
+#: src/dashboard/bulk/BulkActions.jsx:118
+msgid "Item #%d"
+msgstr ""
+
 #: src/dashboard/bulk/ChangeStatusModal.jsx:43
 msgid "None of the selected content can change status right now."
 msgstr ""
 
-#: assets/build/dashboard.js:163
-#: assets/build/dashboard.js:176
 #: src/dashboard/bulk/ChangeStatusModal.jsx:54
 #: src/dashboard/modals/TransitionModal.jsx:85
 msgid "Close"
 msgstr ""
 
 #. translators: %d: Number of selected items.
-#: assets/build/dashboard.js:164
 #: src/dashboard/bulk/ChangeStatusModal.jsx:88
 msgid "Change the workflow status of %d selected item."
 msgid_plural "Change the workflow status of %d selected items."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/dashboard.js:164
 #: src/dashboard/bulk/ChangeStatusModal.jsx:101
 msgid "New status"
 msgstr ""
 
 #. translators: 1: Number of items, 2: Workflow status label.
-#: assets/build/dashboard.js:165
 #: src/dashboard/bulk/ChangeStatusModal.jsx:118
 msgid "%1$d item cannot move to %2$s right now and will be reported as not updated."
 msgid_plural "%1$d items cannot move to %2$s right now and will be reported as not updated."
@@ -722,47 +798,19 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: Number of items, 2: Workflow status label.
-#: assets/build/dashboard.js:166
 #: src/dashboard/bulk/ChangeStatusModal.jsx:134
 msgid "Move %1$d item to %2$s?"
 msgid_plural "Move %1$d items to %2$s?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/dashboard.js:167
-#: assets/build/sidebar.js:1
-#: src/api/client.js:288
-msgid "The response is not a valid JSON response."
-msgstr ""
-
-#: assets/build/dashboard.js:167
-#: assets/build/dashboard.js:169
-#: assets/build/sidebar.js:12
 #: src/dashboard/bulk/SetDueDateModal.jsx:33
 #: src/dashboard/modals/DueDateModal.jsx:30
 #: src/sidebar/components/DueDateControl.jsx:68
 msgid "Due date"
 msgstr ""
 
-#. translators: %s: Post title.
-#: assets/build/dashboard.js:168
-#: src/dashboard/modals/DueDateModal.jsx:64
-msgid "Due date updated for “%s”."
-msgstr ""
-
-#. translators: %s: Post title.
-#: assets/build/dashboard.js:169
-#: src/dashboard/modals/DueDateModal.jsx:69
-msgid "Due date removed from “%s”."
-msgstr ""
-
-#: assets/build/dashboard.js:169
-#: src/dashboard/modals/DueDateModal.jsx:118
-msgid "Remove due date"
-msgstr ""
-
 #. translators: %d: Number of selected items.
-#: assets/build/dashboard.js:170
 #: src/dashboard/bulk/SetDueDateModal.jsx:91
 msgid "Set the due date of %d selected item."
 msgid_plural "Set the due date of %d selected items."
@@ -770,7 +818,6 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: Number of items.
-#: assets/build/dashboard.js:171
 #: src/dashboard/bulk/SetDueDateModal.jsx:121
 msgid "Remove the due date from %d item?"
 msgid_plural "Remove the due date from %d items?"
@@ -778,7 +825,6 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: Number of items, 2: Due date.
-#: assets/build/dashboard.js:172
 #: src/dashboard/bulk/SetDueDateModal.jsx:136
 msgid "Set the due date of %1$d item to %2$s?"
 msgid_plural "Set the due date of %1$d items to %2$s?"
@@ -786,563 +832,339 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: Number of items.
-#: assets/build/dashboard.js:173
 #: src/dashboard/bulk/SetDueDateModal.jsx:154
 msgid "Yes, remove from %d item"
 msgid_plural "Yes, remove from %d items"
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/dashboard.js:174
 #: src/dashboard/bulk/SetDueDateModal.jsx:194
 msgid "Remove due dates"
 msgstr ""
 
-#: assets/build/dashboard.js:174
-#: src/dashboard/bulk/BulkActions.jsx:38
-msgid "Change status"
+#: src/dashboard/bulk/shared.jsx:110
+#: src/dashboard/fields.js:80
+#: src/dashboard/modals/DueDateModal.jsx:54
+#: src/dashboard/modals/ReviewerModal.jsx:95
+#: src/dashboard/modals/TransitionModal.jsx:92
+msgid "(no title)"
 msgstr ""
 
-#: assets/build/dashboard.js:174
-#: src/dashboard/bulk/BulkActions.jsx:39
-msgid "Change workflow status"
-msgstr ""
-
-#: assets/build/dashboard.js:174
-#: src/dashboard/bulk/BulkActions.jsx:49
-#: src/dashboard/bulk/BulkActions.jsx:50
-msgid "Assign reviewer"
-msgstr ""
-
-#: assets/build/dashboard.js:174
-#: src/dashboard/bulk/BulkActions.jsx:58
-#: src/dashboard/bulk/BulkActions.jsx:59
-msgid "Set due date"
-msgstr ""
-
-#: assets/build/dashboard.js:174
-#: src/dashboard/bulk/BulkActions.jsx:101
-msgid "Hide details"
-msgstr ""
-
-#: assets/build/dashboard.js:174
-#: src/dashboard/bulk/BulkActions.jsx:102
-msgid "Show details"
-msgstr ""
-
-#. translators: 1: Post title, 2: Reason it was not updated.
-#: assets/build/dashboard.js:175
-#: src/dashboard/bulk/BulkActions.jsx:110
-msgctxt "bulk action failure"
-msgid "%1$s: %2$s"
-msgstr ""
-
-#. translators: %d: Post ID.
-#: assets/build/dashboard.js:176
-#: src/dashboard/bulk/BulkActions.jsx:118
-msgid "Item #%d"
-msgstr ""
-
-#: assets/build/dashboard.js:176
-#: src/dashboard/modals/TransitionModal.jsx:30
-msgid "Comment (optional)"
-msgstr ""
-
-#: assets/build/dashboard.js:176
-#: src/dashboard/modals/TransitionModal.jsx:31
-msgid "Added to the activity history."
-msgstr ""
-
-#: assets/build/dashboard.js:176
-#: src/dashboard/modals/TransitionModal.jsx:74
-msgid "This action is no longer available for this content."
-msgstr ""
-
-#. translators: %s: Target workflow status label.
-#: assets/build/dashboard.js:177
-#: assets/build/dashboard.js:179
-#: assets/build/sidebar.js:15
-#: assets/build/sidebar.js:17
-#: src/utils/confirmations.js:56
-#: src/utils/confirmations.js:96
-msgid "Move to %s?"
-msgstr ""
-
-#: assets/build/dashboard.js:177
-#: assets/build/sidebar.js:15
-#: src/utils/confirmations.js:59
-msgid "This sends the content back to an earlier workflow stage."
-msgstr ""
-
-#. translators: %s: Target workflow status label.
-#: assets/build/dashboard.js:178
-#: assets/build/dashboard.js:180
-#: assets/build/sidebar.js:14
-#: assets/build/sidebar.js:16
-#: assets/build/sidebar.js:18
-#: src/sidebar/components/TransitionActions.jsx:35
-#: src/utils/confirmations.js:65
-#: src/utils/confirmations.js:102
-msgid "Move to %s"
-msgstr ""
-
-#: assets/build/dashboard.js:178
-#: assets/build/dashboard.js:187
-#: assets/build/sidebar.js:16
-#: src/dashboard/actions.jsx:74
-#: src/utils/confirmations.js:74
-msgid "Approve content?"
-msgstr ""
-
-#: assets/build/dashboard.js:178
-#: assets/build/sidebar.js:16
-#: src/utils/confirmations.js:75
-msgid "This will mark the content as approved."
-msgstr ""
-
-#: assets/build/dashboard.js:178
-#: assets/build/dashboard.js:187
-#: assets/build/sidebar.js:16
-#: src/dashboard/actions.jsx:40
-#: src/dashboard/actions.jsx:73
-#: src/utils/confirmations.js:76
-msgid "Approve"
-msgstr ""
-
-#: assets/build/dashboard.js:178
-#: assets/build/sidebar.js:16
-#: src/utils/confirmations.js:83
-msgid "Publish content?"
-msgstr ""
-
-#: assets/build/dashboard.js:178
-#: assets/build/sidebar.js:16
-#: src/utils/confirmations.js:84
-msgid "This will mark the workflow as published and complete the cycle. It does not change the post’s WordPress publish status."
-msgstr ""
-
-#: assets/build/dashboard.js:178
-#: assets/build/sidebar.js:16
-#: src/utils/confirmations.js:88
-msgid "Publish"
-msgstr ""
-
-#. translators: 1: Post title, 2: Workflow status label.
-#: assets/build/dashboard.js:181
-#: src/dashboard/modals/TransitionModal.jsx:108
-msgid "“%1$s” moved to %2$s."
-msgstr ""
-
-#. translators: 1: Workflow status label, 2: Error message.
-#: assets/build/dashboard.js:182
-#: src/dashboard/modals/TransitionModal.jsx:123
-msgid "Moved to %1$s, but the comment could not be saved: %2$s"
-msgstr ""
-
-#. translators: 1: Post title, 2: Current workflow status label, 3: Target workflow status label.
-#: assets/build/dashboard.js:183
-#: src/dashboard/modals/TransitionModal.jsx:142
-msgid "Move “%1$s” from %2$s to %3$s?"
-msgstr ""
-
-#: assets/build/dashboard.js:183
-#: src/dashboard/StatusBadge.jsx:29
-msgid "The previous workflow status is no longer available."
-msgstr ""
-
-#: assets/build/dashboard.js:183
-#: assets/build/dashboard.js:187
 #: src/dashboard/fields.js:105
 #: src/dashboard/fields.js:249
 msgid "Unassigned"
 msgstr ""
 
-#. translators: %s: Due date.
-#: assets/build/dashboard.js:184
-#: assets/build/sidebar.js:12
-#: src/dashboard/fields.js:141
-#: src/sidebar/components/DueDateControl.jsx:55
-msgid "%s (overdue)"
-msgstr ""
-
-#: assets/build/dashboard.js:184
-#: assets/build/sidebar.js:11
 #: src/dashboard/fields.js:128
 #: src/sidebar/components/DueDateControl.jsx:49
 msgid "No due date"
 msgstr ""
 
-#: assets/build/dashboard.js:184
+#. translators: %s: Due date.
+#: src/dashboard/fields.js:141
+#: src/sidebar/components/DueDateControl.jsx:55
+msgid "%s (overdue)"
+msgstr ""
+
 #: src/dashboard/fields.js:152
 msgid "Unknown author"
 msgstr ""
 
-#: assets/build/dashboard.js:184
 #: src/dashboard/fields.js:169
 msgid "No activity"
 msgstr ""
 
-#: assets/build/dashboard.js:184
-#: assets/build/dashboard.js:187
 #: src/dashboard/fields.js:196
 #: src/dashboard/fields.js:303
 msgid "Overdue"
 msgstr ""
 
-#: assets/build/dashboard.js:184
 #: src/dashboard/fields.js:199
 msgid "Not overdue"
 msgstr ""
 
+#: src/dashboard/fields.js:219
+msgid "Title"
+msgstr ""
+
+#: src/dashboard/fields.js:230
+#: src/sidebar/components/StatusControl.jsx:32
+msgid "Status"
+msgstr ""
+
+#: src/dashboard/fields.js:258
+msgid "Due"
+msgstr ""
+
+#: src/dashboard/fields.js:267
+msgid "Author"
+msgstr ""
+
+#: src/dashboard/fields.js:280
+msgid "Type"
+msgstr ""
+
+#: src/dashboard/fields.js:294
+msgid "Last activity"
+msgstr ""
+
+#: src/dashboard/fields.js:307
+msgid "Overdue only"
+msgstr ""
+
+#. translators: %s: Post title.
+#: src/dashboard/modals/DueDateModal.jsx:64
+msgid "Due date updated for “%s”."
+msgstr ""
+
+#. translators: %s: Post title.
+#: src/dashboard/modals/DueDateModal.jsx:69
+msgid "Due date removed from “%s”."
+msgstr ""
+
+#: src/dashboard/modals/DueDateModal.jsx:104
+#: src/dashboard/modals/ReviewerModal.jsx:140
+msgid "Save"
+msgstr ""
+
+#: src/dashboard/modals/DueDateModal.jsx:118
+msgid "Remove due date"
+msgstr ""
+
+#. translators: %s: Post title.
+#: src/dashboard/modals/ReviewerModal.jsx:109
+msgid "Reviewer assigned to “%s”."
+msgstr ""
+
+#. translators: %s: Post title.
+#: src/dashboard/modals/ReviewerModal.jsx:114
+msgid "Reviewer removed from “%s”."
+msgstr ""
+
+#: src/dashboard/modals/TransitionModal.jsx:30
+msgid "Comment (optional)"
+msgstr ""
+
+#: src/dashboard/modals/TransitionModal.jsx:31
+msgid "Added to the activity history."
+msgstr ""
+
+#: src/dashboard/modals/TransitionModal.jsx:74
+msgid "This action is no longer available for this content."
+msgstr ""
+
+#. translators: 1: Post title, 2: Workflow status label.
+#: src/dashboard/modals/TransitionModal.jsx:108
+msgid "“%1$s” moved to %2$s."
+msgstr ""
+
+#. translators: 1: Workflow status label, 2: Error message.
+#: src/dashboard/modals/TransitionModal.jsx:123
+msgid "Moved to %1$s, but the comment could not be saved: %2$s"
+msgstr ""
+
+#. translators: 1: Post title, 2: Current workflow status label, 3: Target workflow status label.
+#: src/dashboard/modals/TransitionModal.jsx:142
+msgid "Move “%1$s” from %2$s to %3$s?"
+msgstr ""
+
+#: src/dashboard/modals/useRowMutation.js:68
+#: src/hooks/useWorkflow.js:198
+msgid "This post changed elsewhere — refreshed."
+msgstr ""
+
+#: src/dashboard/StatusBadge.jsx:29
+msgid "The previous workflow status is no longer available."
+msgstr ""
+
+#: src/dashboard/WorkflowDataViews.jsx:138
+msgid "No content is in the workflow yet."
+msgstr ""
+
+#: src/dashboard/WorkflowDataViews.jsx:140
+msgid "Content of the workflow-enabled post types appears here as soon as it is created."
+msgstr ""
+
+#. translators: %s: Singular post type label, e.g. "Post".
+#: src/dashboard/WorkflowDataViews.jsx:149
+msgid "Add new %s"
+msgstr ""
+
+#: src/dashboard/WorkflowDataViews.jsx:169
+msgid "No content matches the current search and filters."
+msgstr ""
+
+#: src/dashboard/WorkflowDataViews.jsx:175
+#: src/dashboard/WorkflowDataViews.jsx:310
+msgid "Clear all filters"
+msgstr ""
+
+#: src/dashboard/WorkflowDataViews.jsx:190
+msgid "Content could not be loaded."
+msgstr ""
+
+#: src/dashboard/WorkflowDataViews.jsx:301
+#: src/sidebar/Sidebar.jsx:238
+msgid "Refreshing…"
+msgstr ""
+
+#: src/dashboard/WorkflowDataViews.jsx:328
+msgid "Search content"
+msgstr ""
+
+#: src/hooks/useBulkAction.js:102
+msgid "The server did not report a result for this item."
+msgstr ""
+
 #. translators: %d: Number of updated posts.
-#: assets/build/dashboard.js:185
 #: src/hooks/useBulkAction.js:131
 msgid "%d post updated."
 msgid_plural "%d posts updated."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/dashboard.js:185
 #: src/hooks/useBulkAction.js:139
 msgid "No posts were updated."
 msgstr ""
 
 #. translators: %d: Number of posts that could not be updated.
-#: assets/build/dashboard.js:186
 #: src/hooks/useBulkAction.js:146
 msgid "%d could not be updated."
 msgid_plural "%d could not be updated."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/dashboard.js:186
-#: src/dashboard/WorkflowDataViews.jsx:138
-msgid "No content is in the workflow yet."
-msgstr ""
-
-#: assets/build/dashboard.js:186
-#: src/dashboard/WorkflowDataViews.jsx:140
-msgid "Content of the workflow-enabled post types appears here as soon as it is created."
-msgstr ""
-
-#. translators: %s: Singular post type label, e.g. "Post".
-#: assets/build/dashboard.js:187
-#: src/dashboard/WorkflowDataViews.jsx:149
-msgid "Add new %s"
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: src/dashboard/WorkflowDataViews.jsx:169
-msgid "No content matches the current search and filters."
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: src/dashboard/WorkflowDataViews.jsx:175
-#: src/dashboard/WorkflowDataViews.jsx:310
-msgid "Clear all filters"
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: src/dashboard/WorkflowDataViews.jsx:190
-msgid "Content could not be loaded."
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: src/hooks/useBulkAction.js:102
-msgid "The server did not report a result for this item."
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: src/dashboard/fields.js:219
-msgid "Title"
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: assets/build/sidebar.js:13
-#: src/dashboard/fields.js:230
-#: src/sidebar/components/StatusControl.jsx:32
-msgid "Status"
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: src/dashboard/fields.js:258
-msgid "Due"
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: src/dashboard/fields.js:267
-msgid "Author"
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: src/dashboard/fields.js:280
-msgid "Type"
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: src/dashboard/fields.js:294
-msgid "Last activity"
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: src/dashboard/fields.js:307
-msgid "Overdue only"
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: src/dashboard/actions.jsx:61
-msgid "Edit"
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: src/dashboard/actions.jsx:51
-#: src/dashboard/actions.jsx:80
-msgid "Request changes"
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: src/dashboard/actions.jsx:81
-msgid "Request changes?"
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: assets/build/sidebar.js:11
-#: assets/build/sidebar.js:18
-#: assets/build/sidebar.js:21
-#: src/components/ActivityTimeline.jsx:145
-#: src/dashboard/WorkflowDataViews.jsx:290
-#: src/sidebar/Sidebar.jsx:98
-#: src/sidebar/Sidebar.jsx:190
-msgid "Retry"
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: assets/build/sidebar.js:22
-#: src/dashboard/WorkflowDataViews.jsx:301
-#: src/sidebar/Sidebar.jsx:238
-msgid "Refreshing…"
-msgstr ""
-
-#: assets/build/dashboard.js:187
-#: src/dashboard/WorkflowDataViews.jsx:328
-msgid "Search content"
-msgstr ""
-
-#: assets/build/sidebar.js:1
-#: src/components/ActivityItem.jsx:80
-msgid "Someone"
-msgstr ""
-
-#: assets/build/sidebar.js:1
-#: src/components/ActivityItem.jsx:77
-msgid "System"
-msgstr ""
-
-#. translators: 1: user name, 2: previous status, 3: new status
-#: assets/build/sidebar.js:2
-#: src/components/ActivityItem.jsx:103
-msgid "%1$s changed status from %2$s to %3$s"
-msgstr ""
-
-#. translators: 1: user name, 2: new status
-#: assets/build/sidebar.js:3
-#: src/components/ActivityItem.jsx:112
-msgid "%1$s set the status to %2$s"
-msgstr ""
-
-#. translators: 1: user name, 2: reviewer name
-#: assets/build/sidebar.js:4
-#: src/components/ActivityItem.jsx:120
-msgid "%1$s assigned %2$s as reviewer"
-msgstr ""
-
-#. translators: 1: user name, 2: reviewer name
-#: assets/build/sidebar.js:5
-#: src/components/ActivityItem.jsx:129
-msgid "%1$s removed %2$s as reviewer"
-msgstr ""
-
-#. translators: %s: user name
-#: assets/build/sidebar.js:6
-#: src/components/ActivityItem.jsx:137
-msgid "%s removed the reviewer"
-msgstr ""
-
-#. translators: 1: user name, 2: due date
-#: assets/build/sidebar.js:7
-#: src/components/ActivityItem.jsx:144
-msgid "%1$s set the due date to %2$s"
-msgstr ""
-
-#. translators: %s: user name
-#: assets/build/sidebar.js:8
-#: src/components/ActivityItem.jsx:152
-msgid "%s removed the due date"
-msgstr ""
-
-#. translators: %s: user name
-#: assets/build/sidebar.js:9
-#: src/components/ActivityItem.jsx:159
-msgid "%s commented"
-msgstr ""
-
-#. translators: 1: user name, 2: activity label, e.g. "Status changed"
-#: assets/build/sidebar.js:10
-#: src/components/ActivityItem.jsx:166
-msgid "%1$s: %2$s"
-msgstr ""
-
-#: assets/build/sidebar.js:10
-#: src/components/ActivityTimeline.jsx:43
-msgid "Loading activity…"
-msgstr ""
-
-#: assets/build/sidebar.js:10
-#: src/utils/groupByDay.js:80
-msgid "Unknown date"
-msgstr ""
-
-#: assets/build/sidebar.js:10
-#: src/utils/groupByDay.js:82
-msgid "Today"
-msgstr ""
-
-#: assets/build/sidebar.js:10
-#: src/utils/groupByDay.js:84
-msgid "Yesterday"
-msgstr ""
-
-#. translators: %d: Number of new activity entries.
-#: assets/build/sidebar.js:11
-#: src/components/ActivityTimeline.jsx:93
-msgid "%d new activity entry."
-msgid_plural "%d new activity entries."
-msgstr[0] ""
-msgstr[1] ""
-
-#: assets/build/sidebar.js:11
-#: src/components/ActivityTimeline.jsx:154
-msgid "No activity yet."
-msgstr ""
-
-#: assets/build/sidebar.js:11
-#: src/components/ActivityTimeline.jsx:156
-msgid "Status changes, reviewer assignments, due dates and comments will appear here."
-msgstr ""
-
-#: assets/build/sidebar.js:11
-#: src/components/ActivityTimeline.jsx:167
-msgid "Updating…"
-msgstr ""
-
-#: assets/build/sidebar.js:11
-#: src/components/ActivityTimeline.jsx:193
-msgid "Load more"
-msgstr ""
-
-#: assets/build/sidebar.js:11
-#: src/sidebar/components/CommentForm.jsx:62
-msgid "Add a workflow comment"
-msgstr ""
-
-#: assets/build/sidebar.js:11
-#: src/sidebar/components/CommentForm.jsx:84
-msgid "Add comment"
-msgstr ""
-
-#. translators: %s: Current due date, or "No due date".
-#: assets/build/sidebar.js:13
-#: src/sidebar/components/DueDateControl.jsx:91
-msgid "Change due date: %s"
-msgstr ""
-
-#: assets/build/sidebar.js:13
-#: src/sidebar/components/DueDateControl.jsx:126
-msgid "Clear"
-msgstr ""
-
-#: assets/build/sidebar.js:14
-#: src/sidebar/components/TransitionActions.jsx:61
-msgid "No workflow actions are available to you right now. The actions offered depend on the current status and your role."
-msgstr ""
-
-#: assets/build/sidebar.js:18
-#: assets/build/sidebar.js:22
-#: src/sidebar/components/TransitionActions.jsx:108
-#: src/sidebar/Sidebar.jsx:266
-msgid "Workflow actions"
-msgstr ""
-
-#: assets/build/sidebar.js:18
-#: src/sidebar/Sidebar.jsx:60
-msgid "Workflow is not available for this post type. An administrator can enable it in the Content Workflow settings."
-msgstr ""
-
-#: assets/build/sidebar.js:18
-#: src/sidebar/Sidebar.jsx:82
-msgid "You don’t have permission to view the workflow of this content."
+#: src/hooks/useReviewerOptions.js:49
+msgid "— Unassigned —"
 msgstr ""
 
 #. translators: %s: Workflow status label.
-#: assets/build/sidebar.js:19
 #: src/hooks/useWorkflow.js:262
 msgid "Workflow status changed to %s."
 msgstr ""
 
 #. translators: %s: Reviewer display name.
-#: assets/build/sidebar.js:20
 #: src/hooks/useWorkflow.js:285
 msgid "Reviewer set to %s."
 msgstr ""
 
-#: assets/build/sidebar.js:20
 #: src/hooks/useWorkflow.js:288
 msgid "Reviewer removed."
 msgstr ""
 
 #. translators: %s: Due date.
-#: assets/build/sidebar.js:21
 #: src/hooks/useWorkflow.js:308
 msgid "Due date set to %s."
 msgstr ""
 
-#: assets/build/sidebar.js:21
 #: src/hooks/useWorkflow.js:311
 msgid "Due date removed."
 msgstr ""
 
-#: assets/build/sidebar.js:21
 #: src/hooks/useWorkflow.js:328
 msgid "Comment added."
 msgstr ""
 
-#: assets/build/sidebar.js:21
+#: src/sidebar/components/CommentForm.jsx:62
+msgid "Add a workflow comment"
+msgstr ""
+
+#: src/sidebar/components/CommentForm.jsx:84
+msgid "Add comment"
+msgstr ""
+
+#. translators: %s: Current due date, or "No due date".
+#: src/sidebar/components/DueDateControl.jsx:91
+msgid "Change due date: %s"
+msgstr ""
+
+#: src/sidebar/components/DueDateControl.jsx:126
+msgid "Clear"
+msgstr ""
+
+#. translators: %s: Target workflow status label.
+#: src/sidebar/components/TransitionActions.jsx:35
+#: src/utils/confirmations.js:65
+#: src/utils/confirmations.js:102
+msgid "Move to %s"
+msgstr ""
+
+#: src/sidebar/components/TransitionActions.jsx:61
+msgid "No workflow actions are available to you right now. The actions offered depend on the current status and your role."
+msgstr ""
+
+#: src/sidebar/components/TransitionActions.jsx:108
+#: src/sidebar/Sidebar.jsx:266
+msgid "Workflow actions"
+msgstr ""
+
+#: src/sidebar/Sidebar.jsx:60
+msgid "Workflow is not available for this post type. An administrator can enable it in the Editorial Workflow settings."
+msgstr ""
+
+#: src/sidebar/Sidebar.jsx:82
+msgid "You don’t have permission to view the workflow of this content."
+msgstr ""
+
 #: src/sidebar/Sidebar.jsx:139
 msgid "Loading workflow…"
 msgstr ""
 
-#: assets/build/sidebar.js:21
 #: src/sidebar/Sidebar.jsx:173
 msgid "This content was deleted or is no longer part of the workflow. Workflow controls are disabled."
 msgstr ""
 
 #. translators: %s: Default workflow status label, e.g. "Draft".
-#: assets/build/sidebar.js:22
 #: src/sidebar/Sidebar.jsx:213
 msgid "This content had a workflow status that is no longer available, so it is treated as %s. Use the workflow actions below to continue."
 msgstr ""
 
-#: assets/build/sidebar.js:22
 #: src/sidebar/Sidebar.jsx:228
 msgid "You can follow this workflow, but your role doesn’t allow you to change it."
 msgstr ""
 
-#: assets/build/sidebar.js:22
 #: src/sidebar/Sidebar.jsx:276
 msgid "Comment"
 msgstr ""
 
-#: assets/build/sidebar.js:22
 #: src/sidebar/Sidebar.jsx:287
 msgid "Activity"
+msgstr ""
+
+#. translators: %s: Target workflow status label.
+#: src/utils/confirmations.js:56
+#: src/utils/confirmations.js:96
+msgid "Move to %s?"
+msgstr ""
+
+#: src/utils/confirmations.js:59
+msgid "This sends the content back to an earlier workflow stage."
+msgstr ""
+
+#: src/utils/confirmations.js:75
+msgid "This will mark the content as approved."
+msgstr ""
+
+#: src/utils/confirmations.js:83
+msgid "Publish content?"
+msgstr ""
+
+#: src/utils/confirmations.js:84
+msgid "This will mark the workflow as published and complete the cycle. It does not change the post’s WordPress publish status."
+msgstr ""
+
+#: src/utils/confirmations.js:88
+msgid "Publish"
+msgstr ""
+
+#: src/utils/groupByDay.js:80
+msgid "Unknown date"
+msgstr ""
+
+#: src/utils/groupByDay.js:82
+msgid "Today"
+msgstr ""
+
+#: src/utils/groupByDay.js:84
+msgid "Yesterday"
 msgstr ""

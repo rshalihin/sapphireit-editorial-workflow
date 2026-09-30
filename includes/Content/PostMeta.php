@@ -132,7 +132,7 @@ final class PostMeta implements Bootable {
 			PostRepository::META_STATUS,
 			array(
 				'type'              => 'string',
-				'description'       => __( 'Editorial workflow status.', 'sit-cwm' ),
+				'description'       => __( 'Editorial workflow status.', 'sapphireit-editorial-workflow' ),
 				'single'            => true,
 				'default'           => $this->statuses->default_status(),
 				'show_in_rest'      => array(
@@ -158,7 +158,7 @@ final class PostMeta implements Bootable {
 			PostRepository::META_REVIEWER,
 			array(
 				'type'              => 'integer',
-				'description'       => __( 'User id of the assigned reviewer; 0 when none.', 'sit-cwm' ),
+				'description'       => __( 'User id of the assigned reviewer; 0 when none.', 'sapphireit-editorial-workflow' ),
 				'single'            => true,
 				'default'           => 0,
 				'show_in_rest'      => array(
@@ -177,7 +177,7 @@ final class PostMeta implements Bootable {
 			PostRepository::META_DUE_DATE,
 			array(
 				'type'              => 'string',
-				'description'       => __( 'Workflow due date (Y-m-d); empty when none.', 'sit-cwm' ),
+				'description'       => __( 'Workflow due date (Y-m-d); empty when none.', 'sapphireit-editorial-workflow' ),
 				'single'            => true,
 				'default'           => '',
 				'show_in_rest'      => array(

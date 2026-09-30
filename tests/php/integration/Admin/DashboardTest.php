@@ -117,7 +117,7 @@ final class DashboardTest extends WP_UnitTestCase {
 			$item = $this->menu_item();
 
 			$this->assertNotNull( $item, $role );
-			$this->assertSame( 'Content Workflow', $item[0] );
+			$this->assertSame( 'Editorial Workflow', $item[0] );
 			$this->assertSame( Capabilities::VIEW_ACTIVITY, $item[1] );
 			$this->assertSame( 'dashicons-clipboard', $item[6] );
 		}
@@ -196,7 +196,7 @@ final class DashboardTest extends WP_UnitTestCase {
 		$html = ob_get_clean();
 
 		$this->assertSame(
-			'<div class="wrap sit-cwm-dashboard-wrap"><h1 class="screen-reader-text">Content Workflow</h1><div id="sit-cwm-dashboard"></div></div>',
+			'<div class="wrap sit-cwm-dashboard-wrap"><h1 class="screen-reader-text">Editorial Workflow</h1><div id="sit-cwm-dashboard"></div></div>',
 			$html
 		);
 	}

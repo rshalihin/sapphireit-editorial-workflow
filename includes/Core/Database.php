@@ -156,11 +156,8 @@ KEY action (action)
 	public function drop(): void {
 		global $wpdb;
 
-		$table = $this->table_name();
-
-		// The table name comes from table_name() (prefix + constant), never user input.
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Dropping the plugin's own table.
-		$wpdb->query( "DROP TABLE IF EXISTS {$table}" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Dropping the plugin's own table.
+		$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $this->table_name() ) );
 
 		delete_option( self::VERSION_OPTION );
 	}

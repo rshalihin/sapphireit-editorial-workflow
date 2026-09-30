@@ -30,7 +30,7 @@ const FIELDS = [
 	{
 		id: 'due_date',
 		type: 'date',
-		label: __( 'Due date', 'sit-cwm' ),
+		label: __( 'Due date', 'sapphireit-editorial-workflow' ),
 	},
 ];
 
@@ -92,7 +92,7 @@ function BulkDueDateForm( { items, closeModal } ) {
 						'Set the due date of %d selected item.',
 						'Set the due date of %d selected items.',
 						count,
-						'sit-cwm'
+						'sapphireit-editorial-workflow'
 					),
 					count
 				) }
@@ -122,7 +122,7 @@ function BulkDueDateForm( { items, closeModal } ) {
 							'Remove the due date from %d item?',
 							'Remove the due date from %d items?',
 							count,
-							'sit-cwm'
+							'sapphireit-editorial-workflow'
 						),
 						count
 					) }
@@ -137,7 +137,7 @@ function BulkDueDateForm( { items, closeModal } ) {
 							'Set the due date of %1$d item to %2$s?',
 							'Set the due date of %1$d items to %2$s?',
 							count,
-							'sit-cwm'
+							'sapphireit-editorial-workflow'
 						),
 						count,
 						formatDate( data.due_date )
@@ -155,7 +155,7 @@ function BulkDueDateForm( { items, closeModal } ) {
 								'Yes, remove from %d item',
 								'Yes, remove from %d items',
 								count,
-								'sit-cwm'
+								'sapphireit-editorial-workflow'
 							),
 							count
 						);
@@ -168,13 +168,13 @@ function BulkDueDateForm( { items, closeModal } ) {
 								'Yes, update %d item',
 								'Yes, update %d items',
 								count,
-								'sit-cwm'
+								'sapphireit-editorial-workflow'
 							),
 							count
 						);
 					}
 
-					return __( 'Apply', 'sit-cwm' );
+					return __( 'Apply', 'sapphireit-editorial-workflow' );
 				} )() }
 				isBusy={ isRunning }
 				canSubmit={ isClearing || isCalendarDate( data.due_date ) }
@@ -191,7 +191,7 @@ function BulkDueDateForm( { items, closeModal } ) {
 						} }
 						disabled={ isRunning }
 					>
-						{ __( 'Remove due dates', 'sit-cwm' ) }
+						{ __( 'Remove due dates', 'sapphireit-editorial-workflow' ) }
 					</Button>
 				) }
 			</ModalActions>

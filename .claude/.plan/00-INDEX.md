@@ -73,6 +73,7 @@ Tick a box only when that step's acceptance criteria all pass.
 - [x] 21 Performance pass  _(`bin/measure.php`; budgets, timings and `EXPLAIN` in `DEVELOPMENT.md` → "Performance"; `get_for_posts()` long-history fix 8.3 s → 96 ms)_
 - [x] 22 UX polish + i18n  _(axe/keyboard/ui-states specs pass; badge contrast table, RTL check and NVDA script in `DEVELOPMENT.md` → "Accessibility"; `.pot` regenerated; the manual screen-reader pass itself is the developer's, step G of `24-remaining-v1-tasks.md`)_
 - [x] 23 Docs + release  _(docs, screenshots, zip tooling and release.yml done and verified locally; the tag push, the clean-WP install check and the full CI matrix are the developer's)_
+- [ ] 25 Rename to SapphireIT Editorial Workflow (WP.org pre-review fixes): see `25-rename-sapphireit-editorial-workflow.md`
 
 ## Out of scope for v1.0 (do not build)
 

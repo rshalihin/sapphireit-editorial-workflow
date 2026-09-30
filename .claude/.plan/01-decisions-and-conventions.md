@@ -10,13 +10,19 @@ Change here first, then in code.
 | Functions / hooks | `sit_cwm_` |
 | Namespace root | `Sit_Cwm\` |
 | Constants | `SIT_CWM_` |
-| Slug / text domain / asset handles | `sit-cwm` |
+| Plugin slug / text domain | `sapphireit-editorial-workflow` (must equal the WP.org slug) |
+| Asset handles / CSS classes / DOM ids / admin page slugs | `sit-cwm` |
 | REST namespace | `sit-cwm/v1` |
 | DB tables | `{$wpdb->prefix}sit_cwm_*` |
 | Post meta | `_sit_cwm_*` |
 | Capabilities | `sit_cwm_*` |
 | Options | `sit_cwm_*` |
 | Nonce actions | `sit_cwm_*` |
+
+2026-09-30: renamed for the WP.org naming review, see step 25. Display name is
+"SapphireIT Editorial Workflow"; slug and text domain are
+`sapphireit-editorial-workflow`. The code prefixes above are unchanged, so no
+data migration is needed.
 
 ## D2 — Class style: namespaced, PSR-4, `StudlyCase` class names
 

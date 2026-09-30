@@ -197,7 +197,7 @@ export default function useWorkflow( postId ) {
 						...err,
 						message: __(
 							'This post changed elsewhere — refreshed.',
-							'sit-cwm'
+							'sapphireit-editorial-workflow'
 						),
 					};
 				} else if ( err.status === 403 ) {
@@ -259,7 +259,10 @@ export default function useWorkflow( postId ) {
 				createSuccessNotice(
 					sprintf(
 						/* translators: %s: Workflow status label. */
-						__( 'Workflow status changed to %s.', 'sit-cwm' ),
+						__(
+							'Workflow status changed to %s.',
+							'sapphireit-editorial-workflow'
+						),
 						data.status_label
 					),
 					{ id: 'sit-cwm-status-changed', type: 'snackbar' }
@@ -282,10 +285,16 @@ export default function useWorkflow( postId ) {
 					data.reviewer?.name
 						? sprintf(
 								/* translators: %s: Reviewer display name. */
-								__( 'Reviewer set to %s.', 'sit-cwm' ),
+								__(
+									'Reviewer set to %s.',
+									'sapphireit-editorial-workflow'
+								),
 								data.reviewer.name
 							)
-						: __( 'Reviewer removed.', 'sit-cwm' )
+						: __(
+								'Reviewer removed.',
+								'sapphireit-editorial-workflow'
+							)
 				);
 			}
 
@@ -305,10 +314,16 @@ export default function useWorkflow( postId ) {
 					data.due_date
 						? sprintf(
 								/* translators: %s: Due date. */
-								__( 'Due date set to %s.', 'sit-cwm' ),
+								__(
+									'Due date set to %s.',
+									'sapphireit-editorial-workflow'
+								),
 								formatDate( data.due_date )
 							)
-						: __( 'Due date removed.', 'sit-cwm' )
+						: __(
+								'Due date removed.',
+								'sapphireit-editorial-workflow'
+							)
 				);
 			}
 
@@ -325,7 +340,9 @@ export default function useWorkflow( postId ) {
 			);
 
 			if ( ! err ) {
-				speak( __( 'Comment added.', 'sit-cwm' ) );
+				speak(
+					__( 'Comment added.', 'sapphireit-editorial-workflow' )
+				);
 			}
 
 			return err;

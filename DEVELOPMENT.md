@@ -1,6 +1,6 @@
 # Development
 
-Everything you need to work on Content Workflow Manager: environment, build,
+Everything you need to work on SapphireIT Editorial Workflow: environment, build,
 tests, standards, performance budgets and the release process.
 
 [ARCHITECTURE.md](ARCHITECTURE.md) explains how the code is shaped;
@@ -11,8 +11,8 @@ tests, standards, performance budgets and the release process.
 From a clean clone, with Node 20+, PHP 7.4+ and Docker:
 
 ```sh
-git clone https://github.com/shappire-it/content-workflow-manager.git
-cd content-workflow-manager
+git clone https://github.com/rshalihin/sapphireit-editorial-workflow.git
+cd sapphireit-editorial-workflow
 
 composer install     # dev tooling: phpcs, phpunit
 npm ci               # build + test toolchain
@@ -23,13 +23,13 @@ npm run env:start    # wp-env: WordPress on http://localhost:8888
 Then:
 
 1. Open <http://localhost:8888/wp-admin> (`admin` / `password`).
-2. **Plugins** → activate **Content Workflow Manager**.
+2. **Plugins** → activate **SapphireIT Editorial Workflow**.
 3. **Posts → Add New**, give it a title, save a draft.
-4. Click the **Content Workflow** icon in the top-right toolbar — the sidebar
+4. Click the **Editorial Workflow** icon in the top-right toolbar — the sidebar
    shows **Draft** and one button, **Move to Writing**.
 5. Move it to Writing, then Review; assign yourself as reviewer and a due date;
    then **Approve**.
-6. **Content Workflow → Dashboard** shows the post with its new status.
+6. **Editorial Workflow → Dashboard** shows the post with its new status.
 
 If you cannot run Docker, the plugin already lives in a WordPress install here
 (`wp-content/plugins/`) — activate it there and skip `env:start`. See
@@ -51,7 +51,7 @@ test suites.
 | `npm run test:e2e` | Playwright against wp-env |
 | `npm run test:e2e:local` | Playwright against a local site (no Docker) |
 | `npm run env:start` | wp-env |
-| `npm run makepot` | Regenerate `languages/sit-cwm.pot` (needs wp-cli) |
+| `npm run makepot` | Regenerate `languages/sapphireit-editorial-workflow.pot` (needs wp-cli) |
 | `npm run screenshots` | Regenerate `docs/screenshots/` (**destructive**) |
 | `npm run check:version` | Assert the version matches in all four files |
 | `npm run build:zip` | Build the release zip into `dist/` |
@@ -67,7 +67,7 @@ commands are in the table above.
 | Entry | Source | Output | Loaded by |
 |---|---|---|---|
 | `sidebar` | `src/sidebar/index.js` | `assets/build/sidebar.{js,asset.php}` | `Sit_Cwm\Editor\SidebarAssets` (block editor, enabled post types, users who can edit the post) |
-| `dashboard` | `src/dashboard/index.js` | `assets/build/dashboard.{js,css,asset.php}` | `Sit_Cwm\Admin\Dashboard` (the "Content Workflow" admin page only, for users with `sit_cwm_view_activity` who can edit a workflow-enabled post type) |
+| `dashboard` | `src/dashboard/index.js` | `assets/build/dashboard.{js,css,asset.php}` | `Sit_Cwm\Admin\Dashboard` (the "Editorial Workflow" admin page only, for users with `sit_cwm_view_activity` who can edit a workflow-enabled post type) |
 
 A `.css` file is emitted per entry once it imports styles. Name the entry's
 stylesheet after the entry (`src/sidebar/sidebar.scss`), not `style.scss`:
@@ -135,7 +135,7 @@ an empty React root. `src/dashboard/` renders `@wordpress/dataviews` over
 
 ### Settings page
 
-`admin/Settings.php` adds **Content Workflow → Settings** for users with
+`admin/Settings.php` adds **Editorial Workflow → Settings** for users with
 `sit_cwm_manage_workflows`. It uses the Settings API only: `options.php` checks
 the nonce from `settings_fields()`, and
 `option_page_capability_sit_cwm_settings_group` makes it require the plugin
@@ -348,7 +348,7 @@ author or activity query per row.
 
 ```sh
 npm run env:start                          # wp-env includes Query Monitor
-npx wp-env run cli wp eval-file wp-content/plugins/content-workflow-manager/bin/seed.php 500 10 5000
+npx wp-env run cli wp eval-file wp-content/plugins/sapphireit-editorial-workflow/bin/seed.php 500 10 5000
 ```
 
 `bin/seed.php` (dev only, export-ignored) creates reviewers, workflow posts
@@ -543,7 +543,7 @@ few managed posts, and one reviewer user. Start in browse mode. Press
 elements list. After each step, the listed announcement should be heard.
 
 **Editor sidebar** (open a post, then use the editor top bar's
-*Content Workflow* button):
+*Editorial Workflow* button):
 
 1. **Status.** Tab to the panel and read down with the arrow keys. You should
    hear "Status", then the status label (for example "Draft") and its
@@ -575,7 +575,7 @@ elements list. After each step, the listed announcement should be heard.
    notices. To trigger one, stop the web server and move a status: the error
    notice is read, and *Retry* is reachable with `Tab`.
 
-**Dashboard** (*Content Workflow → Dashboard*):
+**Dashboard** (*Editorial Workflow → Dashboard*):
 
 7. **Table navigation.** Press `T` to jump to the table. NVDA reads the column
    count and the column headers. Move with `Ctrl+Alt+Arrow`. Headers are
@@ -679,7 +679,7 @@ match the files fails the build before anything is published.
 
 ```sh
 npm run build        # assets/build/ is committed (D11) — commit the diff
-npm run makepot      # languages/sit-cwm.pot
+npm run makepot      # languages/sapphireit-editorial-workflow.pot
 ```
 
 CI fails if `npm run build` produces a diff against the committed output, so
@@ -699,7 +699,7 @@ No exceptions, no "just this once".
 ### 5. Build and inspect the zip
 
 ```sh
-npm run build:zip          # → dist/content-workflow-manager.zip
+npm run build:zip          # → dist/sapphireit-editorial-workflow.zip
 php bin/build-zip.php --list   # what would ship, without building
 ```
 

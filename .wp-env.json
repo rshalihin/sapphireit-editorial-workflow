@@ -11,7 +11,7 @@
   "env": {
     "tests": {
       "mappings": {
-        "wp-content/plugins/content-workflow-manager/tests": "./tests"
+        "wp-content/plugins/sapphireit-editorial-workflow/tests": "./tests"
       }
     }
   }

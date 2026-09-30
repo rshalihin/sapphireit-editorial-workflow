@@ -67,7 +67,7 @@ export default function useRowMutation( { closeModal, onChanged } ) {
 						err.status === 409
 							? __(
 									'This post changed elsewhere — refreshed.',
-									'sit-cwm'
+									'sapphireit-editorial-workflow'
 								)
 							: err.message,
 						{ type: 'snackbar' }

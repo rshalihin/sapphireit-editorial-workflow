@@ -1,6 +1,6 @@
-=== Content Workflow Manager ===
-Contributors: shappireit
-Tags: editorial workflow, approval, review, content workflow, editorial calendar
+=== SapphireIT Editorial Workflow ===
+Contributors: sapphireit
+Tags: editorial workflow, approval workflow, content review, reviewer, publishing
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 7.4
@@ -12,10 +12,10 @@ Editorial approval workflow for posts, pages and custom post types: statuses, re
 
 == Description ==
 
-Content Workflow Manager adds a real editorial process on top of the posts you
-already have. Every managed post gets a workflow status, an assigned reviewer, a
-due date, workflow comments and a complete activity history — managed from a
-Gutenberg sidebar and an admin dashboard.
+SapphireIT Editorial Workflow adds a real editorial process on top of the posts
+you already have. Every managed post gets a workflow status, an assigned
+reviewer, a due date, workflow comments and a complete activity history —
+managed from a Gutenberg sidebar and an admin dashboard.
 
 **Six statuses, one clear path:** Draft → Writing → Review → Needs Changes →
 Approved → Published, with explicit paths for sending content back and for
@@ -79,17 +79,17 @@ actions and filters at every lifecycle point (`sit_cwm_status_changed`,
 extended without editing its files.
 
 Source, architecture notes and full REST documentation:
-https://github.com/shappire-it/content-workflow-manager
+https://github.com/rshalihin/sapphireit-editorial-workflow
 
 == Installation ==
 
-1. Upload the plugin to `/wp-content/plugins/content-workflow-manager/`, or
+1. Upload the plugin to `/wp-content/plugins/sapphireit-editorial-workflow/`, or
    install it through **Plugins → Add New → Upload Plugin**.
 2. Activate it through the **Plugins** menu. Activation creates the activity
    table and grants the workflow capabilities to your existing roles.
-3. Go to **Content Workflow → Settings** and choose which post types the
+3. Go to **Editorial Workflow → Settings** and choose which post types the
    workflow applies to. Posts and pages are enabled by default.
-4. Open any post in the block editor and click the **Content Workflow** icon in
+4. Open any post in the block editor and click the **Editorial Workflow** icon in
    the top-right toolbar.
 
 Uninstalling removes the activity table, the plugin's post meta, its options and

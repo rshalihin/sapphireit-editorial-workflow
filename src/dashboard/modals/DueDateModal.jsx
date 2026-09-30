@@ -27,7 +27,7 @@ const FIELDS = [
 	{
 		id: 'due_date',
 		type: 'date',
-		label: __( 'Due date', 'sit-cwm' ),
+		label: __( 'Due date', 'sapphireit-editorial-workflow' ),
 	},
 ];
 
@@ -51,7 +51,7 @@ export default function DueDateModal( { items, closeModal, onChanged } ) {
 	const [ data, setData ] = useState( { due_date: current } );
 	const { run, isBusy, error } = useRowMutation( { closeModal, onChanged } );
 
-	const title = item.title || __( '(no title)', 'sit-cwm' );
+	const title = item.title || __( '(no title)', 'sapphireit-editorial-workflow' );
 
 	const save = ( date ) =>
 		run( async () => {
@@ -61,12 +61,12 @@ export default function DueDateModal( { items, closeModal, onChanged } ) {
 				success: date
 					? sprintf(
 							/* translators: %s: Post title. */
-							__( 'Due date updated for “%s”.', 'sit-cwm' ),
+							__( 'Due date updated for “%s”.', 'sapphireit-editorial-workflow' ),
 							title
 						)
 					: sprintf(
 							/* translators: %s: Post title. */
-							__( 'Due date removed from “%s”.', 'sit-cwm' ),
+							__( 'Due date removed from “%s”.', 'sapphireit-editorial-workflow' ),
 							title
 						),
 			};
@@ -101,7 +101,7 @@ export default function DueDateModal( { items, closeModal, onChanged } ) {
 
 			<ModalActions
 				onCancel={ closeModal }
-				submitLabel={ __( 'Save', 'sit-cwm' ) }
+				submitLabel={ __( 'Save', 'sapphireit-editorial-workflow' ) }
 				isBusy={ isBusy }
 				canSubmit={
 					isCalendarDate( data.due_date ) && data.due_date !== current
@@ -115,7 +115,7 @@ export default function DueDateModal( { items, closeModal, onChanged } ) {
 						onClick={ () => save( '' ) }
 						disabled={ isBusy }
 					>
-						{ __( 'Remove due date', 'sit-cwm' ) }
+						{ __( 'Remove due date', 'sapphireit-editorial-workflow' ) }
 					</Button>
 				) }
 			</ModalActions>

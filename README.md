@@ -1,4 +1,4 @@
-# Content Workflow Manager
+# SapphireIT Editorial Workflow
 
 An editorial approval workflow for WordPress. Posts, pages and custom post
 types get a **workflow status**, an assigned **reviewer**, a **due date**,
@@ -97,8 +97,8 @@ older PHP it shows an admin notice instead of fataling.
 
 ### From a release zip
 
-1. Download `content-workflow-manager.zip` from the
-   [releases page](https://github.com/shappire-it/content-workflow-manager/releases).
+1. Download `sapphireit-editorial-workflow.zip` from the
+   [releases page](https://github.com/rshalihin/sapphireit-editorial-workflow/releases).
 2. **Plugins → Add New → Upload Plugin**, choose the zip, install, activate.
 
 Activation creates the `wp_sit_cwm_activity` table and grants the six
@@ -109,7 +109,7 @@ capabilities to the administrator, editor, author and contributor roles.
 `assets/build/` is committed, so a clone runs as-is — no build step needed:
 
 ```sh
-git clone https://github.com/shappire-it/content-workflow-manager.git
+git clone https://github.com/rshalihin/sapphireit-editorial-workflow.git
 # into wp-content/plugins/, then activate in wp-admin
 ```
 
@@ -121,15 +121,15 @@ for when `vendor/` is absent.
 ## Quick start
 
 1. Activate the plugin.
-2. **Content Workflow → Settings** — choose which post types the workflow
+2. **Editorial Workflow → Settings** — choose which post types the workflow
    applies to (default: posts and pages).
-3. Open a post in the block editor and click the **Content Workflow** icon in
+3. Open a post in the block editor and click the **Editorial Workflow** icon in
    the top-right toolbar. Every managed post starts at **Draft**.
 4. Move it along: **Draft → Writing** when you start, **Writing → Review** when
    it is ready, and assign a reviewer plus a due date.
 5. The reviewer either **Approves** it or sends it back with **Needs Changes**,
    leaving a workflow comment explaining why.
-6. **Content Workflow → Dashboard** shows everything in flight.
+6. **Editorial Workflow → Dashboard** shows everything in flight.
 
 ### The six statuses, and who can reach each one
 
@@ -306,4 +306,4 @@ attach to.
 
 GPL-2.0-or-later. See [LICENSE](LICENSE).
 
-Copyright © 2026 Shappire IT.
+Copyright © 2026 SapphireIT.

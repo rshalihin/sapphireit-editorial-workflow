@@ -73,7 +73,7 @@ function BulkReviewerForm( { items, closeModal } ) {
 						'Set the reviewer of %d selected item.',
 						'Set the reviewer of %d selected items.',
 						count,
-						'sit-cwm'
+						'sapphireit-editorial-workflow'
 					),
 					count
 				) }
@@ -82,7 +82,7 @@ function BulkReviewerForm( { items, closeModal } ) {
 			<ComboboxControl
 				__next40pxDefaultSize
 				__nextHasNoMarginBottom
-				label={ __( 'Reviewer', 'sit-cwm' ) }
+				label={ __( 'Reviewer', 'sapphireit-editorial-workflow' ) }
 				value={ value }
 				options={ options }
 				onChange={ ( next ) => {
@@ -105,7 +105,7 @@ function BulkReviewerForm( { items, closeModal } ) {
 										'Remove the reviewer from %d item?',
 										'Remove the reviewer from %d items?',
 										count,
-										'sit-cwm'
+										'sapphireit-editorial-workflow'
 									),
 									count
 							  )
@@ -115,7 +115,7 @@ function BulkReviewerForm( { items, closeModal } ) {
 										'Assign %1$s as reviewer of %2$d item?',
 										'Assign %1$s as reviewer of %2$d items?',
 										count,
-										'sit-cwm'
+										'sapphireit-editorial-workflow'
 									),
 									reviewerName,
 									count
@@ -126,7 +126,7 @@ function BulkReviewerForm( { items, closeModal } ) {
 
 			{ ! options.length && ! isLoading && (
 				<Notice status="info" isDismissible={ false }>
-					{ __( 'No reviewers are available.', 'sit-cwm' ) }
+					{ __( 'No reviewers are available.', 'sapphireit-editorial-workflow' ) }
 				</Notice>
 			) }
 
@@ -140,11 +140,11 @@ function BulkReviewerForm( { items, closeModal } ) {
 									'Yes, update %d item',
 									'Yes, update %d items',
 									count,
-									'sit-cwm'
+									'sapphireit-editorial-workflow'
 								),
 								count
 						  )
-						: __( 'Apply', 'sit-cwm' )
+						: __( 'Apply', 'sapphireit-editorial-workflow' )
 				}
 				isBusy={ isRunning }
 				canSubmit={ !! value }

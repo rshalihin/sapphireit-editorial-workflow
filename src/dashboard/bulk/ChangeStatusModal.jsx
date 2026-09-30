@@ -42,7 +42,7 @@ export default function ChangeStatusModal( { items, closeModal } ) {
 				<p>
 					{ __(
 						'None of the selected content can change status right now.',
-						'sit-cwm'
+						'sapphireit-editorial-workflow'
 					) }
 				</p>
 				<div className="sit-cwm-modal-actions">
@@ -51,7 +51,7 @@ export default function ChangeStatusModal( { items, closeModal } ) {
 						variant="primary"
 						onClick={ closeModal }
 					>
-						{ __( 'Close', 'sit-cwm' ) }
+						{ __( 'Close', 'sapphireit-editorial-workflow' ) }
 					</Button>
 				</div>
 			</>
@@ -89,7 +89,7 @@ export default function ChangeStatusModal( { items, closeModal } ) {
 						'Change the workflow status of %d selected item.',
 						'Change the workflow status of %d selected items.',
 						count,
-						'sit-cwm'
+						'sapphireit-editorial-workflow'
 					),
 					count
 				) }
@@ -98,7 +98,7 @@ export default function ChangeStatusModal( { items, closeModal } ) {
 			<SelectControl
 				__next40pxDefaultSize
 				__nextHasNoMarginBottom
-				label={ __( 'New status', 'sit-cwm' ) }
+				label={ __( 'New status', 'sapphireit-editorial-workflow' ) }
 				value={ to }
 				options={ options.map( ( option ) => ( {
 					value: option.slug,
@@ -119,7 +119,7 @@ export default function ChangeStatusModal( { items, closeModal } ) {
 							'%1$d item cannot move to %2$s right now and will be reported as not updated.',
 							'%1$d items cannot move to %2$s right now and will be reported as not updated.',
 							blocked,
-							'sit-cwm'
+							'sapphireit-editorial-workflow'
 						),
 						blocked,
 						selected.label
@@ -135,7 +135,7 @@ export default function ChangeStatusModal( { items, closeModal } ) {
 							'Move %1$d item to %2$s?',
 							'Move %1$d items to %2$s?',
 							count,
-							'sit-cwm'
+							'sapphireit-editorial-workflow'
 						),
 						count,
 						selected.label
@@ -153,11 +153,11 @@ export default function ChangeStatusModal( { items, closeModal } ) {
 									'Yes, update %d item',
 									'Yes, update %d items',
 									count,
-									'sit-cwm'
+									'sapphireit-editorial-workflow'
 								),
 								count
 						  )
-						: __( 'Apply', 'sit-cwm' )
+						: __( 'Apply', 'sapphireit-editorial-workflow' )
 				}
 				isBusy={ isRunning }
 				isDestructive={ selected.isRollback }

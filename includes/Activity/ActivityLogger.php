@@ -370,21 +370,38 @@ final class ActivityLogger implements Bootable {
 			return array();
 		}
 
-		list( $where, $params ) = $this->post_where( $post_id, $query['action'] );
+		$table  = $this->database->table_name();
+		$action = $query['action'];
+		$limit  = $query['per_page'];
+		$offset = ( $query['page'] - 1 ) * $query['per_page'];
 
-		// Whitelisted in parse_query_args(); never raw input.
-		$order = $query['order'];
-
-		$params[] = $query['per_page'];
-		$params[] = ( $query['page'] - 1 ) * $query['per_page'];
-
-		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin's own table; caching is a documented follow-up.
-			$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Values are passed as one array.
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $where is a hard-coded fragment, $order is whitelisted.
-				"SELECT * FROM %i WHERE {$where} ORDER BY created_at {$order}, id {$order} LIMIT %d OFFSET %d",
-				array_merge( array( $this->database->table_name() ), $params )
-			)
-		);
+		// Literal SQL per sort direction: nothing is interpolated. An empty
+		// action matches all; MySQL folds `'' = ''` so `post_created` is used.
+		if ( 'ASC' === $query['order'] ) {
+			$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin's own table; caching is a documented follow-up.
+				$wpdb->prepare(
+					"SELECT * FROM %i WHERE post_id = %d AND ( %s = '' OR action = %s ) ORDER BY created_at ASC, id ASC LIMIT %d OFFSET %d",
+					$table,
+					$post_id,
+					$action,
+					$action,
+					$limit,
+					$offset
+				)
+			);
+		} else {
+			$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin's own table; caching is a documented follow-up.
+				$wpdb->prepare(
+					"SELECT * FROM %i WHERE post_id = %d AND ( %s = '' OR action = %s ) ORDER BY created_at DESC, id DESC LIMIT %d OFFSET %d",
+					$table,
+					$post_id,
+					$action,
+					$action,
+					$limit,
+					$offset
+				)
+			);
+		}
 
 		return $this->to_entries( $rows );
 	}
@@ -407,13 +424,13 @@ final class ActivityLogger implements Bootable {
 			return 0;
 		}
 
-		list( $where, $params ) = $this->post_where( $post_id, $query['action'] );
-
 		return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin's own table; caching is a documented follow-up.
-			$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Values are passed as one array.
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $where is a hard-coded fragment.
-				"SELECT COUNT(*) FROM %i WHERE {$where}",
-				array_merge( array( $this->database->table_name() ), $params )
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM %i WHERE post_id = %d AND ( %s = '' OR action = %s )",
+				$this->database->table_name(),
+				$post_id,
+				$query['action'],
+				$query['action']
 			)
 		);
 	}
@@ -532,24 +549,6 @@ final class ActivityLogger implements Bootable {
 			'action'   => $action,
 			'order'    => 'ASC' === $order ? 'ASC' : 'DESC',
 		);
-	}
-
-	/**
-	 * Hard-coded WHERE fragment and its values for a post, optionally filtered
-	 * by action.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param int    $post_id Post id.
-	 * @param string $action  Validated action slug, or `''` for all.
-	 * @return array{0: string, 1: array} Fragment with placeholders, values.
-	 */
-	private function post_where( int $post_id, string $action ): array {
-		if ( '' === $action ) {
-			return array( 'post_id = %d', array( $post_id ) );
-		}
-
-		return array( 'post_id = %d AND action = %s', array( $post_id, $action ) );
 	}
 
 	/**

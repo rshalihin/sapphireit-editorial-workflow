@@ -164,7 +164,7 @@ final class Assets {
 		$handle = $this->script_handle( $entry );
 
 		wp_enqueue_script( $handle, $this->build_url . $entry . '.js', $asset['dependencies'], $asset['version'], true );
-		wp_set_script_translations( $handle, 'sit-cwm', $this->languages_dir );
+		wp_set_script_translations( $handle, 'sapphireit-editorial-workflow', $this->languages_dir );
 
 		if ( is_readable( $this->build_dir . $entry . '.css' ) ) {
 			wp_enqueue_style( $this->style_handle( $entry ), $this->build_url . $entry . '.css', array( 'wp-components' ), $asset['version'] );

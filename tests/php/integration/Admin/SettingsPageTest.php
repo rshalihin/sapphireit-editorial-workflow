@@ -310,7 +310,7 @@ final class SettingsPageTest extends TestCase {
 	 * @return void
 	 */
 	public function test_help_tab() {
-		set_current_screen( 'content-workflow_page_sit-cwm-settings' );
+		set_current_screen( 'editorial-workflow_page_sit-cwm-settings' );
 
 		$this->page->add_help_tab();
 

@@ -27,8 +27,8 @@ const COMMENT_FIELDS = [
 	{
 		id: 'comment',
 		type: 'text',
-		label: __( 'Comment (optional)', 'sit-cwm' ),
-		description: __( 'Added to the activity history.', 'sit-cwm' ),
+		label: __( 'Comment (optional)', 'sapphireit-editorial-workflow' ),
+		description: __( 'Added to the activity history.', 'sapphireit-editorial-workflow' ),
 		Edit: { control: 'textarea', rows: 4 },
 	},
 ];
@@ -73,7 +73,7 @@ export default function TransitionModal( {
 				<p>
 					{ __(
 						'This action is no longer available for this content.',
-						'sit-cwm'
+						'sapphireit-editorial-workflow'
 					) }
 				</p>
 				<div className="sit-cwm-modal-actions">
@@ -82,14 +82,14 @@ export default function TransitionModal( {
 						variant="primary"
 						onClick={ closeModal }
 					>
-						{ __( 'Close', 'sit-cwm' ) }
+						{ __( 'Close', 'sapphireit-editorial-workflow' ) }
 					</Button>
 				</div>
 			</>
 		);
 	}
 
-	const title = item.title || __( '(no title)', 'sit-cwm' );
+	const title = item.title || __( '(no title)', 'sapphireit-editorial-workflow' );
 	const { message: explanation } = getTransitionConfirmation( transition );
 
 	const submit = ( event ) => {
@@ -105,7 +105,7 @@ export default function TransitionModal( {
 			const message = withComment ? data.comment.trim() : '';
 			const success = sprintf(
 				/* translators: 1: Post title, 2: Workflow status label. */
-				__( '“%1$s” moved to %2$s.', 'sit-cwm' ),
+				__( '“%1$s” moved to %2$s.', 'sapphireit-editorial-workflow' ),
 				title,
 				transition.label
 			);
@@ -122,7 +122,7 @@ export default function TransitionModal( {
 						/* translators: 1: Workflow status label, 2: Error message. */
 						__(
 							'Moved to %1$s, but the comment could not be saved: %2$s',
-							'sit-cwm'
+							'sapphireit-editorial-workflow'
 						),
 						transition.label,
 						err.message
@@ -139,7 +139,7 @@ export default function TransitionModal( {
 			<p>
 				{ sprintf(
 					/* translators: 1: Post title, 2: Current workflow status label, 3: Target workflow status label. */
-					__( 'Move “%1$s” from %2$s to %3$s?', 'sit-cwm' ),
+					__( 'Move “%1$s” from %2$s to %3$s?', 'sapphireit-editorial-workflow' ),
 					title,
 					item.status_label,
 					transition.label

@@ -47,7 +47,7 @@ require_once $sit_cwm_tests_dir . '/includes/functions.php';
 tests_add_filter(
 	'muplugins_loaded',
 	static function () use ( $sit_cwm_root ) {
-		require $sit_cwm_root . '/content-workflow-manager.php';
+		require $sit_cwm_root . '/sapphireit-editorial-workflow.php';
 	}
 );
 

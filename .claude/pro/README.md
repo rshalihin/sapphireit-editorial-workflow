@@ -1,4 +1,4 @@
-# Content Workflow Manager — Pro plans
+# SapphireIT Editorial Workflow — Pro plans
 
 Plans that belong to a future **Pro** add-on, kept apart from the Free v1.0
 build plan in `../.plan/`. Nothing in this folder is part of the Free

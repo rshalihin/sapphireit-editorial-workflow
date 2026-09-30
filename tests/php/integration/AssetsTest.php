@@ -30,13 +30,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class AssetsTest extends WP_UnitTestCase {
 
 	/**
-	 * Build URL passed to the loader.
-	 *
-	 * @var string
-	 */
-	const BUILD_URL = 'http://example.org/wp-content/plugins/content-workflow-manager/assets/build/';
-
-	/**
 	 * Resets script/style registries and grants the default capabilities.
 	 *
 	 * @return void
@@ -76,11 +69,11 @@ final class AssetsTest extends WP_UnitTestCase {
 
 		$this->assertSame( $handle, $assets->script_handle( 'sidebar' ) );
 		$this->assertTrue( wp_script_is( $handle, 'enqueued' ) );
-		$this->assertSame( self::BUILD_URL . 'sidebar.js', $script->src );
+		$this->assertSame( self::build_url() . 'sidebar.js', $script->src );
 		$this->assertSame( array( 'wp-element', 'wp-i18n' ), $script->deps );
 		$this->assertSame( 'fixture-sidebar', $script->ver );
 		$this->assertSame( 1, wp_scripts()->get_data( $handle, 'group' ) );
-		$this->assertSame( 'sit-cwm', $script->textdomain );
+		$this->assertSame( 'sapphireit-editorial-workflow', $script->textdomain );
 		$this->assertSame( '/languages', $script->translations_path );
 	}
 
@@ -100,7 +93,7 @@ final class AssetsTest extends WP_UnitTestCase {
 
 		$style = wp_styles()->registered['sit-cwm-sidebar-css'];
 
-		$this->assertSame( self::BUILD_URL . 'sidebar.css', $style->src );
+		$this->assertSame( self::build_url() . 'sidebar.css', $style->src );
 		$this->assertSame( array( 'wp-components' ), $style->deps );
 		$this->assertSame( 'fixture-sidebar', $style->ver );
 	}
@@ -203,9 +196,19 @@ final class AssetsTest extends WP_UnitTestCase {
 			$statuses,
 			new PermissionManager( new PostRepository( $statuses, $settings ), $settings ),
 			dirname( __DIR__ ) . '/fixtures/' . $fixture,
-			self::BUILD_URL,
+			self::build_url(),
 			'/languages'
 		);
+	}
+
+	/**
+	 * Build URL passed to the loader, derived from the plugin URL so a renamed
+	 * plugin folder cannot break the assertions.
+	 *
+	 * @return string
+	 */
+	private static function build_url(): string {
+		return SIT_CWM_PLUGIN_URL . 'assets/build/';
 	}
 
 	/**

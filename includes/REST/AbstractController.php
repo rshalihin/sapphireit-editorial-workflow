@@ -127,7 +127,7 @@ abstract class AbstractController extends WP_REST_Controller implements Bootable
 	 */
 	protected function post_id_arg(): array {
 		return array(
-			'description'       => __( 'Post ID.', 'sit-cwm' ),
+			'description'       => __( 'Post ID.', 'sapphireit-editorial-workflow' ),
 			'type'              => 'integer',
 			'required'          => true,
 			'minimum'           => 1,
@@ -146,7 +146,7 @@ abstract class AbstractController extends WP_REST_Controller implements Bootable
 	protected function pagination_args(): array {
 		return array(
 			'page'     => array(
-				'description'       => __( 'Current page of the collection.', 'sit-cwm' ),
+				'description'       => __( 'Current page of the collection.', 'sapphireit-editorial-workflow' ),
 				'type'              => 'integer',
 				'default'           => 1,
 				'minimum'           => 1,
@@ -154,7 +154,7 @@ abstract class AbstractController extends WP_REST_Controller implements Bootable
 				'sanitize_callback' => 'absint',
 			),
 			'per_page' => array(
-				'description'       => __( 'Maximum number of items to return.', 'sit-cwm' ),
+				'description'       => __( 'Maximum number of items to return.', 'sapphireit-editorial-workflow' ),
 				'type'              => 'integer',
 				'default'           => self::DEFAULT_PER_PAGE,
 				'minimum'           => 1,
@@ -209,7 +209,7 @@ abstract class AbstractController extends WP_REST_Controller implements Bootable
 
 		return new WP_Error(
 			'sit_cwm_invalid_date',
-			__( 'The due date must be a valid date in YYYY-MM-DD format.', 'sit-cwm' ),
+			__( 'The due date must be a valid date in YYYY-MM-DD format.', 'sapphireit-editorial-workflow' ),
 			array( 'status' => 400 )
 		);
 	}
@@ -246,7 +246,7 @@ abstract class AbstractController extends WP_REST_Controller implements Bootable
 		if ( ! $post instanceof WP_Post || ! $this->posts->is_managed( $post->ID ) || ! $this->permissions->can_read_post( $post->ID ) ) {
 			return new WP_Error(
 				'sit_cwm_not_managed',
-				__( 'No workflow was found for this content.', 'sit-cwm' ),
+				__( 'No workflow was found for this content.', 'sapphireit-editorial-workflow' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -294,7 +294,7 @@ abstract class AbstractController extends WP_REST_Controller implements Bootable
 
 		return new WP_Error(
 			'rest_forbidden',
-			__( 'You must be logged in to access workflows.', 'sit-cwm' ),
+			__( 'You must be logged in to access workflows.', 'sapphireit-editorial-workflow' ),
 			array( 'status' => rest_authorization_required_code() )
 		);
 	}
@@ -309,7 +309,7 @@ abstract class AbstractController extends WP_REST_Controller implements Bootable
 	protected function forbidden(): WP_Error {
 		return new WP_Error(
 			'sit_cwm_forbidden',
-			__( 'You are not allowed to perform this workflow action.', 'sit-cwm' ),
+			__( 'You are not allowed to perform this workflow action.', 'sapphireit-editorial-workflow' ),
 			array( 'status' => 403 )
 		);
 	}

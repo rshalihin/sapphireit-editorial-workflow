@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-This file guides Claude Code (and any other AI assistant) when working on the **Content Workflow Manager** WordPress plugin. Follow these rules for every file created or edited in this repository, without exception, unless the user explicitly overrides one in the moment.
+This file guides Claude Code (and any other AI assistant) when working on the **SapphireIT Editorial Workflow** WordPress plugin. Follow these rules for every file created or edited in this repository, without exception, unless the user explicitly overrides one in the moment.
 
 ## Project overview
 
-Content Workflow Manager (CWM) is a WordPress plugin that adds an editorial approval workflow on top of normal posts/pages/CPTs: **Draft → Writing → Review → Needs Changes → Approved → Published**. Each managed post gets a workflow status, an assigned reviewer, a due date, workflow comments, and an activity history. Full architecture and phased build order live in `Content Workflow Manager — Development Plan.md` in this repo — read it before proposing structure for any new feature.
+SapphireIT Editorial Workflow (CWM internally) is a WordPress plugin that adds an editorial approval workflow on top of normal posts/pages/CPTs: **Draft → Writing → Review → Needs Changes → Approved → Published**. Each managed post gets a workflow status, an assigned reviewer, a due date, workflow comments, and an activity history. Full architecture and phased build order live in `.claude/.plan/` (start at `00-INDEX.md`) — read it before proposing structure for any new feature.
 
 - **Free v1.0 scope**: workflow statuses, transition validation, permissions, reviewer assignment, due dates, comments, activity history, REST API, Gutenberg sidebar, admin dashboard (DataViews).
 - **Pro scope (do not build into Free core)**: multiple workflows, role-based workflow configuration, email notifications, Slack integration, editorial calendar, checklist gating, workflow rules engine, advanced audit logs.
@@ -12,14 +12,15 @@ Content Workflow Manager (CWM) is a WordPress plugin that adds an editorial appr
 
 ## Naming conventions — always use these, never invent new ones
 
-The plugin author's WordPress identity is "Shappire IT" → prefix `sit_cwm`. Consistency here matters more than any single choice, so never deviate mid-codebase.
+The plugin author's WordPress identity is "SapphireIT" → prefix `sit_cwm`. Consistency here matters more than any single choice, so never deviate mid-codebase.
 
 | Element | Convention | Example |
 |---|---|---|
 | PHP functions / hooks / actions / filters | `sit_cwm_` | `sit_cwm_get_workflow_status()`, `do_action( 'sit_cwm_status_changed', ... )` |
 | PHP classes | `Sit_Cwm_` prefix or `Sit_Cwm\` namespace | `Sit_Cwm_Workflow_Manager`, `Sit_Cwm\Workflow\WorkflowManager` |
 | Constants | `SIT_CWM_` | `SIT_CWM_VERSION`, `SIT_CWM_PLUGIN_DIR` |
-| Text domain / plugin slug / asset handles | `sit-cwm` | `sit-cwm`, `sit-cwm-sidebar-js` |
+| Text domain / plugin slug (must equal the WP.org slug) | `sapphireit-editorial-workflow` | `__( 'Approve', 'sapphireit-editorial-workflow' )` |
+| Asset handles / CSS classes / DOM ids / admin page slugs | `sit-cwm` | `sit-cwm-sidebar-js`, `.sit-cwm-status-badge` |
 | REST namespace | `sit-cwm/v1` | `/wp-json/sit-cwm/v1/posts/125/workflow` |
 | Custom DB tables | `{$wpdb->prefix}sit_cwm_*` | `wp_sit_cwm_activity` |
 | Post meta keys | `_sit_cwm_*` | `_sit_cwm_status`, `_sit_cwm_reviewer_id`, `_sit_cwm_due_date` |
@@ -36,7 +37,7 @@ All PHP must pass `phpcs` with the **WordPress** ruleset (WordPress-Extra recomm
 - Full docblocks on every class, method, and function (`@since`, `@param`, `@return`).
 - File header guard: every PHP file must start with `if ( ! defined( 'ABSPATH' ) ) { exit; }` immediately after the opening `<?php`.
 - Use `snake_case` for functions/variables, `Sit_Cwm_Class_Name` (underscores between words) for classes, matching WP core conventions.
-- All strings shown to users must be translatable: `__()`, `_e()`, `esc_html__()`, etc., with text domain `sit-cwm`.
+- All strings shown to users must be translatable: `__()`, `_e()`, `esc_html__()`, etc., with text domain `sapphireit-editorial-workflow`.
 - Target PHP 7.4+ syntax by default unless the user specifies a higher minimum; declare `Requires PHP` and `Requires at least` (WP version) in the main plugin file header.
 - JS/React code (Gutenberg sidebar, dashboard) follows the `@wordpress/scripts` ESLint config (`@wordpress/eslint-plugin`) — no ad hoc formatting.
 

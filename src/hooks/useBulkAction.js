@@ -90,7 +90,10 @@ export function reconcileResult( data, postIds ) {
 			message:
 				typeof entry.message === 'string' && entry.message
 					? entry.message
-					: __( 'An unknown error occurred.', 'sit-cwm' ),
+					: __(
+							'An unknown error occurred.',
+							'sapphireit-editorial-workflow'
+						),
 		} );
 	} );
 
@@ -101,7 +104,7 @@ export function reconcileResult( data, postIds ) {
 				code: MISSING_RESULT,
 				message: __(
 					'The server did not report a result for this item.',
-					'sit-cwm'
+					'sapphireit-editorial-workflow'
 				),
 			} );
 		}
@@ -132,11 +135,11 @@ export function summarizeResult( result ) {
 						'%d post updated.',
 						'%d posts updated.',
 						updated,
-						'sit-cwm'
+						'sapphireit-editorial-workflow'
 					),
 					updated
 				)
-			: __( 'No posts were updated.', 'sit-cwm' ),
+			: __( 'No posts were updated.', 'sapphireit-editorial-workflow' ),
 	];
 
 	if ( failed ) {
@@ -147,7 +150,7 @@ export function summarizeResult( result ) {
 					'%d could not be updated.',
 					'%d could not be updated.',
 					failed,
-					'sit-cwm'
+					'sapphireit-editorial-workflow'
 				),
 				failed
 			)

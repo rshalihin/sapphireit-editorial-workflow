@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * The "Content Workflow" top-level admin page.
+ * The "Editorial Workflow" top-level admin page.
  *
  * The page is an empty React root: every row, filter and action is loaded
  * from `GET /sit-cwm/v1/posts` and re-authorized server-side per request, so
@@ -127,7 +127,7 @@ final class Dashboard implements Bootable {
 			return;
 		}
 
-		$title = __( 'Content Workflow', 'sit-cwm' );
+		$title = __( 'Editorial Workflow', 'sapphireit-editorial-workflow' );
 
 		$this->hook_suffix = (string) add_menu_page(
 			$title,
@@ -144,7 +144,7 @@ final class Dashboard implements Bootable {
 		add_submenu_page(
 			self::MENU_SLUG,
 			$title,
-			__( 'Dashboard', 'sit-cwm' ),
+			__( 'Dashboard', 'sapphireit-editorial-workflow' ),
 			Capabilities::VIEW_ACTIVITY,
 			self::MENU_SLUG
 		);
@@ -189,12 +189,12 @@ final class Dashboard implements Bootable {
 	 */
 	public function render(): void {
 		if ( ! $this->permissions->can_access_dashboard() ) {
-			wp_die( esc_html__( 'Sorry, you are not allowed to access this page.', 'sit-cwm' ), 403 );
+			wp_die( esc_html__( 'Sorry, you are not allowed to access this page.', 'sapphireit-editorial-workflow' ), 403 );
 		}
 
 		printf(
 			'<div class="wrap sit-cwm-dashboard-wrap"><h1 class="screen-reader-text">%1$s</h1><div id="%2$s"></div></div>',
-			esc_html__( 'Content Workflow', 'sit-cwm' ),
+			esc_html__( 'Editorial Workflow', 'sapphireit-editorial-workflow' ),
 			esc_attr( self::ROOT_ID )
 		);
 	}

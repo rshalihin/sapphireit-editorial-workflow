@@ -119,7 +119,7 @@ final class ActivityFormatter {
 			'created_at'       => false === $created ? '' : $created->format( DATE_ATOM ),
 			'created_at_human' => false === $created ? '' : sprintf(
 				/* translators: %s: Human-readable time difference, e.g. "2 hours". */
-				__( '%s ago', 'sit-cwm' ),
+				__( '%s ago', 'sapphireit-editorial-workflow' ),
 				human_time_diff( $created->getTimestamp(), time() )
 			),
 			// Lets the timeline tell the system (0) from a deleted user (id without summary).
@@ -138,12 +138,12 @@ final class ActivityFormatter {
 	 */
 	public function action_label( string $action ): string {
 		$core = array(
-			'status_changed'    => __( 'Status changed', 'sit-cwm' ),
-			'reviewer_assigned' => __( 'Reviewer assigned', 'sit-cwm' ),
-			'reviewer_cleared'  => __( 'Reviewer removed', 'sit-cwm' ),
-			'due_date_set'      => __( 'Due date set', 'sit-cwm' ),
-			'due_date_cleared'  => __( 'Due date removed', 'sit-cwm' ),
-			'comment_added'     => __( 'Comment added', 'sit-cwm' ),
+			'status_changed'    => __( 'Status changed', 'sapphireit-editorial-workflow' ),
+			'reviewer_assigned' => __( 'Reviewer assigned', 'sapphireit-editorial-workflow' ),
+			'reviewer_cleared'  => __( 'Reviewer removed', 'sapphireit-editorial-workflow' ),
+			'due_date_set'      => __( 'Due date set', 'sapphireit-editorial-workflow' ),
+			'due_date_cleared'  => __( 'Due date removed', 'sapphireit-editorial-workflow' ),
+			'comment_added'     => __( 'Comment added', 'sapphireit-editorial-workflow' ),
 		);
 
 		/**
@@ -185,7 +185,7 @@ final class ActivityFormatter {
 		if ( in_array( $action, self::REVIEWER_ACTIONS, true ) ) {
 			$id = absint( $value );
 
-			return isset( $users[ $id ] ) ? $users[ $id ]['name'] : __( 'Deleted user', 'sit-cwm' );
+			return isset( $users[ $id ] ) ? $users[ $id ]['name'] : __( 'Deleted user', 'sapphireit-editorial-workflow' );
 		}
 
 		if ( in_array( $action, self::DUE_DATE_ACTIONS, true ) ) {

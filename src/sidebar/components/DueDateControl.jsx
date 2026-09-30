@@ -46,13 +46,13 @@ export default function DueDateControl( {
 	const hasDate = isYmd( value );
 	const overdue = hasDate && ! isComplete && isOverdue( value );
 
-	let text = __( 'No due date', 'sit-cwm' );
+	let text = __( 'No due date', 'sapphireit-editorial-workflow' );
 
 	if ( hasDate ) {
 		text = overdue
 			? sprintf(
 					/* translators: %s: Due date. */
-					__( '%s (overdue)', 'sit-cwm' ),
+					__( '%s (overdue)', 'sapphireit-editorial-workflow' ),
 					formatDate( value )
 			  )
 			: formatDate( value );
@@ -65,7 +65,7 @@ export default function DueDateControl( {
 	return (
 		<div className="sit-cwm-field sit-cwm-due-date">
 			<span className="sit-cwm-field-label">
-				{ __( 'Due date', 'sit-cwm' ) }
+				{ __( 'Due date', 'sapphireit-editorial-workflow' ) }
 			</span>
 
 			{ ! canEdit && (
@@ -88,7 +88,7 @@ export default function DueDateControl( {
 								disabled={ isSaving }
 								label={ sprintf(
 									/* translators: %s: Current due date, or "No due date". */
-									__( 'Change due date: %s', 'sit-cwm' ),
+									__( 'Change due date: %s', 'sapphireit-editorial-workflow' ),
 									text
 								) }
 								showTooltip={ false }
@@ -123,7 +123,7 @@ export default function DueDateControl( {
 							onClick={ () => onChange( '' ) }
 							disabled={ isSaving }
 						>
-							{ __( 'Clear', 'sit-cwm' ) }
+							{ __( 'Clear', 'sapphireit-editorial-workflow' ) }
 						</Button>
 					) }
 				</div>

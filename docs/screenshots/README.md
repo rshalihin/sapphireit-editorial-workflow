@@ -31,9 +31,9 @@ comparable between runs.
 |---|---|---|
 | `sidebar.png` | The editor sidebar: status, reviewer, due date, the transitions this user may perform, the comment box and the timeline. | The block editor, clipped to the sidebar panel. |
 | `timeline.png` | The activity timeline, grouped by day. | The same sidebar's `.sit-cwm-activity` region. |
-| `dashboard.png` | The admin dashboard: every managed post with status, reviewer, due date, author, type and last activity. | **Content Workflow → Dashboard**, full page. |
+| `dashboard.png` | The admin dashboard: every managed post with status, reviewer, due date, author, type and last activity. | **Editorial Workflow → Dashboard**, full page. |
 | `bulk-actions.png` | Two rows selected, the bulk action bar, and the *Change workflow status* dialog. | The same page mid-interaction. |
-| `settings.png` | The settings screen: enabled post types and the uninstall option. | **Content Workflow → Settings**, full page. |
+| `settings.png` | The settings screen: enabled post types and the uninstall option. | **Editorial Workflow → Settings**, full page. |
 
 ## Notes
 

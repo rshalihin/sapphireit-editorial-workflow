@@ -152,7 +152,7 @@ class WorkflowController extends AbstractController {
 
 		return array(
 			'status'      => array(
-				'description'       => __( 'Target workflow status.', 'sit-cwm' ),
+				'description'       => __( 'Target workflow status.', 'sapphireit-editorial-workflow' ),
 				'type'              => 'string',
 				'required'          => false,
 				'enum'              => $slugs,
@@ -160,7 +160,7 @@ class WorkflowController extends AbstractController {
 				'sanitize_callback' => array( $this->statuses, 'sanitize' ),
 			),
 			'from'        => array(
-				'description'       => __( 'Workflow status the client saw as current. Required with status.', 'sit-cwm' ),
+				'description'       => __( 'Workflow status the client saw as current. Required with status.', 'sapphireit-editorial-workflow' ),
 				'type'              => 'string',
 				'required'          => false,
 				'enum'              => $slugs,
@@ -168,7 +168,7 @@ class WorkflowController extends AbstractController {
 				'sanitize_callback' => array( $this->statuses, 'sanitize' ),
 			),
 			'reviewer_id' => array(
-				'description'       => __( 'Reviewer user ID; 0 clears the reviewer.', 'sit-cwm' ),
+				'description'       => __( 'Reviewer user ID; 0 clears the reviewer.', 'sapphireit-editorial-workflow' ),
 				'type'              => 'integer',
 				'required'          => false,
 				'minimum'           => 0,
@@ -176,7 +176,7 @@ class WorkflowController extends AbstractController {
 				'sanitize_callback' => 'absint',
 			),
 			'due_date'    => array(
-				'description'       => __( 'Due date as YYYY-MM-DD; an empty string clears it.', 'sit-cwm' ),
+				'description'       => __( 'Due date as YYYY-MM-DD; an empty string clears it.', 'sapphireit-editorial-workflow' ),
 				'type'              => 'string',
 				'required'          => false,
 				'validate_callback' => array( $this, 'validate_due_date' ),
@@ -274,7 +274,7 @@ class WorkflowController extends AbstractController {
 			return new WP_Error(
 				'rest_missing_callback_param',
 				/* translators: %s: Comma-separated parameter names. */
-				sprintf( __( 'Missing parameter(s): %s', 'sit-cwm' ), 'from' ),
+				sprintf( __( 'Missing parameter(s): %s', 'sapphireit-editorial-workflow' ), 'from' ),
 				array(
 					'status' => 400,
 					'params' => array( 'from' ),
@@ -304,7 +304,7 @@ class WorkflowController extends AbstractController {
 			return new WP_Error(
 				'rest_missing_callback_param',
 				/* translators: %s: Comma-separated parameter names. */
-				sprintf( __( 'Missing parameter(s): %s', 'sit-cwm' ), 'status, reviewer_id, due_date' ),
+				sprintf( __( 'Missing parameter(s): %s', 'sapphireit-editorial-workflow' ), 'status, reviewer_id, due_date' ),
 				array(
 					'status' => 400,
 					'params' => array( 'status', 'reviewer_id', 'due_date' ),
@@ -410,48 +410,48 @@ class WorkflowController extends AbstractController {
 			'type'       => 'object',
 			'properties' => array(
 				'post_id'               => array(
-					'description' => __( 'Post ID.', 'sit-cwm' ),
+					'description' => __( 'Post ID.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'integer',
 					'readonly'    => true,
 				),
 				'post_title'            => array(
-					'description' => __( 'Post title.', 'sit-cwm' ),
+					'description' => __( 'Post title.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
 				'post_type'             => array(
-					'description' => __( 'Post type.', 'sit-cwm' ),
+					'description' => __( 'Post type.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
 				'post_status'           => array(
-					'description' => __( 'Native WordPress post status, separate from the workflow status.', 'sit-cwm' ),
+					'description' => __( 'Native WordPress post status, separate from the workflow status.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
 				'edit_link'             => array(
-					'description' => __( 'Edit screen URL.', 'sit-cwm' ),
+					'description' => __( 'Edit screen URL.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'format'      => 'uri',
 					'readonly'    => true,
 				),
 				'status'                => array(
-					'description' => __( 'Workflow status.', 'sit-cwm' ),
+					'description' => __( 'Workflow status.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'enum'        => $this->statuses->slugs(),
 				),
 				'status_label'          => array(
-					'description' => __( 'Workflow status label.', 'sit-cwm' ),
+					'description' => __( 'Workflow status label.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
 				'status_is_unknown'     => array(
-					'description' => __( 'Whether the stored workflow status is no longer registered and the default status is reported instead.', 'sit-cwm' ),
+					'description' => __( 'Whether the stored workflow status is no longer registered and the default status is reported instead.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'boolean',
 					'readonly'    => true,
 				),
 				'reviewer'              => array(
-					'description' => __( 'Assigned reviewer.', 'sit-cwm' ),
+					'description' => __( 'Assigned reviewer.', 'sapphireit-editorial-workflow' ),
 					'type'        => array( 'object', 'null' ),
 					'properties'  => array(
 						'id'     => array( 'type' => 'integer' ),
@@ -463,17 +463,17 @@ class WorkflowController extends AbstractController {
 					),
 				),
 				'due_date'              => array(
-					'description' => __( 'Due date as YYYY-MM-DD, or an empty string.', 'sit-cwm' ),
+					'description' => __( 'Due date as YYYY-MM-DD, or an empty string.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 				),
 				'available_transitions' => array(
-					'description' => __( 'Transitions the current user may perform now.', 'sit-cwm' ),
+					'description' => __( 'Transitions the current user may perform now.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'array',
 					'items'       => $transition,
 					'readonly'    => true,
 				),
 				'capabilities'          => array(
-					'description' => __( 'What the current user may do on this post. Display hints only.', 'sit-cwm' ),
+					'description' => __( 'What the current user may do on this post. Display hints only.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'object',
 					'readonly'    => true,
 					'properties'  => array(
@@ -504,12 +504,12 @@ class WorkflowController extends AbstractController {
 			'type'       => 'object',
 			'properties' => array(
 				'default_status' => array(
-					'description' => __( 'Status of managed content that has none stored yet.', 'sit-cwm' ),
+					'description' => __( 'Status of managed content that has none stored yet.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
 				'statuses'       => array(
-					'description' => __( 'Registered workflow statuses, in display order.', 'sit-cwm' ),
+					'description' => __( 'Registered workflow statuses, in display order.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'array',
 					'readonly'    => true,
 					'items'       => array(
@@ -525,7 +525,7 @@ class WorkflowController extends AbstractController {
 					),
 				),
 				'transitions'    => array(
-					'description'          => __( 'Transition map: source status slug to the moves the workflow allows from it, whoever the user is.', 'sit-cwm' ),
+					'description'          => __( 'Transition map: source status slug to the moves the workflow allows from it, whoever the user is.', 'sapphireit-editorial-workflow' ),
 					'type'                 => 'object',
 					'readonly'             => true,
 					'additionalProperties' => array(
@@ -570,7 +570,7 @@ class WorkflowController extends AbstractController {
 		if ( array() === $state ) {
 			return new WP_Error(
 				'sit_cwm_not_managed',
-				__( 'No workflow was found for this content.', 'sit-cwm' ),
+				__( 'No workflow was found for this content.', 'sapphireit-editorial-workflow' ),
 				array( 'status' => 404 )
 			);
 		}

@@ -40,7 +40,7 @@ function Skeleton() {
 	return (
 		<>
 			<VisuallyHidden>
-				{ __( 'Loading activity…', 'sit-cwm' ) }
+				{ __( 'Loading activity…', 'sapphireit-editorial-workflow' ) }
 			</VisuallyHidden>
 			<ol className="sit-cwm-activity-list is-loading" aria-hidden="true">
 				{ Array.from( { length: SKELETON_ROWS }, ( _, index ) => (
@@ -94,7 +94,7 @@ function useNewEntriesAnnouncement( items ) {
 						'%d new activity entry.',
 						'%d new activity entries.',
 						count,
-						'sit-cwm'
+						'sapphireit-editorial-workflow'
 					),
 					count
 				)
@@ -142,7 +142,7 @@ export default function ActivityTimeline( { postId, version = 0, perPage } ) {
 						disabled={ isLoading }
 						accessibleWhenDisabled
 					>
-						{ __( 'Retry', 'sit-cwm' ) }
+						{ __( 'Retry', 'sapphireit-editorial-workflow' ) }
 					</Button>
 				</div>
 			) }
@@ -151,11 +151,11 @@ export default function ActivityTimeline( { postId, version = 0, perPage } ) {
 
 			{ isEmpty && ! isLoading && ! error && (
 				<div className="sit-cwm-activity-empty">
-					<p>{ __( 'No activity yet.', 'sit-cwm' ) }</p>
+					<p>{ __( 'No activity yet.', 'sapphireit-editorial-workflow' ) }</p>
 					<p>
 						{ __(
 							'Status changes, reviewer assignments, due dates and comments will appear here.',
-							'sit-cwm'
+							'sapphireit-editorial-workflow'
 						) }
 					</p>
 				</div>
@@ -164,7 +164,7 @@ export default function ActivityTimeline( { postId, version = 0, perPage } ) {
 			{ isRefreshing && (
 				<p className="sit-cwm-activity-refreshing">
 					<Spinner />
-					{ __( 'Updating…', 'sit-cwm' ) }
+					{ __( 'Updating…', 'sapphireit-editorial-workflow' ) }
 				</p>
 			) }
 
@@ -190,7 +190,7 @@ export default function ActivityTimeline( { postId, version = 0, perPage } ) {
 					disabled={ isLoading }
 					accessibleWhenDisabled
 				>
-					{ __( 'Load more', 'sit-cwm' ) }
+					{ __( 'Load more', 'sapphireit-editorial-workflow' ) }
 				</Button>
 			) }
 		</div>

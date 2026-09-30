@@ -67,15 +67,15 @@ function sit_cwm_version_match( string $pattern, string $subject ): ?string {
  * @return array<string, string|null> Location description => version or null.
  */
 function sit_cwm_version_locations( string $root ): array {
-	$plugin  = sit_cwm_version_read( $root . '/content-workflow-manager.php' );
+	$plugin  = sit_cwm_version_read( $root . '/sapphireit-editorial-workflow.php' );
 	$readme  = sit_cwm_version_read( $root . '/readme.txt' );
 	$package = json_decode( sit_cwm_version_read( $root . '/package.json' ), true );
 
 	return array(
-		'content-workflow-manager.php (plugin header)'   => sit_cwm_version_match( '/^\s*\*\s*Version:\s*(.+)$/m', $plugin ),
-		'content-workflow-manager.php (SIT_CWM_VERSION)' => sit_cwm_version_match( "/define\(\s*'SIT_CWM_VERSION'\s*,\s*'([^']+)'/", $plugin ),
-		'package.json (version)'                         => is_array( $package ) && isset( $package['version'] ) ? (string) $package['version'] : null,
-		'readme.txt (Stable tag)'                        => sit_cwm_version_match( '/^Stable tag:\s*(.+)$/m', $readme ),
+		'sapphireit-editorial-workflow.php (plugin header)' => sit_cwm_version_match( '/^\s*\*\s*Version:\s*(.+)$/m', $plugin ),
+		'sapphireit-editorial-workflow.php (SIT_CWM_VERSION)' => sit_cwm_version_match( "/define\(\s*'SIT_CWM_VERSION'\s*,\s*'([^']+)'/", $plugin ),
+		'package.json (version)'  => is_array( $package ) && isset( $package['version'] ) ? (string) $package['version'] : null,
+		'readme.txt (Stable tag)' => sit_cwm_version_match( '/^Stable tag:\s*(.+)$/m', $readme ),
 	);
 }
 
@@ -106,7 +106,7 @@ function sit_cwm_version_report( array $locations, ?string $expected ): bool {
 		$matches = $version === $expected;
 		$failed  = $failed || ! $matches;
 
-		printf( "%-8s %-48s %s\n", $matches ? 'ok' : 'MISMATCH', $where, $version );
+		printf( "%-8s %-52s %s\n", $matches ? 'ok' : 'MISMATCH', $where, $version );
 	}
 
 	if ( $failed ) {

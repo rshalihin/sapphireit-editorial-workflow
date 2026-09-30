@@ -122,7 +122,7 @@ final class Plugin {
 
 		$this->register_services();
 
-		add_action( 'init', array( $this, 'load_textdomain' ) );
+		// No load_plugin_textdomain(): WordPress.org translations load just in time (WP 4.6+).
 		add_action( 'plugins_loaded', array( $this, 'maybe_upgrade_database' ), 20 );
 		add_action( 'rest_api_init', array( $this, 'register_rest_services' ), 5 );
 
@@ -145,17 +145,6 @@ final class Plugin {
 	 */
 	public function container(): Container {
 		return $this->container;
-	}
-
-	/**
-	 * Loads the plugin's translations.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @return void
-	 */
-	public function load_textdomain(): void {
-		load_plugin_textdomain( 'sit-cwm', false, dirname( plugin_basename( SIT_CWM_PLUGIN_FILE ) ) . '/languages' );
 	}
 
 	/**

@@ -59,7 +59,7 @@ export default function CommentForm( {
 	return (
 		<form className="sit-cwm-comment-form" onSubmit={ handleSubmit }>
 			<TextareaControl
-				label={ __( 'Add a workflow comment', 'sit-cwm' ) }
+				label={ __( 'Add a workflow comment', 'sapphireit-editorial-workflow' ) }
 				value={ message }
 				onChange={ setMessage }
 				rows={ 3 }
@@ -81,7 +81,7 @@ export default function CommentForm( {
 				disabled={ isEmpty || isSaving || isDisabled }
 				isBusy={ isSaving && ! isEmpty }
 			>
-				{ __( 'Add comment', 'sit-cwm' ) }
+				{ __( 'Add comment', 'sapphireit-editorial-workflow' ) }
 			</Button>
 		</form>
 	);

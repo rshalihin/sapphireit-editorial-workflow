@@ -35,8 +35,8 @@ export function buildBulkActions( { isRunning = false } = {} ) {
 	return [
 		{
 			id: 'change-status',
-			label: __( 'Change status', 'sit-cwm' ),
-			modalHeader: __( 'Change workflow status', 'sit-cwm' ),
+			label: __( 'Change status', 'sapphireit-editorial-workflow' ),
+			modalHeader: __( 'Change workflow status', 'sapphireit-editorial-workflow' ),
 			supportsBulk: true,
 			disabled: isRunning,
 			isEligible: ( item ) =>
@@ -46,8 +46,8 @@ export function buildBulkActions( { isRunning = false } = {} ) {
 		},
 		{
 			id: 'assign-reviewer',
-			label: __( 'Assign reviewer', 'sit-cwm' ),
-			modalHeader: __( 'Assign reviewer', 'sit-cwm' ),
+			label: __( 'Assign reviewer', 'sapphireit-editorial-workflow' ),
+			modalHeader: __( 'Assign reviewer', 'sapphireit-editorial-workflow' ),
 			supportsBulk: true,
 			disabled: isRunning,
 			isEligible: ( item ) => !! item?.capabilities?.can_assign_reviewer,
@@ -55,8 +55,8 @@ export function buildBulkActions( { isRunning = false } = {} ) {
 		},
 		{
 			id: 'set-due-date',
-			label: __( 'Set due date', 'sit-cwm' ),
-			modalHeader: __( 'Set due date', 'sit-cwm' ),
+			label: __( 'Set due date', 'sapphireit-editorial-workflow' ),
+			modalHeader: __( 'Set due date', 'sapphireit-editorial-workflow' ),
 			modalSize: 'small',
 			supportsBulk: true,
 			disabled: isRunning,
@@ -98,8 +98,8 @@ export function BulkResultNotice( { result, onDismiss } ) {
 						onClick={ () => setIsExpanded( ( value ) => ! value ) }
 					>
 						{ isExpanded
-							? __( 'Hide details', 'sit-cwm' )
-							: __( 'Show details', 'sit-cwm' ) }
+							? __( 'Hide details', 'sapphireit-editorial-workflow' )
+							: __( 'Show details', 'sapphireit-editorial-workflow' ) }
 					</Button>
 					{ isExpanded && (
 						<ul className="sit-cwm-bulk-failures">
@@ -110,12 +110,12 @@ export function BulkResultNotice( { result, onDismiss } ) {
 										_x(
 											'%1$s: %2$s',
 											'bulk action failure',
-											'sit-cwm'
+											'sapphireit-editorial-workflow'
 										),
 										labels[ entry.post_id ] ||
 											sprintf(
 												/* translators: %d: Post ID. */
-												__( 'Item #%d', 'sit-cwm' ),
+												__( 'Item #%d', 'sapphireit-editorial-workflow' ),
 												entry.post_id
 											),
 										entry.message

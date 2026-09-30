@@ -122,7 +122,7 @@ final class BulkProcessor {
 			return new WP_Error(
 				'sit_cwm_invalid_batch',
 				/* translators: %d: Maximum number of items in one batch. */
-				sprintf( __( 'A batch must contain between 1 and %d items.', 'sit-cwm' ), self::MAX_ITEMS ),
+				sprintf( __( 'A batch must contain between 1 and %d items.', 'sapphireit-editorial-workflow' ), self::MAX_ITEMS ),
 				array( 'status' => 400 )
 			);
 		}
@@ -130,7 +130,7 @@ final class BulkProcessor {
 		if ( ! isset( self::ACTIONS[ $action ] ) || ! array_key_exists( self::ACTIONS[ $action ], $payload ) ) {
 			return new WP_Error(
 				'sit_cwm_invalid_payload',
-				__( 'The bulk action or its payload is not valid.', 'sit-cwm' ),
+				__( 'The bulk action or its payload is not valid.', 'sapphireit-editorial-workflow' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -299,7 +299,7 @@ final class BulkProcessor {
 	private function invalid_post(): WP_Error {
 		return new WP_Error(
 			'sit_cwm_invalid_post',
-			__( 'No workflow content was found with this ID.', 'sit-cwm' ),
+			__( 'No workflow content was found with this ID.', 'sapphireit-editorial-workflow' ),
 			array( 'status' => 404 )
 		);
 	}

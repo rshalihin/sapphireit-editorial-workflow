@@ -37,7 +37,7 @@ export default function buildActions( { onChanged, isBulkRunning = false } ) {
 			<TransitionModal
 				{ ...props }
 				to="approved"
-				submitLabel={ __( 'Approve', 'sit-cwm' ) }
+				submitLabel={ __( 'Approve', 'sapphireit-editorial-workflow' ) }
 				onChanged={ onChanged }
 			/>
 		);
@@ -48,7 +48,7 @@ export default function buildActions( { onChanged, isBulkRunning = false } ) {
 			<TransitionModal
 				{ ...props }
 				to="needs_changes"
-				submitLabel={ __( 'Request changes', 'sit-cwm' ) }
+				submitLabel={ __( 'Request changes', 'sapphireit-editorial-workflow' ) }
 				withComment
 				onChanged={ onChanged }
 			/>
@@ -58,7 +58,7 @@ export default function buildActions( { onChanged, isBulkRunning = false } ) {
 	return [
 		{
 			id: 'edit',
-			label: __( 'Edit', 'sit-cwm' ),
+			label: __( 'Edit', 'sapphireit-editorial-workflow' ),
 			icon: pencil,
 			isPrimary: true,
 			isEligible: ( item ) => isSafeUrl( item.edit_link ),
@@ -70,15 +70,15 @@ export default function buildActions( { onChanged, isBulkRunning = false } ) {
 		},
 		{
 			id: 'approve',
-			label: __( 'Approve', 'sit-cwm' ),
-			modalHeader: __( 'Approve content?', 'sit-cwm' ),
+			label: __( 'Approve', 'sapphireit-editorial-workflow' ),
+			modalHeader: __( 'Approve content?', 'sapphireit-editorial-workflow' ),
 			isEligible: ( item ) => canMoveTo( item, 'approved' ),
 			RenderModal: ApproveModal,
 		},
 		{
 			id: 'request-changes',
-			label: __( 'Request changes', 'sit-cwm' ),
-			modalHeader: __( 'Request changes?', 'sit-cwm' ),
+			label: __( 'Request changes', 'sapphireit-editorial-workflow' ),
+			modalHeader: __( 'Request changes?', 'sapphireit-editorial-workflow' ),
 			isEligible: ( item ) => canMoveTo( item, 'needs_changes' ),
 			RenderModal: RequestChangesModal,
 		},

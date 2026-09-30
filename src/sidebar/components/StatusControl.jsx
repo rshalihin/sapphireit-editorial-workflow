@@ -29,7 +29,7 @@ export default function StatusControl( { status, label } ) {
 	return (
 		<div className="sit-cwm-field sit-cwm-status">
 			<span className="sit-cwm-field-label">
-				{ __( 'Status', 'sit-cwm' ) }
+				{ __( 'Status', 'sapphireit-editorial-workflow' ) }
 			</span>
 			<span className="sit-cwm-status-badge" data-status={ status }>
 				<span

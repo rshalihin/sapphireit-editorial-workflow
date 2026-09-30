@@ -77,7 +77,8 @@ function userElements( users ) {
 }
 
 const TitleCell = memo( ( { item } ) => {
-	const title = item.title || __( '(no title)', 'sit-cwm' );
+	const title =
+		item.title || __( '(no title)', 'sapphireit-editorial-workflow' );
 
 	return isSafeUrl( item.edit_link ) ? (
 		<a className="sit-cwm-title-link" href={ item.edit_link }>
@@ -102,7 +103,11 @@ const ReviewerCell = memo( ( { item } ) => {
 	const { reviewer } = item;
 
 	if ( ! reviewer ) {
-		return <EmptyValue label={ __( 'Unassigned', 'sit-cwm' ) } />;
+		return (
+			<EmptyValue
+				label={ __( 'Unassigned', 'sapphireit-editorial-workflow' ) }
+			/>
+		);
 	}
 
 	return (
@@ -125,7 +130,11 @@ const DueDateCell = memo( ( { item } ) => {
 	const text = formatDate( item.due_date );
 
 	if ( ! text ) {
-		return <EmptyValue label={ __( 'No due date', 'sit-cwm' ) } />;
+		return (
+			<EmptyValue
+				label={ __( 'No due date', 'sapphireit-editorial-workflow' ) }
+			/>
+		);
 	}
 
 	// `is_overdue` is computed by the server in the site timezone.
@@ -138,7 +147,7 @@ const DueDateCell = memo( ( { item } ) => {
 			<Icon icon={ caution } size={ 16 } />
 			{ sprintf(
 				/* translators: %s: Due date. */
-				__( '%s (overdue)', 'sit-cwm' ),
+				__( '%s (overdue)', 'sapphireit-editorial-workflow' ),
 				text
 			) }
 		</span>
@@ -149,7 +158,9 @@ const AuthorCell = memo( ( { item } ) => {
 	return item.author?.name ? (
 		<span>{ item.author.name }</span>
 	) : (
-		<EmptyValue label={ __( 'Unknown author', 'sit-cwm' ) } />
+		<EmptyValue
+			label={ __( 'Unknown author', 'sapphireit-editorial-workflow' ) }
+		/>
 	);
 } );
 
@@ -166,7 +177,11 @@ const LastActivityCell = memo( ( { item } ) => {
 	const entry = item.last_activity;
 
 	if ( ! entry || ! entry.created_at ) {
-		return <EmptyValue label={ __( 'No activity', 'sit-cwm' ) } />;
+		return (
+			<EmptyValue
+				label={ __( 'No activity', 'sapphireit-editorial-workflow' ) }
+			/>
+		);
 	}
 
 	const { formats } = getSettings();
@@ -193,10 +208,12 @@ const OverdueCell = memo( ( { item } ) => {
 	return item.is_overdue ? (
 		<span className="sit-cwm-due-date is-overdue">
 			<Icon icon={ caution } size={ 16 } />
-			{ __( 'Overdue', 'sit-cwm' ) }
+			{ __( 'Overdue', 'sapphireit-editorial-workflow' ) }
 		</span>
 	) : (
-		<EmptyValue label={ __( 'Not overdue', 'sit-cwm' ) } />
+		<EmptyValue
+			label={ __( 'Not overdue', 'sapphireit-editorial-workflow' ) }
+		/>
 	);
 } );
 
@@ -216,7 +233,7 @@ export default function buildFields( { reviewers = [], authors = [] } = {} ) {
 		{
 			id: 'title',
 			type: 'text',
-			label: __( 'Title', 'sit-cwm' ),
+			label: __( 'Title', 'sapphireit-editorial-workflow' ),
 			getValue: ( { item } ) => item.title || '',
 			render: TitleCell,
 			enableSorting: true,
@@ -227,7 +244,7 @@ export default function buildFields( { reviewers = [], authors = [] } = {} ) {
 		{
 			id: 'status',
 			type: 'text',
-			label: __( 'Status', 'sit-cwm' ),
+			label: __( 'Status', 'sapphireit-editorial-workflow' ),
 			getValue: ( { item } ) => item.status,
 			render: StatusCell,
 			elements: ( Array.isArray( statuses ) ? statuses : [] )
@@ -242,11 +259,14 @@ export default function buildFields( { reviewers = [], authors = [] } = {} ) {
 		{
 			id: 'reviewer',
 			type: 'integer',
-			label: __( 'Reviewer', 'sit-cwm' ),
+			label: __( 'Reviewer', 'sapphireit-editorial-workflow' ),
 			getValue: ( { item } ) => ( item.reviewer ? item.reviewer.id : 0 ),
 			render: ReviewerCell,
 			elements: [
-				{ value: 0, label: __( 'Unassigned', 'sit-cwm' ) },
+				{
+					value: 0,
+					label: __( 'Unassigned', 'sapphireit-editorial-workflow' ),
+				},
 				...userElements( reviewers ),
 			],
 			enableSorting: false,
@@ -255,7 +275,7 @@ export default function buildFields( { reviewers = [], authors = [] } = {} ) {
 		{
 			id: 'due_date',
 			type: 'date',
-			label: __( 'Due', 'sit-cwm' ),
+			label: __( 'Due', 'sapphireit-editorial-workflow' ),
 			getValue: ( { item } ) => item.due_date || '',
 			render: DueDateCell,
 			enableSorting: true,
@@ -264,7 +284,7 @@ export default function buildFields( { reviewers = [], authors = [] } = {} ) {
 		{
 			id: 'author',
 			type: 'integer',
-			label: __( 'Author', 'sit-cwm' ),
+			label: __( 'Author', 'sapphireit-editorial-workflow' ),
 			getValue: ( { item } ) => ( item.author ? item.author.id : 0 ),
 			render: AuthorCell,
 			elements: authorElements,
@@ -277,7 +297,7 @@ export default function buildFields( { reviewers = [], authors = [] } = {} ) {
 		{
 			id: 'post_type',
 			type: 'text',
-			label: __( 'Type', 'sit-cwm' ),
+			label: __( 'Type', 'sapphireit-editorial-workflow' ),
 			getValue: ( { item } ) => item.post_type,
 			render: PostTypeCell,
 			elements: ( Array.isArray( postTypes ) ? postTypes : [] )
@@ -291,7 +311,7 @@ export default function buildFields( { reviewers = [], authors = [] } = {} ) {
 		},
 		{
 			id: 'last_activity',
-			label: __( 'Last activity', 'sit-cwm' ),
+			label: __( 'Last activity', 'sapphireit-editorial-workflow' ),
 			getValue: ( { item } ) => item.last_activity?.created_at || '',
 			render: LastActivityCell,
 			enableSorting: false,
@@ -300,11 +320,17 @@ export default function buildFields( { reviewers = [], authors = [] } = {} ) {
 		{
 			// Filter-only field: the "Overdue only" quick filter. Never a column.
 			id: 'is_overdue',
-			label: __( 'Overdue', 'sit-cwm' ),
+			label: __( 'Overdue', 'sapphireit-editorial-workflow' ),
 			getValue: ( { item } ) => !! item.is_overdue,
 			render: OverdueCell,
 			elements: [
-				{ value: true, label: __( 'Overdue only', 'sit-cwm' ) },
+				{
+					value: true,
+					label: __(
+						'Overdue only',
+						'sapphireit-editorial-workflow'
+					),
+				},
 			],
 			enableSorting: false,
 			enableHiding: false,

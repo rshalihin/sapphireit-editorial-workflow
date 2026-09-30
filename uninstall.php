@@ -1,6 +1,6 @@
 <?php
 /**
- * Uninstall routine for Content Workflow Manager.
+ * Uninstall routine for SapphireIT Editorial Workflow.
  *
  * Removes plugin data only when the site owner opted in via
  * `sit_cwm_settings['delete_data_on_uninstall']`. Deactivation never removes
@@ -27,7 +27,7 @@ require_once __DIR__ . '/includes/Core/Database.php';
 require_once __DIR__ . '/includes/Workflow/Capabilities.php';
 
 /**
- * Removes all Content Workflow Manager data from the current site, if the
+ * Removes all SapphireIT Editorial Workflow data from the current site, if the
  * site opted in to data deletion.
  *
  * @since 1.0.0

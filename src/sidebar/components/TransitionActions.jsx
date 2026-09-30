@@ -32,7 +32,7 @@ export { requiresConfirmation };
 function actionLabel( transition ) {
 	return sprintf(
 		/* translators: %s: Target workflow status label. */
-		__( 'Move to %s', 'sit-cwm' ),
+		__( 'Move to %s', 'sapphireit-editorial-workflow' ),
 		transition.label
 	);
 }
@@ -60,7 +60,7 @@ export default function TransitionActions( {
 			<p className="sit-cwm-help">
 				{ __(
 					'No workflow actions are available to you right now. The actions offered depend on the current status and your role.',
-					'sit-cwm'
+					'sapphireit-editorial-workflow'
 				) }
 			</p>
 		);
@@ -105,7 +105,7 @@ export default function TransitionActions( {
 				ref={ groupRef }
 				className="sit-cwm-actions"
 				role="group"
-				aria-label={ __( 'Workflow actions', 'sit-cwm' ) }
+				aria-label={ __( 'Workflow actions', 'sapphireit-editorial-workflow' ) }
 				tabIndex={ -1 }
 			>
 				{ transitions.map( ( transition ) => (

@@ -107,7 +107,7 @@ export function toBulkRequest( items ) {
 		if ( item && Number.isInteger( item.post_id ) && item.post_id > 0 ) {
 			postIds.push( item.post_id );
 			labels[ item.post_id ] =
-				item.title || __( '(no title)', 'sit-cwm' );
+				item.title || __( '(no title)', 'sapphireit-editorial-workflow' );
 		}
 	} );
 

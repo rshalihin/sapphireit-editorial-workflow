@@ -59,7 +59,7 @@ export default function ConfirmDialog( {
 					onClick={ onCancel }
 					disabled={ isBusy }
 				>
-					{ __( 'Cancel', 'sit-cwm' ) }
+					{ __( 'Cancel', 'sapphireit-editorial-workflow' ) }
 				</Button>
 				<Button
 					__next40pxDefaultSize

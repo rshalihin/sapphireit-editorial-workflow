@@ -172,14 +172,14 @@ class PostsController extends AbstractController {
 			$this->pagination_args(),
 			array(
 				'search'      => array(
-					'description'       => __( 'Limit to posts matching a search.', 'sit-cwm' ),
+					'description'       => __( 'Limit to posts matching a search.', 'sapphireit-editorial-workflow' ),
 					'type'              => 'string',
 					'maxLength'         => 200,
 					'validate_callback' => 'rest_validate_request_arg',
 					'sanitize_callback' => 'sanitize_text_field',
 				),
 				'status'      => array(
-					'description'       => __( 'Limit to one or more workflow statuses.', 'sit-cwm' ),
+					'description'       => __( 'Limit to one or more workflow statuses.', 'sapphireit-editorial-workflow' ),
 					'type'              => 'array',
 					'items'             => array(
 						'type' => 'string',
@@ -189,36 +189,36 @@ class PostsController extends AbstractController {
 					'sanitize_callback' => 'rest_sanitize_request_arg',
 				),
 				'reviewer_id' => array(
-					'description'       => __( 'Limit to posts with this reviewer; 0 for posts without one.', 'sit-cwm' ),
+					'description'       => __( 'Limit to posts with this reviewer; 0 for posts without one.', 'sapphireit-editorial-workflow' ),
 					'type'              => 'integer',
 					'minimum'           => 0,
 					'validate_callback' => 'rest_validate_request_arg',
 					'sanitize_callback' => 'absint',
 				),
 				'author'      => array(
-					'description'       => __( 'Limit to posts by this author.', 'sit-cwm' ),
+					'description'       => __( 'Limit to posts by this author.', 'sapphireit-editorial-workflow' ),
 					'type'              => 'integer',
 					'minimum'           => 1,
 					'validate_callback' => 'rest_validate_request_arg',
 					'sanitize_callback' => 'absint',
 				),
 				'post_type'   => array(
-					'description'       => __( 'Limit to one workflow-enabled post type.', 'sit-cwm' ),
+					'description'       => __( 'Limit to one workflow-enabled post type.', 'sapphireit-editorial-workflow' ),
 					'type'              => 'string',
 					'enum'              => $this->settings->enabled_post_types(),
 					'validate_callback' => 'rest_validate_request_arg',
 					'sanitize_callback' => 'sanitize_key',
 				),
-				'due_before'  => array_merge( $date, array( 'description' => __( 'Limit to posts due on or before this date (YYYY-MM-DD).', 'sit-cwm' ) ) ),
-				'due_after'   => array_merge( $date, array( 'description' => __( 'Limit to posts due on or after this date (YYYY-MM-DD).', 'sit-cwm' ) ) ),
+				'due_before'  => array_merge( $date, array( 'description' => __( 'Limit to posts due on or before this date (YYYY-MM-DD).', 'sapphireit-editorial-workflow' ) ) ),
+				'due_after'   => array_merge( $date, array( 'description' => __( 'Limit to posts due on or after this date (YYYY-MM-DD).', 'sapphireit-editorial-workflow' ) ) ),
 				'overdue'     => array(
-					'description'       => __( 'Limit to posts whose due date has passed, in the site timezone, before the workflow completed.', 'sit-cwm' ),
+					'description'       => __( 'Limit to posts whose due date has passed, in the site timezone, before the workflow completed.', 'sapphireit-editorial-workflow' ),
 					'type'              => 'boolean',
 					'validate_callback' => 'rest_validate_request_arg',
 					'sanitize_callback' => 'rest_sanitize_boolean',
 				),
 				'orderby'     => array(
-					'description'       => __( 'Sort column.', 'sit-cwm' ),
+					'description'       => __( 'Sort column.', 'sapphireit-editorial-workflow' ),
 					'type'              => 'string',
 					'default'           => 'date',
 					'enum'              => array( 'title', 'date', 'due_date', 'status' ),
@@ -226,7 +226,7 @@ class PostsController extends AbstractController {
 					'sanitize_callback' => 'sanitize_key',
 				),
 				'order'       => array(
-					'description'       => __( 'Sort direction.', 'sit-cwm' ),
+					'description'       => __( 'Sort direction.', 'sapphireit-editorial-workflow' ),
 					'type'              => 'string',
 					'default'           => 'desc',
 					'enum'              => array( 'asc', 'desc' ),
@@ -337,27 +337,27 @@ class PostsController extends AbstractController {
 			'type'       => 'object',
 			'properties' => array(
 				'post_id'               => array(
-					'description' => __( 'Post ID.', 'sit-cwm' ),
+					'description' => __( 'Post ID.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'integer',
 					'readonly'    => true,
 				),
 				'title'                 => array(
-					'description' => __( 'Raw post title; escape at output.', 'sit-cwm' ),
+					'description' => __( 'Raw post title; escape at output.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
 				'post_type'             => array(
-					'description' => __( 'Post type.', 'sit-cwm' ),
+					'description' => __( 'Post type.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
 				'post_status'           => array(
-					'description' => __( 'Native WordPress post status, separate from the workflow status.', 'sit-cwm' ),
+					'description' => __( 'Native WordPress post status, separate from the workflow status.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
 				'author'                => array(
-					'description' => __( 'Post author.', 'sit-cwm' ),
+					'description' => __( 'Post author.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'object',
 					'readonly'    => true,
 					'properties'  => array(
@@ -366,44 +366,44 @@ class PostsController extends AbstractController {
 					),
 				),
 				'status'                => array(
-					'description' => __( 'Workflow status.', 'sit-cwm' ),
+					'description' => __( 'Workflow status.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'enum'        => $this->statuses->slugs(),
 					'readonly'    => true,
 				),
 				'status_label'          => array(
-					'description' => __( 'Workflow status label.', 'sit-cwm' ),
+					'description' => __( 'Workflow status label.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
 				'status_is_unknown'     => array(
-					'description' => __( 'Whether the stored workflow status is no longer registered and the default status is reported instead.', 'sit-cwm' ),
+					'description' => __( 'Whether the stored workflow status is no longer registered and the default status is reported instead.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'boolean',
 					'readonly'    => true,
 				),
-				'reviewer'              => array_merge( $summary, array( 'description' => __( 'Assigned reviewer.', 'sit-cwm' ) ) ),
+				'reviewer'              => array_merge( $summary, array( 'description' => __( 'Assigned reviewer.', 'sapphireit-editorial-workflow' ) ) ),
 				'due_date'              => array(
-					'description' => __( 'Due date as YYYY-MM-DD, or an empty string.', 'sit-cwm' ),
+					'description' => __( 'Due date as YYYY-MM-DD, or an empty string.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
 				'is_overdue'            => array(
-					'description' => __( 'Whether the due date has passed before the workflow completed.', 'sit-cwm' ),
+					'description' => __( 'Whether the due date has passed before the workflow completed.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'boolean',
 					'readonly'    => true,
 				),
 				'last_activity'         => array(
-					'description' => __( 'Most recent activity entry, shaped like the activity route items.', 'sit-cwm' ),
+					'description' => __( 'Most recent activity entry, shaped like the activity route items.', 'sapphireit-editorial-workflow' ),
 					'type'        => array( 'object', 'null' ),
 					'readonly'    => true,
 				),
 				'edit_link'             => array(
-					'description' => __( 'Edit screen URL; empty when the user cannot edit the post.', 'sit-cwm' ),
+					'description' => __( 'Edit screen URL; empty when the user cannot edit the post.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
 				'available_transitions' => array(
-					'description' => __( 'Transitions the current user may perform now.', 'sit-cwm' ),
+					'description' => __( 'Transitions the current user may perform now.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'array',
 					'readonly'    => true,
 					'items'       => array(
@@ -417,7 +417,7 @@ class PostsController extends AbstractController {
 					),
 				),
 				'capabilities'          => array(
-					'description' => __( 'What the current user may do on this post. Display hints only.', 'sit-cwm' ),
+					'description' => __( 'What the current user may do on this post. Display hints only.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'object',
 					'readonly'    => true,
 					'properties'  => array(

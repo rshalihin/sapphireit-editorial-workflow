@@ -146,7 +146,7 @@ class ActivityController extends AbstractController {
 					'permission_callback' => array( $this, 'create_item_permissions_check' ),
 					'args'                => array(
 						'message' => array(
-							'description'       => __( 'Comment text; post-safe HTML is kept.', 'sit-cwm' ),
+							'description'       => __( 'Comment text; post-safe HTML is kept.', 'sapphireit-editorial-workflow' ),
 							'type'              => 'string',
 							'required'          => true,
 							'validate_callback' => array( $this, 'validate_message' ),
@@ -171,7 +171,7 @@ class ActivityController extends AbstractController {
 			$this->pagination_args(),
 			array(
 				'action' => array(
-					'description'       => __( 'Limit to one activity action.', 'sit-cwm' ),
+					'description'       => __( 'Limit to one activity action.', 'sapphireit-editorial-workflow' ),
 					'type'              => 'string',
 					'enum'              => $this->activity->get_actions(),
 					'validate_callback' => 'rest_validate_request_arg',
@@ -203,7 +203,7 @@ class ActivityController extends AbstractController {
 			return new WP_Error(
 				'sit_cwm_comment_too_long',
 				/* translators: %d: Maximum number of characters. */
-				sprintf( __( 'The comment cannot be longer than %d characters.', 'sit-cwm' ), self::MESSAGE_MAX_LENGTH ),
+				sprintf( __( 'The comment cannot be longer than %d characters.', 'sapphireit-editorial-workflow' ), self::MESSAGE_MAX_LENGTH ),
 				array( 'status' => 400 )
 			);
 		}
@@ -211,7 +211,7 @@ class ActivityController extends AbstractController {
 		if ( '' === trim( wp_strip_all_tags( wp_kses_post( $value ) ) ) ) {
 			return new WP_Error(
 				'sit_cwm_empty_comment',
-				__( 'The comment cannot be empty.', 'sit-cwm' ),
+				__( 'The comment cannot be empty.', 'sapphireit-editorial-workflow' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -340,7 +340,7 @@ class ActivityController extends AbstractController {
 		if ( null === $entry ) {
 			return new WP_Error(
 				'sit_cwm_update_failed',
-				__( 'The workflow could not be saved. Please try again.', 'sit-cwm' ),
+				__( 'The workflow could not be saved. Please try again.', 'sapphireit-editorial-workflow' ),
 				array( 'status' => 500 )
 			);
 		}
@@ -374,17 +374,17 @@ class ActivityController extends AbstractController {
 			'type'       => 'object',
 			'properties' => array(
 				'id'               => array(
-					'description' => __( 'Activity ID.', 'sit-cwm' ),
+					'description' => __( 'Activity ID.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'integer',
 					'readonly'    => true,
 				),
 				'action'           => array(
-					'description' => __( 'Action slug.', 'sit-cwm' ),
+					'description' => __( 'Action slug.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
 				'action_label'     => array(
-					'description' => __( 'Action label.', 'sit-cwm' ),
+					'description' => __( 'Action label.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
@@ -393,27 +393,27 @@ class ActivityController extends AbstractController {
 				'new_value'        => $nullable_string,
 				'new_label'        => $nullable_string,
 				'message'          => array(
-					'description' => __( 'Comment text, post-safe HTML.', 'sit-cwm' ),
+					'description' => __( 'Comment text, post-safe HTML.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 				),
 				'created_at'       => array(
-					'description' => __( 'Creation time, ISO 8601, UTC.', 'sit-cwm' ),
+					'description' => __( 'Creation time, ISO 8601, UTC.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'format'      => 'date-time',
 					'readonly'    => true,
 				),
 				'created_at_human' => array(
-					'description' => __( 'Creation time relative to now.', 'sit-cwm' ),
+					'description' => __( 'Creation time relative to now.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
 				'user_id'          => array(
-					'description' => __( 'Acting user ID; 0 for the system.', 'sit-cwm' ),
+					'description' => __( 'Acting user ID; 0 for the system.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'integer',
 					'readonly'    => true,
 				),
 				'user'             => array(
-					'description' => __( 'Acting user; null for the system or a deleted user.', 'sit-cwm' ),
+					'description' => __( 'Acting user; null for the system or a deleted user.', 'sapphireit-editorial-workflow' ),
 					'type'        => array( 'object', 'null' ),
 					'readonly'    => true,
 					'properties'  => array(

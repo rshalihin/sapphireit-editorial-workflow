@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * "Content Workflow → Settings": the post types the workflow applies to and
+ * "Editorial Workflow → Settings": the post types the workflow applies to and
  * the uninstall data preference. Nothing more in v1.0.
  *
  * Built on the Settings API: the form posts to `options.php`, which verifies
@@ -131,8 +131,8 @@ final class Settings implements Bootable {
 
 		$hook_suffix = add_submenu_page(
 			Dashboard::MENU_SLUG,
-			__( 'Content Workflow Settings', 'sit-cwm' ),
-			__( 'Settings', 'sit-cwm' ),
+			__( 'Editorial Workflow Settings', 'sapphireit-editorial-workflow' ),
+			__( 'Settings', 'sapphireit-editorial-workflow' ),
 			Capabilities::MANAGE_WORKFLOWS,
 			self::MENU_SLUG,
 			array( $this, 'render' )
@@ -183,7 +183,7 @@ final class Settings implements Bootable {
 			SettingsStore::OPTION,
 			array(
 				'type'              => 'object',
-				'description'       => __( 'Content Workflow Manager settings.', 'sit-cwm' ),
+				'description'       => __( 'SapphireIT Editorial Workflow settings.', 'sapphireit-editorial-workflow' ),
 				'sanitize_callback' => array( $this, 'sanitize' ),
 				'default'           => $this->settings->defaults(),
 				'show_in_rest'      => false,
@@ -192,14 +192,14 @@ final class Settings implements Bootable {
 
 		add_settings_section(
 			self::SECTION,
-			__( 'Workflow', 'sit-cwm' ),
+			__( 'Workflow', 'sapphireit-editorial-workflow' ),
 			array( $this, 'render_section' ),
 			self::MENU_SLUG
 		);
 
 		add_settings_field(
 			'sit_cwm_post_types',
-			__( 'Enabled content types', 'sit-cwm' ),
+			__( 'Enabled content types', 'sapphireit-editorial-workflow' ),
 			array( $this, 'render_post_types_field' ),
 			self::MENU_SLUG,
 			self::SECTION
@@ -207,7 +207,7 @@ final class Settings implements Bootable {
 
 		add_settings_field(
 			'sit_cwm_delete_data_on_uninstall',
-			__( 'Uninstall', 'sit-cwm' ),
+			__( 'Uninstall', 'sapphireit-editorial-workflow' ),
 			array( $this, 'render_uninstall_field' ),
 			self::MENU_SLUG,
 			self::SECTION
@@ -239,7 +239,7 @@ final class Settings implements Bootable {
 		}
 
 		if ( ! is_array( $input ) ) {
-			$this->add_error( 'sit_cwm_invalid_settings', __( 'The settings were not saved because the submitted data was invalid.', 'sit-cwm' ) );
+			$this->add_error( 'sit_cwm_invalid_settings', __( 'The settings were not saved because the submitted data was invalid.', 'sapphireit-editorial-workflow' ) );
 
 			return $current;
 		}
@@ -263,11 +263,11 @@ final class Settings implements Bootable {
 	 */
 	public function render(): void {
 		if ( ! $this->permissions->can_manage() ) {
-			wp_die( esc_html__( 'Sorry, you are not allowed to access this page.', 'sit-cwm' ), 403 );
+			wp_die( esc_html__( 'Sorry, you are not allowed to access this page.', 'sapphireit-editorial-workflow' ), 403 );
 		}
 
 		echo '<div class="wrap">';
-		printf( '<h1>%s</h1>', esc_html__( 'Content Workflow Settings', 'sit-cwm' ) );
+		printf( '<h1>%s</h1>', esc_html__( 'Editorial Workflow Settings', 'sapphireit-editorial-workflow' ) );
 
 		// Only options-general.php screens print settings errors automatically.
 		settings_errors();
@@ -289,7 +289,7 @@ final class Settings implements Bootable {
 	public function render_section(): void {
 		printf(
 			'<p>%s</p>',
-			esc_html__( 'Choose which content goes through the editorial workflow.', 'sit-cwm' )
+			esc_html__( 'Choose which content goes through the editorial workflow.', 'sapphireit-editorial-workflow' )
 		);
 	}
 
@@ -305,7 +305,7 @@ final class Settings implements Bootable {
 
 		printf(
 			'<fieldset><legend class="screen-reader-text">%s</legend>',
-			esc_html__( 'Enabled content types', 'sit-cwm' )
+			esc_html__( 'Enabled content types', 'sapphireit-editorial-workflow' )
 		);
 
 		foreach ( $this->settings->available_post_types() as $post_type ) {
@@ -328,7 +328,7 @@ final class Settings implements Bootable {
 
 		printf(
 			'<p class="description">%s</p>',
-			esc_html__( 'Turning a content type off stops the workflow for it. Its workflow statuses, reviewers, due dates and activity history are kept, and come back if you turn it on again.', 'sit-cwm' )
+			esc_html__( 'Turning a content type off stops the workflow for it. Its workflow statuses, reviewers, due dates and activity history are kept, and come back if you turn it on again.', 'sapphireit-editorial-workflow' )
 		);
 	}
 
@@ -344,13 +344,13 @@ final class Settings implements Bootable {
 			'<label><input type="checkbox" name="%1$s" value="1" %2$s /> %3$s</label>',
 			esc_attr( SettingsStore::OPTION . '[delete_data_on_uninstall]' ),
 			checked( (bool) $this->settings->get( 'delete_data_on_uninstall', false ), true, false ),
-			esc_html__( 'Delete all workflow data when the plugin is deleted', 'sit-cwm' )
+			esc_html__( 'Delete all workflow data when the plugin is deleted', 'sapphireit-editorial-workflow' )
 		);
 
 		printf(
 			'<p class="description"><strong>%1$s</strong> %2$s</p>',
-			esc_html__( 'Warning:', 'sit-cwm' ),
-			esc_html__( 'this permanently removes the activity history, workflow comments, statuses, reviewers, due dates and the plugin’s capabilities. It cannot be undone. Deactivating the plugin never deletes data.', 'sit-cwm' )
+			esc_html__( 'Warning:', 'sapphireit-editorial-workflow' ),
+			esc_html__( 'this permanently removes the activity history, workflow comments, statuses, reviewers, due dates and the plugin’s capabilities. It cannot be undone. Deactivating the plugin never deletes data.', 'sapphireit-editorial-workflow' )
 		);
 	}
 
@@ -371,7 +371,7 @@ final class Settings implements Bootable {
 		$screen->add_help_tab(
 			array(
 				'id'      => self::HELP_TAB_ID,
-				'title'   => __( 'Workflow', 'sit-cwm' ),
+				'title'   => __( 'Workflow', 'sapphireit-editorial-workflow' ),
 				'content' => $this->help_content(),
 			)
 		);
@@ -386,14 +386,14 @@ final class Settings implements Bootable {
 	 */
 	public function help_content(): string {
 		$rules = array(
-			__( 'Draft, Writing and Review: users who can change the workflow (by default administrators, editors, authors and contributors).', 'sit-cwm' ),
-			__( 'Needs Changes: users who can review content (by default administrators and editors).', 'sit-cwm' ),
-			__( 'Approved: users who can approve content (by default administrators and editors).', 'sit-cwm' ),
-			__( 'Published: users who can approve content and can also publish that post.', 'sit-cwm' ),
-			__( 'Reviewers and due dates: users who can assign reviewers (by default administrators and editors).', 'sit-cwm' ),
+			__( 'Draft, Writing and Review: users who can change the workflow (by default administrators, editors, authors and contributors).', 'sapphireit-editorial-workflow' ),
+			__( 'Needs Changes: users who can review content (by default administrators and editors).', 'sapphireit-editorial-workflow' ),
+			__( 'Approved: users who can approve content (by default administrators and editors).', 'sapphireit-editorial-workflow' ),
+			__( 'Published: users who can approve content and can also publish that post.', 'sapphireit-editorial-workflow' ),
+			__( 'Reviewers and due dates: users who can assign reviewers (by default administrators and editors).', 'sapphireit-editorial-workflow' ),
 		);
 
-		$html  = '<p>' . esc_html__( 'Draft → Writing → Review → Approved → Published. A reviewer can send content in Review back to Needs Changes, which returns to Writing. Published content starts a new cycle in Writing.', 'sit-cwm' ) . '</p>';
+		$html  = '<p>' . esc_html__( 'Draft → Writing → Review → Approved → Published. A reviewer can send content in Review back to Needs Changes, which returns to Writing. Published content starts a new cycle in Writing.', 'sapphireit-editorial-workflow' ) . '</p>';
 		$html .= '<ul>';
 
 		foreach ( $rules as $rule ) {
@@ -401,7 +401,7 @@ final class Settings implements Bootable {
 		}
 
 		$html .= '</ul>';
-		$html .= '<p>' . esc_html__( 'Every action also requires permission to edit that piece of content. See WORKFLOW.md in the plugin folder for the full reference.', 'sit-cwm' ) . '</p>';
+		$html .= '<p>' . esc_html__( 'Every action also requires permission to edit that piece of content. See WORKFLOW.md in the plugin folder for the full reference.', 'sapphireit-editorial-workflow' ) . '</p>';
 
 		return $html;
 	}
@@ -417,7 +417,7 @@ final class Settings implements Bootable {
 	 */
 	private function sanitize_post_types( $value, array $current ): array {
 		if ( ! is_array( $value ) ) {
-			$this->add_error( 'sit_cwm_invalid_post_types', __( 'The enabled content types were not changed because the submitted value was invalid.', 'sit-cwm' ) );
+			$this->add_error( 'sit_cwm_invalid_post_types', __( 'The enabled content types were not changed because the submitted value was invalid.', 'sapphireit-editorial-workflow' ) );
 
 			return $current;
 		}
@@ -437,7 +437,7 @@ final class Settings implements Bootable {
 		}
 
 		if ( $rejected ) {
-			$this->add_error( 'sit_cwm_unknown_post_types', __( 'Content types that do not exist were ignored.', 'sit-cwm' ) );
+			$this->add_error( 'sit_cwm_unknown_post_types', __( 'Content types that do not exist were ignored.', 'sapphireit-editorial-workflow' ) );
 		}
 
 		return array_values( $types );

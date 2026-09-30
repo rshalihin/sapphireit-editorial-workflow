@@ -47,7 +47,8 @@ Specifically:
 - `snake_case` methods and variables; `StudlyCase` class names in the `Sit_Cwm\`
   namespace, one class per file, path mirroring the namespace.
 - PHP 7.4 target. CI runs 7.4, 8.1 and 8.3.
-- Every user-facing string is translatable, text domain `sit-cwm`.
+- Every user-facing string is translatable, text domain
+  `sapphireit-editorial-workflow` (it must equal the plugin slug).
 
 `WordPress.Files.FileName` is the only sniff excluded repo-wide (we use PSR-4
 file names, decision D2). Inline `phpcs:ignore` is allowed only with a reason
@@ -55,14 +56,17 @@ comment and a specific sniff name.
 
 ### Naming
 
-The prefix is `sit_cwm` / `Sit_Cwm` / `SIT_CWM_` / `sit-cwm`, without exception:
+The code prefix is `sit_cwm` / `Sit_Cwm` / `SIT_CWM_` / `sit-cwm`, without
+exception. The text domain is not a code prefix: WordPress.org requires it to
+equal the plugin slug.
 
 | Element | Convention |
 |---|---|
 | Functions, hooks | `sit_cwm_` |
 | Classes | `Sit_Cwm\` namespace |
 | Constants | `SIT_CWM_` |
-| Text domain, slug, asset handles | `sit-cwm` |
+| Text domain, plugin slug | `sapphireit-editorial-workflow` |
+| Asset handles, CSS classes, DOM ids, admin page slugs | `sit-cwm` |
 | REST namespace | `sit-cwm/v1` |
 | Tables | `{$wpdb->prefix}sit_cwm_` |
 | Post meta | `_sit_cwm_` |
