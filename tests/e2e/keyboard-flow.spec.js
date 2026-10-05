@@ -99,9 +99,9 @@ test.describe( 'Keyboard-only workflow', () => {
 		).toBeVisible();
 		await keyboard.press( 'ArrowDown' );
 		await keyboard.press( 'Enter' );
-		await expect( panel.locator( '.sit-cwm-reviewer-current' ) ).toHaveText(
-			REVIEWER
-		);
+		await expect(
+			panel.getByRole( 'combobox', { name: 'Reviewer' } )
+		).toHaveValue( REVIEWER );
 
 		// Due date: Enter opens the calendar, arrows move, Enter picks.
 		const dueToggle = panel.getByRole( 'button', {

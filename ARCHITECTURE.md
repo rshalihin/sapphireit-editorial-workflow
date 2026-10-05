@@ -27,6 +27,8 @@ the code.
 ┌──────────────────────────────────────────────────────────────┐
 │  React                                                       │
 │  src/sidebar/   Gutenberg PluginSidebar                      │
+│  src/classic/   classic editor meta box (same panel)         │
+│  src/components/WorkflowPanel, shared by both editors        │
 │  src/dashboard/ @wordpress/dataviews table + bulk actions    │
 │  src/hooks/     useWorkflow, usePosts, useActivity, …        │
 │  src/api/       the only apiFetch caller                     │
@@ -70,6 +72,20 @@ whole design hangs on:
 Consequence: a hostile client with a valid cookie and nonce can do exactly what
 the UI lets an honest one do, and nothing more. Deleting the JavaScript would
 not weaken a single rule.
+
+**Editor layer: two thin clients over one panel.** The block editor sidebar
+(`src/sidebar/`, loaded by `Editor\SidebarAssets`) and the classic editor meta
+box (`src/classic/`, loaded by `Editor\ClassicMetaBox`) both render the same
+`src/components/WorkflowPanel`. They only differ in how they are mounted: a
+`PluginSidebar`, or a React root in an `Editorial Workflow` meta box. Only one
+loads on a given screen, because `ClassicMetaBox` requires
+`! use_block_editor_for_post()`. The meta box adds no PHP form, nonce field or
+`save_post` handler. Every change goes through the same REST routes with the
+`wp_rest` nonce and saves immediately. The post's **Update** button never
+touches workflow state, which keeps the two status fields apart (see below).
+This also works on `post-new.php`: the auto-draft core creates there already
+has its final id, so workflow changes made before the first save survive it
+(`tests/php/integration/REST/AutoDraftTest.php`).
 
 ---
 
@@ -129,7 +145,7 @@ be built entirely on the `sit_cwm_status_changed` hook, without touching core.
 | `Interfaces\Bootable` | `register()`. The only thing `Plugin` needs to know about a service to boot it. |
 | `Activator` / `Deactivator` | Create the activity table, grant capabilities, flush caches. `Activator::initialize_site()` also runs on `wp_initialize_site` for new multisite sites. |
 | `Database` | Owns `{$wpdb->prefix}sit_cwm_activity`: `dbDelta()` schema, the `sit_cwm_db_version` option, and an upgrade check on `plugins_loaded` so a schema change does not need reactivation. |
-| `Settings` | Reads `sit_cwm_settings`; `enabled_post_types()` and `available_post_types()`. The `sit_cwm_enabled_post_types` filter lives here. |
+| `Settings` | Reads `sit_cwm_settings`; `enabled_post_types()`, `available_post_types()` (offered: admin UI + REST + `editor` support) and `selectable_post_types()` (offered plus already-enabled types that are no longer offered, so saving never drops them). The `sit_cwm_enabled_post_types` and `sit_cwm_available_post_types` filters live here. |
 | `Assets` | The single enqueue path. Reads each entry's generated `*.asset.php` for dependencies and version, uses the `sit-cwm-{entry}-{js,css}` handles, wires `wp_set_script_translations()`, and prints the `window.sitCwm` bootstrap with `wp_add_inline_script()`. |
 
 ### `includes/Workflow/`

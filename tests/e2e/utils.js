@@ -8,6 +8,11 @@
 import { expect } from '@wordpress/e2e-test-utils-playwright';
 
 /**
+ * External dependencies
+ */
+import AxeBuilder from '@axe-core/playwright';
+
+/**
  * Password of every user the specs create.
  *
  * @type {string}
@@ -235,4 +240,31 @@ export async function moveTo( page, panel, label, { confirm = false } = {} ) {
 	}
 
 	await expect( statusBadge( panel ) ).toHaveText( label );
+}
+
+/**
+ * Violations of WCAG A/AA rules inside one element.
+ *
+ * @param {Object} page     Playwright page.
+ * @param {string} selector CSS selector to scan.
+ * @return {Promise<Object[]>} `{ id, impact, help, targets }` per violation.
+ */
+export async function axeViolations( page, selector ) {
+	const { violations: found, passes } = await new AxeBuilder( { page } )
+		.include( selector )
+		.withTags( [ 'wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa' ] )
+		.analyze();
+
+	// Proves the selector matched: an empty scope would pass vacuously.
+	expect(
+		passes.length,
+		`axe checked nothing in ${ selector }`
+	).toBeGreaterThan( 5 );
+
+	return found.map( ( { id, impact, help, nodes } ) => ( {
+		id,
+		impact,
+		help,
+		targets: nodes.map( ( node ) => node.target.join( ' ' ) ),
+	} ) );
 }

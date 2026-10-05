@@ -13,6 +13,7 @@ import { __ } from '@wordpress/i18n';
  * Internal dependencies
  */
 import useUsers from './useUsers';
+import { decodeText } from '../utils/format';
 
 /**
  * Option value meaning "no reviewer" (`reviewer_id: 0`).
@@ -55,7 +56,10 @@ export default function useReviewerOptions( {
 		const add = ( user ) => {
 			if ( user && ! added.has( user.id ) ) {
 				added.add( user.id );
-				list.push( { value: String( user.id ), label: user.name } );
+				list.push( {
+					value: String( user.id ),
+					label: decodeText( user.name ),
+				} );
 			}
 		};
 

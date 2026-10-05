@@ -13,6 +13,7 @@ use Sit_Cwm\Core\Container;
 use Sit_Cwm\Core\Deactivator;
 use Sit_Cwm\Core\Interfaces\Bootable;
 use Sit_Cwm\Core\Plugin;
+use Sit_Cwm\Editor\ClassicMetaBox;
 use WP_UnitTestCase;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -114,6 +115,26 @@ final class PluginTest extends WP_UnitTestCase {
 
 		$this->assertSame( 1, $rest->calls );
 		$this->assertSame( $container, $plugin->container() );
+	}
+
+	/**
+	 * The classic editor meta box is wired and boots with the admin services,
+	 * right after the block editor sidebar.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return void
+	 */
+	public function test_classic_meta_box_is_wired_in_admin_phase() {
+		$plugin = new Plugin( new Container() );
+		$plugin->boot();
+
+		$this->assertInstanceOf( ClassicMetaBox::class, $plugin->container()->get( 'editor.classic' ) );
+
+		$admin = Plugin::BOOT_PHASES['admin'];
+
+		$this->assertContains( 'editor.classic', $admin );
+		$this->assertSame( array_search( 'editor.sidebar', $admin, true ) + 1, array_search( 'editor.classic', $admin, true ) );
 	}
 
 	/**

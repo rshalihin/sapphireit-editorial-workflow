@@ -17,6 +17,7 @@ import ModalActions from './ModalActions';
 import useRowMutation from './useRowMutation';
 import { updateWorkflow } from '../../api/client';
 import useReviewerOptions from '../../hooks/useReviewerOptions';
+import { displayTitle } from '../../utils/format';
 
 /**
  * Reviewer form.
@@ -92,7 +93,7 @@ export default function ReviewerModal( { items, closeModal, onChanged } ) {
 		[ item.post_id, item.reviewer ]
 	);
 
-	const title = item.title || __( '(no title)', 'sapphireit-editorial-workflow' );
+	const title = displayTitle( item.title );
 
 	const submit = ( event ) => {
 		event.preventDefault();
@@ -106,12 +107,18 @@ export default function ReviewerModal( { items, closeModal, onChanged } ) {
 				success: data.reviewer_id
 					? sprintf(
 							/* translators: %s: Post title. */
-							__( 'Reviewer assigned to “%s”.', 'sapphireit-editorial-workflow' ),
+							__(
+								'Reviewer assigned to “%s”.',
+								'sapphireit-editorial-workflow'
+							),
 							title
 						)
 					: sprintf(
 							/* translators: %s: Post title. */
-							__( 'Reviewer removed from “%s”.', 'sapphireit-editorial-workflow' ),
+							__(
+								'Reviewer removed from “%s”.',
+								'sapphireit-editorial-workflow'
+							),
 							title
 						),
 			};

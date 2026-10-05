@@ -8,6 +8,8 @@
  * WordPress dependencies
  */
 import { dateI18n, getSettings } from '@wordpress/date';
+import { decodeEntities } from '@wordpress/html-entities';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Colour used when a status has no registered colour (mirrors
@@ -56,6 +58,33 @@ export function isEnabledPostType( postType ) {
 	return (
 		Array.isArray( postTypes ) &&
 		postTypes.some( ( type ) => type && type.slug === postType )
+	);
+}
+
+/**
+ * A post title or user name from the REST API, ready to render as text.
+ *
+ * The API returns raw DB values, and kses stores `&` as `&amp;` for users
+ * without `unfiltered_html`, so decode entities as core's DataViews screens
+ * do. The result is plain text: render it only as a text node.
+ *
+ * @param {*} value Raw title or name.
+ * @return {string} Decoded text; `''` for non-strings.
+ */
+export function decodeText( value ) {
+	return typeof value === 'string' ? decodeEntities( value ) : '';
+}
+
+/**
+ * A post title for display, with a fallback for untitled posts.
+ *
+ * @param {*} title Raw post title.
+ * @return {string} Decoded title, or `(no title)`.
+ */
+export function displayTitle( title ) {
+	return (
+		decodeText( title ) ||
+		__( '(no title)', 'sapphireit-editorial-workflow' )
 	);
 }
 

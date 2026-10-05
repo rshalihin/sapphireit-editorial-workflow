@@ -23,8 +23,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * array. Only the entries in `ENTRIES` can be loaded, so no path is ever built
  * from anything but a hard-coded name.
  *
- * Not `Bootable`: the screen-specific services (editor sidebar, dashboard)
- * decide when to call it.
+ * Not `Bootable`: the screen-specific services (editor sidebar, classic
+ * meta box, dashboard) decide when to call it.
  *
  * @since 1.0.0
  */
@@ -36,7 +36,7 @@ final class Assets {
 	 * @since 1.0.0
 	 * @var string[]
 	 */
-	const ENTRIES = array( 'sidebar', 'dashboard' );
+	const ENTRIES = array( 'sidebar', 'dashboard', 'classic' );
 
 	/**
 	 * REST namespace exposed to scripts (D9).

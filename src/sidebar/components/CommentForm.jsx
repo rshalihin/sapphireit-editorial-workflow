@@ -1,5 +1,9 @@
 /**
  * Workflow comment form. Rendered only when the user may comment.
+ *
+ * The wrapper is a `<div>`, not a `<form>`: in the classic editor the meta box
+ * sits inside `<form id="post">`, where a nested form would be dropped by the
+ * browser and "Add comment" would submit (and save) the whole post.
  */
 
 /**
@@ -22,7 +26,7 @@ const MAX_LENGTH = 5000;
  *                                  success or a normalized error.
  * @param {boolean}  props.isSaving     Whether a workflow change is in flight.
  * @param {boolean}  [props.isDisabled] Disables the form (e.g. post gone).
- * @return {Element} Form.
+ * @return {Element} Comment group.
  */
 export default function CommentForm( {
 	onSubmit,
@@ -35,7 +39,7 @@ export default function CommentForm( {
 	const isEmpty = message.trim() === '';
 
 	const handleSubmit = async ( event ) => {
-		event.preventDefault();
+		event?.preventDefault();
 
 		if ( isEmpty || isSaving || isDisabled ) {
 			return;
@@ -53,11 +57,23 @@ export default function CommentForm( {
 			return;
 		}
 
-		setMessage( '' );
+		// Keep anything typed while the request was in flight.
+		setMessage( ( current ) => ( current === message ? '' : current ) );
+	};
+
+	// Ctrl/Cmd+Enter submits; plain Enter still adds a newline.
+	const handleKeyDown = ( event ) => {
+		if ( event.key === 'Enter' && ( event.ctrlKey || event.metaKey ) ) {
+			handleSubmit( event );
+		}
 	};
 
 	return (
-		<form className="sit-cwm-comment-form" onSubmit={ handleSubmit }>
+		<div
+			className="sit-cwm-comment-form"
+			role="group"
+			aria-label={ __( 'Workflow comment', 'sapphireit-editorial-workflow' ) }
+		>
 			<TextareaControl
 				label={ __( 'Add a workflow comment', 'sapphireit-editorial-workflow' ) }
 				value={ message }
@@ -65,6 +81,7 @@ export default function CommentForm( {
 				rows={ 3 }
 				maxLength={ MAX_LENGTH }
 				disabled={ isDisabled }
+				onKeyDown={ handleKeyDown }
 			/>
 			{ error && (
 				<Notice
@@ -76,13 +93,15 @@ export default function CommentForm( {
 				</Notice>
 			) }
 			<Button
-				type="submit"
+				type="button"
 				variant="secondary"
+				onClick={ handleSubmit }
+				className="sit-cwm-comment-form__submit"
 				disabled={ isEmpty || isSaving || isDisabled }
 				isBusy={ isSaving && ! isEmpty }
 			>
 				{ __( 'Add comment', 'sapphireit-editorial-workflow' ) }
 			</Button>
-		</form>
+		</div>
 	);
 }

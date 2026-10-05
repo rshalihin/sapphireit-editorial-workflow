@@ -293,23 +293,12 @@ export default function WorkflowDataViews() {
 					{ error.message }
 				</Notice>
 			) }
-			{ ( isFiltered || isRefreshing ) && (
+			{ isRefreshing && (
 				<div className="sit-cwm-dashboard-toolbar">
-					{ isRefreshing && (
-						<span className="sit-cwm-dashboard-refreshing">
-							<Spinner />
-							{ __( 'Refreshing…', 'sapphireit-editorial-workflow' ) }
-						</span>
-					) }
-					{ isFiltered && (
-						<Button
-							__next40pxDefaultSize
-							variant="tertiary"
-							onClick={ clearFilters }
-						>
-							{ __( 'Clear all filters', 'sapphireit-editorial-workflow' ) }
-						</Button>
-					) }
+					<span className="sit-cwm-dashboard-refreshing">
+						<Spinner />
+						{ __( 'Refreshing…', 'sapphireit-editorial-workflow' ) }
+					</span>
 				</div>
 			) }
 			<DataViews
@@ -325,12 +314,38 @@ export default function WorkflowDataViews() {
 				getItemId={ getItemId }
 				isLoading={ isLoading }
 				config={ CONFIG }
-				searchLabel={ __( 'Search content', 'sapphireit-editorial-workflow' ) }
 				empty={ empty }
 				onReset={
 					isDefaultView ? false : () => setView( DEFAULT_VIEW )
 				}
-			/>
+			>
+				{ /* DataViews' default layout, plus "Clear all filters" beside
+				   the filter toggle. */ }
+				<div className="dataviews__view-actions sit-cwm-view-actions">
+					<div className="dataviews__search sit-cwm-view-search">
+						<DataViews.Search
+							label={ __( 'Search content', 'sapphireit-editorial-workflow' ) }
+						/>
+						<DataViews.FiltersToggle />
+						{ isFiltered && (
+							<Button
+								size="compact"
+								variant="tertiary"
+								onClick={ clearFilters }
+							>
+								{ __( 'Clear all filters', 'sapphireit-editorial-workflow' ) }
+							</Button>
+						) }
+					</div>
+					<div className="sit-cwm-view-config">
+						<DataViews.LayoutSwitcher />
+						<DataViews.ViewConfig />
+					</div>
+				</div>
+				<DataViews.FiltersToggled className="dataviews-filters__container" />
+				<DataViews.Layout />
+				<DataViews.Footer />
+			</DataViews>
 		</BulkActions>
 	);
 }

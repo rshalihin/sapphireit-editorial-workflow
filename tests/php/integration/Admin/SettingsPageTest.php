@@ -272,6 +272,117 @@ final class SettingsPageTest extends TestCase {
 	}
 
 	/**
+	 * Back-office types (no `editor` support, or no REST) are not offered,
+	 * but the filter can opt one back in. Internal types stay excluded.
+	 *
+	 * @return void
+	 */
+	public function test_non_editorial_post_types_are_not_offered() {
+		register_post_type(
+			'sit_cwm_order',
+			array(
+				'show_ui'      => true,
+				'show_in_rest' => true,
+				'supports'     => array( 'title' ),
+			)
+		);
+		register_post_type(
+			'sit_cwm_norest',
+			array(
+				'show_ui'      => true,
+				'show_in_rest' => false,
+				'supports'     => array( 'title', 'editor' ),
+			)
+		);
+
+		$available = $this->store->available_post_types();
+
+		$this->assertArrayNotHasKey( 'sit_cwm_order', $available );
+		$this->assertArrayNotHasKey( 'sit_cwm_norest', $available );
+		$this->assertFalse( $this->store->update( array( 'post_types' => array( 'sit_cwm_order' ) ) ) );
+
+		$opt_in = static function ( $types ) {
+			$types['sit_cwm_order'] = 'sit_cwm_order';
+			$types['attachment']    = 'attachment';
+			$types['sit_cwm_ghost'] = 'sit_cwm_ghost';
+
+			return $types;
+		};
+		add_filter( 'sit_cwm_available_post_types', $opt_in );
+
+		$available = $this->store->available_post_types();
+
+		remove_filter( 'sit_cwm_available_post_types', $opt_in );
+		unregister_post_type( 'sit_cwm_order' );
+		unregister_post_type( 'sit_cwm_norest' );
+
+		$this->assertArrayHasKey( 'sit_cwm_order', $available );
+		$this->assertArrayNotHasKey( 'attachment', $available );
+		$this->assertArrayNotHasKey( 'sit_cwm_ghost', $available );
+	}
+
+	/**
+	 * A type that is already enabled but no longer eligible is kept on save
+	 * and rendered with an "unsupported" note.
+	 *
+	 * @return void
+	 */
+	public function test_already_enabled_unsupported_type_is_kept() {
+		register_post_type(
+			'sit_cwm_legacy',
+			array(
+				'show_ui'      => true,
+				'show_in_rest' => true,
+				'supports'     => array( 'title', 'editor' ),
+			)
+		);
+		$this->assertTrue( $this->store->update( array( 'post_types' => array( 'post', 'sit_cwm_legacy' ) ) ) );
+
+		remove_post_type_support( 'sit_cwm_legacy', 'editor' );
+
+		$this->assertArrayNotHasKey( 'sit_cwm_legacy', $this->store->available_post_types() );
+		$this->assertSame( array( 'sit_cwm_legacy' ), $this->store->unsupported_enabled_post_types() );
+		$this->assertSame(
+			array( 'post', 'sit_cwm_legacy' ),
+			$this->page->sanitize( array( 'post_types' => array( 'post', 'sit_cwm_legacy' ) ) )['post_types']
+		);
+
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+		ob_start();
+		$this->page->render_post_types_field();
+		$html = ob_get_clean();
+
+		unregister_post_type( 'sit_cwm_legacy' );
+
+		$this->assertMatchesRegularExpression( '/value="sit_cwm_legacy"\s+checked=\'checked\'/', $html );
+		$this->assertStringContainsString( 'not supported: kept because it is already enabled', $html );
+	}
+
+	/**
+	 * Types without the block editor get no note: the classic meta box covers them.
+	 *
+	 * @return void
+	 */
+	public function test_classic_editor_types_have_no_note() {
+		require_once ABSPATH . 'wp-admin/includes/post.php';
+
+		$classic = static function ( $use_block_editor, $post_type ) {
+			return 'page' === $post_type ? false : $use_block_editor;
+		};
+		add_filter( 'use_block_editor_for_post_type', $classic, 10, 2 );
+
+		ob_start();
+		$this->page->render_post_types_field();
+		$html = ob_get_clean();
+
+		remove_filter( 'use_block_editor_for_post_type', $classic, 10 );
+
+		$this->assertStringNotContainsString( 'dashboard only', $html );
+		$this->assertDoesNotMatchRegularExpression( '/value="page"[^>]*\/> [^<]+<\/label> <span/', $html );
+		$this->assertDoesNotMatchRegularExpression( '/value="post"[^>]*\/> [^<]+<\/label> <span/', $html );
+	}
+
+	/**
 	 * The option is not exposed through `/wp/v2/settings`.
 	 *
 	 * @return void

@@ -86,9 +86,9 @@ test.describe( 'Editorial workflow', () => {
 			.getByRole( 'combobox', { name: 'Reviewer' } )
 			.fill( 'cwm_reviewer' );
 		await page.getByRole( 'option', { name: 'cwm_reviewer' } ).click();
-		await expect( panel.locator( '.sit-cwm-reviewer-current' ) ).toHaveText(
-			'cwm_reviewer'
-		);
+		await expect(
+			panel.getByRole( 'combobox', { name: 'Reviewer' } )
+		).toHaveValue( 'cwm_reviewer' );
 
 		// The date picker's day grid is not a stable selector surface, so the
 		// date is set with the same authenticated request the control sends.

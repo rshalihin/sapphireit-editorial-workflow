@@ -14,6 +14,7 @@ use Sit_Cwm\Admin\Settings as SettingsPage;
 use Sit_Cwm\Content\PostMeta;
 use Sit_Cwm\Content\PostRepository;
 use Sit_Cwm\Core\Interfaces\Bootable;
+use Sit_Cwm\Editor\ClassicMetaBox;
 use Sit_Cwm\Editor\SidebarAssets;
 use Sit_Cwm\REST\ActivityController;
 use Sit_Cwm\REST\ActivityFormatter;
@@ -69,6 +70,7 @@ final class Plugin {
 			'admin.dashboard',
 			'admin.settings',
 			'editor.sidebar',
+			'editor.classic',
 		),
 		'rest'  => array(
 			'rest.workflow',
@@ -357,6 +359,13 @@ final class Plugin {
 			'editor.sidebar',
 			static function ( Container $c ) {
 				return new SidebarAssets( $c->get( 'assets' ), $c->get( 'permission_manager' ) );
+			}
+		);
+
+		$this->container->set(
+			'editor.classic',
+			static function ( Container $c ) {
+				return new ClassicMetaBox( $c->get( 'assets' ), $c->get( 'permission_manager' ), $c->get( 'settings' ) );
 			}
 		);
 

@@ -23,7 +23,13 @@ import { caution, Icon } from '@wordpress/icons';
  */
 import StatusBadge from './StatusBadge';
 import { FILTER_OPERATORS } from '../hooks/usePosts';
-import { formatDate, getBootstrap, isSafeUrl } from '../utils/format';
+import {
+	decodeText,
+	displayTitle,
+	formatDate,
+	getBootstrap,
+	isSafeUrl,
+} from '../utils/format';
 
 /**
  * A dash for an empty cell, with a spoken label.
@@ -72,13 +78,15 @@ export function mergeUsers( ...lists ) {
  */
 function userElements( users ) {
 	return mergeUsers( users )
-		.map( ( user ) => ( { value: user.id, label: user.name || '' } ) )
+		.map( ( user ) => ( {
+			value: user.id,
+			label: decodeText( user.name ),
+		} ) )
 		.sort( ( a, b ) => a.label.localeCompare( b.label ) );
 }
 
 const TitleCell = memo( ( { item } ) => {
-	const title =
-		item.title || __( '(no title)', 'sapphireit-editorial-workflow' );
+	const title = displayTitle( item.title );
 
 	return isSafeUrl( item.edit_link ) ? (
 		<a className="sit-cwm-title-link" href={ item.edit_link }>
@@ -121,7 +129,7 @@ const ReviewerCell = memo( ( { item } ) => {
 					height={ 24 }
 				/>
 			) }
-			<span>{ reviewer.name }</span>
+			<span>{ decodeText( reviewer.name ) }</span>
 		</span>
 	);
 } );
@@ -156,7 +164,7 @@ const DueDateCell = memo( ( { item } ) => {
 
 const AuthorCell = memo( ( { item } ) => {
 	return item.author?.name ? (
-		<span>{ item.author.name }</span>
+		<span>{ decodeText( item.author.name ) }</span>
 	) : (
 		<EmptyValue
 			label={ __( 'Unknown author', 'sapphireit-editorial-workflow' ) }
@@ -234,7 +242,7 @@ export default function buildFields( { reviewers = [], authors = [] } = {} ) {
 			id: 'title',
 			type: 'text',
 			label: __( 'Title', 'sapphireit-editorial-workflow' ),
-			getValue: ( { item } ) => item.title || '',
+			getValue: ( { item } ) => decodeText( item.title ),
 			render: TitleCell,
 			enableSorting: true,
 			enableGlobalSearch: true,
@@ -254,7 +262,7 @@ export default function buildFields( { reviewers = [], authors = [] } = {} ) {
 					label: status.label,
 				} ) ),
 			enableSorting: false,
-			filterBy: { operators: FILTER_OPERATORS.status, isPrimary: true },
+			filterBy: { operators: FILTER_OPERATORS.status },
 		},
 		{
 			id: 'reviewer',
@@ -334,10 +342,7 @@ export default function buildFields( { reviewers = [], authors = [] } = {} ) {
 			],
 			enableSorting: false,
 			enableHiding: false,
-			filterBy: {
-				operators: FILTER_OPERATORS.is_overdue,
-				isPrimary: true,
-			},
+			filterBy: { operators: FILTER_OPERATORS.is_overdue },
 		},
 	];
 }

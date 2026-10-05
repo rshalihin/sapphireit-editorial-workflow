@@ -15,7 +15,7 @@ import { store as noticesStore } from '@wordpress/notices';
  * Internal dependencies
  */
 import * as client from '../api/client';
-import { formatDate } from '../utils/format';
+import { decodeText, formatDate } from '../utils/format';
 
 /**
  * Error returned when a mutation is attempted while another is running or
@@ -289,7 +289,7 @@ export default function useWorkflow( postId ) {
 									'Reviewer set to %s.',
 									'sapphireit-editorial-workflow'
 								),
-								data.reviewer.name
+								decodeText( data.reviewer.name )
 							)
 						: __(
 								'Reviewer removed.',

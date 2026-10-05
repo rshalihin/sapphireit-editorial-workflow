@@ -77,8 +77,54 @@ describe( 'CommentForm', () => {
 		expect( submit().disabled ).toBe( true );
 
 		fireEvent.change( field(), { target: { value: '   ' } } );
-		fireEvent.submit( field().closest( 'form' ) );
+		fireEvent.keyDown( field(), { key: 'Enter', ctrlKey: true } );
 
+		expect( onSubmit ).not.toHaveBeenCalled();
+	} );
+
+	it( 'renders no form element, so it is safe inside the classic editor form', () => {
+		const { container } = render(
+			<CommentForm onSubmit={ jest.fn() } isSaving={ false } />
+		);
+
+		expect( container.querySelector( 'form' ) ).toBeNull();
+		expect(
+			screen.getByRole( 'group', { name: 'Workflow comment' } )
+		).toBeTruthy();
+		expect( submit().getAttribute( 'type' ) ).toBe( 'button' );
+	} );
+
+	it( 'submits on Ctrl+Enter and Cmd+Enter', async () => {
+		const onSubmit = jest.fn().mockResolvedValue( null );
+
+		render( <CommentForm onSubmit={ onSubmit } isSaving={ false } /> );
+
+		fireEvent.change( field(), { target: { value: 'First.' } } );
+		await act( async () => {
+			fireEvent.keyDown( field(), { key: 'Enter', ctrlKey: true } );
+		} );
+
+		expect( onSubmit ).toHaveBeenLastCalledWith( 'First.' );
+		expect( field().value ).toBe( '' );
+
+		fireEvent.change( field(), { target: { value: 'Second.' } } );
+		await act( async () => {
+			fireEvent.keyDown( field(), { key: 'Enter', metaKey: true } );
+		} );
+
+		expect( onSubmit ).toHaveBeenLastCalledWith( 'Second.' );
+		expect( onSubmit ).toHaveBeenCalledTimes( 2 );
+	} );
+
+	it( 'does not submit on plain Enter', () => {
+		const onSubmit = jest.fn();
+
+		render( <CommentForm onSubmit={ onSubmit } isSaving={ false } /> );
+
+		fireEvent.change( field(), { target: { value: 'Line one' } } );
+		const event = fireEvent.keyDown( field(), { key: 'Enter' } );
+
+		expect( event ).toBe( true ); // Not prevented: the newline goes in.
 		expect( onSubmit ).not.toHaveBeenCalled();
 	} );
 
@@ -94,6 +140,28 @@ describe( 'CommentForm', () => {
 
 		expect( onSubmit ).toHaveBeenCalledWith( 'Looks good.' );
 		expect( field().value ).toBe( '' );
+	} );
+
+	it( 'keeps text typed while the comment was being saved', async () => {
+		let resolve;
+		const onSubmit = jest.fn(
+			() =>
+				new Promise( ( done ) => {
+					resolve = done;
+				} )
+		);
+
+		render( <CommentForm onSubmit={ onSubmit } isSaving={ false } /> );
+
+		fireEvent.change( field(), { target: { value: 'First.' } } );
+		fireEvent.click( submit() );
+		fireEvent.change( field(), { target: { value: 'Second.' } } );
+		await act( async () => {
+			resolve( null );
+		} );
+
+		expect( onSubmit ).toHaveBeenCalledWith( 'First.' );
+		expect( field().value ).toBe( 'Second.' );
 	} );
 
 	it( 'keeps the text and shows the error when saving fails', async () => {
@@ -234,7 +302,9 @@ describe( 'ReviewerControl', () => {
 			/>
 		);
 
-		expect( screen.getByText( 'Jane' ) ).toBeTruthy();
+		// The combobox itself shows the reviewer; there is no separate summary.
+		expect( screen.getByDisplayValue( 'Jane' ) ).toBeTruthy();
+		expect( screen.queryByText( 'Jane' ) ).toBeNull();
 
 		const input = screen.getByRole( 'combobox', { name: 'Reviewer' } );
 		fireEvent.focus( input );
@@ -271,6 +341,30 @@ describe( 'ReviewerControl', () => {
 		fireEvent.click(
 			await screen.findByRole( 'option', { name: 'Omar' } )
 		);
+
+		expect( onChange ).not.toHaveBeenCalled();
+	} );
+
+	it( 'does not unassign on Enter when the search matches nobody', async () => {
+		apiFetch.mockResolvedValue( [ jane, omar ] );
+		const onChange = jest.fn();
+		const props = { postId: 12, onChange, isSaving: false };
+
+		const { rerender } = render(
+			<ReviewerControl { ...props } reviewer={ jane } />
+		);
+		await screen.findByDisplayValue( 'Jane' );
+
+		// A save hands back a new reviewer object, so the options are rebuilt
+		// and the combobox highlights its first one: "Unassigned".
+		rerender( <ReviewerControl { ...props } reviewer={ { ...jane } } /> );
+
+		const input = screen.getByRole( 'combobox', { name: 'Reviewer' } );
+		fireEvent.focus( input );
+		fireEvent.change( input, { target: { value: 'no-such-reviewer' } } );
+		await act( async () => {
+			fireEvent.keyDown( input, { key: 'Enter', code: 'Enter' } );
+		} );
 
 		expect( onChange ).not.toHaveBeenCalled();
 	} );

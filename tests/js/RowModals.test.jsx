@@ -313,6 +313,22 @@ describe( 'DueDateModal', () => {
 		] );
 	} );
 
+	it( 'names the post with its entities decoded', async () => {
+		apiFetch.mockResolvedValue( {} );
+
+		const { onChanged } = renderModal( DueDateModal, {
+			items: [ row( { title: 'Q&amp;A', due_date: '2026-10-01' } ) ],
+		} );
+
+		fireEvent.click(
+			screen.getByRole( 'button', { name: 'Remove due date' } )
+		);
+
+		await waitFor( () => expect( onChanged ).toHaveBeenCalled() );
+
+		expect( snackbars() ).toEqual( [ 'Due date removed from “Q&A”.' ] );
+	} );
+
 	it( 'offers no removal when there is no due date', () => {
 		renderModal( DueDateModal, { items: [ row() ] } );
 

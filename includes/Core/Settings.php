@@ -91,7 +91,7 @@ final class Settings {
 	 *
 	 * The whole update is rejected (nothing saved) when the payload is not an
 	 * array or `post_types` is not a list of post types that may be enabled
-	 * (see `available_post_types()`). Unknown keys are ignored.
+	 * (see `selectable_post_types()`). Unknown keys are ignored.
 	 *
 	 * @since 1.0.0
 	 *
@@ -175,10 +175,12 @@ final class Settings {
 	}
 
 	/**
-	 * Post types the workflow may be enabled for: registered with an admin UI,
-	 * minus `EXCLUDED_POST_TYPES` and core's internal `wp_*` post types.
+	 * Post types the workflow may be newly enabled for: editorial content with
+	 * an admin UI, REST support and the `editor` feature, minus
+	 * `EXCLUDED_POST_TYPES` and core's internal `wp_*` post types.
 	 *
-	 * Shared by `update()` and the settings screen, so both accept the same list.
+	 * Back-office types such as WooCommerce orders and coupons have no
+	 * `editor` support, so they are not offered.
 	 *
 	 * @since 1.0.0
 	 *
@@ -188,7 +190,31 @@ final class Settings {
 		$types = array();
 
 		foreach ( get_post_types( array( 'show_ui' => true ) ) as $post_type ) {
-			if ( in_array( $post_type, self::EXCLUDED_POST_TYPES, true ) || 0 === strpos( $post_type, 'wp_' ) ) {
+			$object = get_post_type_object( $post_type );
+
+			if ( null === $object || ! $object->show_in_rest || ! post_type_supports( $post_type, 'editor' ) ) {
+				continue;
+			}
+
+			$types[ $post_type ] = $post_type;
+		}
+
+		/**
+		 * Filters the post types the workflow may be enabled for.
+		 *
+		 * Use it to offer a post type the default rules leave out. Internal
+		 * post types (attachments, revisions, menu items, `wp_*`) and
+		 * unregistered ones are removed afterwards.
+		 *
+		 * @since 1.0.0
+		 *
+		 * @param array<string, string> $types Slug => slug.
+		 */
+		$filtered = apply_filters( 'sit_cwm_available_post_types', $types );
+		$types    = array();
+
+		foreach ( (array) $filtered as $post_type ) {
+			if ( ! is_string( $post_type ) || ! post_type_exists( $post_type ) || $this->is_internal_post_type( $post_type ) ) {
 				continue;
 			}
 
@@ -199,7 +225,60 @@ final class Settings {
 	}
 
 	/**
-	 * Validates a post type list against `available_post_types()`.
+	 * Post types that may be saved as enabled: `available_post_types()` plus
+	 * any still-registered type that is already enabled but no longer
+	 * eligible, so saving the settings never silently drops it.
+	 *
+	 * Shared by `update()` and the settings screen, so both accept the same list.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return array<string, string> Slug => slug; available types first.
+	 */
+	public function selectable_post_types(): array {
+		$types = $this->available_post_types();
+
+		foreach ( $this->unsupported_enabled_post_types() as $post_type ) {
+			$types[ $post_type ] = $post_type;
+		}
+
+		return $types;
+	}
+
+	/**
+	 * Enabled post types that `available_post_types()` no longer offers.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return string[] Registered, non-internal slugs.
+	 */
+	public function unsupported_enabled_post_types(): array {
+		$available = $this->available_post_types();
+		$types     = array();
+
+		foreach ( (array) $this->get( 'post_types', array() ) as $post_type ) {
+			if ( is_string( $post_type ) && ! isset( $available[ $post_type ] ) && post_type_exists( $post_type ) && ! $this->is_internal_post_type( $post_type ) ) {
+				$types[] = $post_type;
+			}
+		}
+
+		return array_values( array_unique( $types ) );
+	}
+
+	/**
+	 * Whether a post type can never be workflow-enabled.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param string $post_type Post type slug.
+	 * @return bool
+	 */
+	private function is_internal_post_type( string $post_type ): bool {
+		return in_array( $post_type, self::EXCLUDED_POST_TYPES, true ) || 0 === strpos( $post_type, 'wp_' );
+	}
+
+	/**
+	 * Validates a post type list against `selectable_post_types()`.
 	 *
 	 * @since 1.0.0
 	 *
@@ -211,7 +290,7 @@ final class Settings {
 			return null;
 		}
 
-		$available = $this->available_post_types();
+		$available = $this->selectable_post_types();
 		$types     = array();
 
 		foreach ( $value as $post_type ) {

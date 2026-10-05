@@ -17,6 +17,7 @@ import ModalActions from './ModalActions';
 import useRowMutation from './useRowMutation';
 import { addComment, updateWorkflow } from '../../api/client';
 import { getTransitionConfirmation } from '../../utils/confirmations';
+import { displayTitle } from '../../utils/format';
 
 /**
  * Comment field.
@@ -28,7 +29,10 @@ const COMMENT_FIELDS = [
 		id: 'comment',
 		type: 'text',
 		label: __( 'Comment (optional)', 'sapphireit-editorial-workflow' ),
-		description: __( 'Added to the activity history.', 'sapphireit-editorial-workflow' ),
+		description: __(
+			'Added to the activity history.',
+			'sapphireit-editorial-workflow'
+		),
 		Edit: { control: 'textarea', rows: 4 },
 	},
 ];
@@ -89,7 +93,7 @@ export default function TransitionModal( {
 		);
 	}
 
-	const title = item.title || __( '(no title)', 'sapphireit-editorial-workflow' );
+	const title = displayTitle( item.title );
 	const { message: explanation } = getTransitionConfirmation( transition );
 
 	const submit = ( event ) => {
@@ -139,7 +143,10 @@ export default function TransitionModal( {
 			<p>
 				{ sprintf(
 					/* translators: 1: Post title, 2: Current workflow status label, 3: Target workflow status label. */
-					__( 'Move “%1$s” from %2$s to %3$s?', 'sapphireit-editorial-workflow' ),
+					__(
+						'Move “%1$s” from %2$s to %3$s?',
+						'sapphireit-editorial-workflow'
+					),
 					title,
 					item.status_label,
 					transition.label

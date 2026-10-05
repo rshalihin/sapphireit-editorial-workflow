@@ -60,15 +60,16 @@ describe( 'buildFields', () => {
 		] );
 	} );
 
-	it( 'offers "Overdue only" as a primary filter that is never a column', () => {
+	it( 'offers "Overdue only" as a filter that is never a column', () => {
 		const overdue = field( buildFields(), 'is_overdue' );
 
 		expect( overdue.elements ).toEqual( [
 			{ value: true, label: 'Overdue only' },
 		] );
+		// Not primary: primary filters pin the filter bar open, which makes
+		// the DataViews filter toggle collapse and immediately re-expand it.
 		expect( overdue.filterBy ).toEqual( {
 			operators: FILTER_OPERATORS.is_overdue,
-			isPrimary: true,
 		} );
 		expect( overdue.enableHiding ).toBe( false );
 	} );
@@ -178,6 +179,52 @@ describe( 'field rendering', () => {
 
 		expect( screen.queryByRole( 'link' ) ).toBeNull();
 		expect( screen.getByText( '<b>x</b>' ) ).toBeTruthy();
+	} );
+
+	it( 'decodes entities that kses stored in the title', () => {
+		renderCell( 'title', row( { title: 'A &amp; B' } ) );
+
+		expect( screen.getByRole( 'link', { name: 'A & B' } ) ).toBeTruthy();
+	} );
+
+	it( 'keeps a decoded title inert', () => {
+		const { container } = renderCell(
+			'title',
+			row( { title: '&lt;img src=x onerror=alert(1)&gt;' } )
+		);
+
+		expect( container.querySelector( 'img' ) ).toBeNull();
+		expect(
+			screen.getByText( '<img src=x onerror=alert(1)>' )
+		).toBeTruthy();
+	} );
+
+	it( 'decodes the title value used for sorting and search', () => {
+		const { getValue } = field( buildFields(), 'title' );
+
+		expect( getValue( { item: row( { title: 'Q&amp;A' } ) } ) ).toBe(
+			'Q&A'
+		);
+	} );
+
+	it( 'falls back for an untitled post', () => {
+		renderCell( 'title', row( { title: '' } ) );
+
+		expect( screen.getByText( '(no title)' ) ).toBeTruthy();
+	} );
+
+	it( 'decodes reviewer and author names', () => {
+		renderCell(
+			'reviewer',
+			row( { reviewer: { id: 7, name: 'R &amp; D', avatar: '' } } )
+		);
+		renderCell(
+			'author',
+			row( { author: { id: 3, name: 'Tom &#039;T&#039;' } } )
+		);
+
+		expect( screen.getByText( 'R & D' ) ).toBeTruthy();
+		expect( screen.getByText( "Tom 'T'" ) ).toBeTruthy();
 	} );
 
 	it( 'renders the status badge with its label', () => {

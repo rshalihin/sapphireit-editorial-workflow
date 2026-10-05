@@ -11,7 +11,8 @@
   "env": {
     "tests": {
       "mappings": {
-        "wp-content/plugins/sapphireit-editorial-workflow/tests": "./tests"
+        "wp-content/plugins/sapphireit-editorial-workflow/tests": "./tests",
+        "wp-content/plugins/classic-editor": "https://downloads.wordpress.org/plugin/classic-editor.zip"
       }
     }
   }

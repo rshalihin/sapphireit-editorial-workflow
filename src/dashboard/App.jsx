@@ -5,39 +5,13 @@
 /**
  * WordPress dependencies
  */
-import { SnackbarList } from '@wordpress/components';
-import { useDispatch, useSelect } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
-import { store as noticesStore } from '@wordpress/notices';
 
 /**
  * Internal dependencies
  */
+import Snackbars from '../components/Snackbars';
 import WorkflowDataViews from './WorkflowDataViews';
-
-/**
- * Snackbar notices raised by row actions.
- *
- * @return {Element} Snackbars.
- */
-function Snackbars() {
-	const notices = useSelect(
-		( select ) =>
-			select( noticesStore )
-				.getNotices()
-				.filter( ( notice ) => notice.type === 'snackbar' ),
-		[]
-	);
-	const { removeNotice } = useDispatch( noticesStore );
-
-	return (
-		<SnackbarList
-			className="sit-cwm-snackbars"
-			notices={ notices }
-			onRemove={ removeNotice }
-		/>
-	);
-}
 
 /**
  * @return {Element} App.

@@ -34,6 +34,7 @@ comparable between runs.
 | `dashboard.png` | The admin dashboard: every managed post with status, reviewer, due date, author, type and last activity. | **Editorial Workflow → Dashboard**, full page. |
 | `bulk-actions.png` | Two rows selected, the bulk action bar, and the *Change workflow status* dialog. | The same page mid-interaction. |
 | `settings.png` | The settings screen: enabled post types and the uninstall option. | **Editorial Workflow → Settings**, full page. |
+| `classic-editor.png` | The **Editorial Workflow** meta box in the classic editor, on the same post as `sidebar.png`. | `post.php` with the Classic Editor plugin briefly activated (it must be installed on the target site), clipped to `#sit-cwm-workflow`. |
 
 ## Notes
 
@@ -44,7 +45,8 @@ comparable between runs.
 - `sidebar.png` clips the page to the panel's box rather than screenshotting
   the element, because the panel's box extends past the viewport and an element
   screenshot pads the overflow with blank space.
-- For **WordPress.org**, these become `screenshot-1.png` … `screenshot-5.png`
+- For **WordPress.org**, these become `screenshot-1.png` … `screenshot-6.png`
   in the SVN `assets/` directory, in the order listed in `readme.txt`'s
-  Screenshots section: sidebar, dashboard, timeline, bulk actions, settings.
+  Screenshots section: sidebar, dashboard, timeline, bulk actions, settings,
+  classic editor.
   Rename them when you upload; do not rename them here.

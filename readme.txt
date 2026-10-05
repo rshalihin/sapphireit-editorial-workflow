@@ -15,7 +15,8 @@ Editorial approval workflow for posts, pages and custom post types: statuses, re
 SapphireIT Editorial Workflow adds a real editorial process on top of the posts
 you already have. Every managed post gets a workflow status, an assigned
 reviewer, a due date, workflow comments and a complete activity history —
-managed from a Gutenberg sidebar and an admin dashboard.
+managed from a Gutenberg sidebar, a classic editor meta box and an admin
+dashboard.
 
 **Six statuses, one clear path:** Draft → Writing → Review → Needs Changes →
 Approved → Published, with explicit paths for sending content back and for
@@ -90,7 +91,8 @@ https://github.com/rshalihin/sapphireit-editorial-workflow
 3. Go to **Editorial Workflow → Settings** and choose which post types the
    workflow applies to. Posts and pages are enabled by default.
 4. Open any post in the block editor and click the **Editorial Workflow** icon in
-   the top-right toolbar.
+   the top-right toolbar. In the classic editor, use the **Editorial Workflow**
+   box in the sidebar column instead.
 
 Uninstalling removes the activity table, the plugin's post meta, its options and
 its capabilities.
@@ -129,15 +131,17 @@ configurable workflows is Pro scope.
 
 = Does it work with custom post types? =
 
-Yes. Anything registered with an admin UI can be enabled in the settings, except
-attachments, revisions and menu items. The plugin uses post meta, so there is
+Yes. Any editorial content type (one with an admin UI, REST API support and the
+editor feature) can be enabled in the settings. Back-office types such as shop
+orders and coupons are not offered; developers can change the list with the
+`sit_cwm_available_post_types` filter. The plugin uses post meta, so there is
 nothing to migrate and nothing to convert.
 
 = Does it work with the classic editor? =
 
-The sidebar is a block-editor plugin, so the classic editor does not get it. The
-admin dashboard, the REST API and all the workflow rules work regardless of
-which editor you use.
+Yes. In the classic editor the workflow controls appear in an **Editorial
+Workflow** box in the sidebar column. Changes there save immediately,
+independently of the Update button.
 
 = What happens to my data if I deactivate it? =
 
@@ -146,7 +150,8 @@ stay. Only uninstalling (deleting the plugin) removes them.
 
 = Where are the workflow comments? =
 
-In the plugin's own activity table, shown in the timeline in the sidebar. They
+In the plugin's own activity table, shown in the timeline in the sidebar (or
+the classic editor box). They
 are editorial notes, so they never appear on the front end and are not mixed in
 with your readers' comments.
 
@@ -164,6 +169,7 @@ using application passwords.
 3. The activity timeline: every change, who made it and when.
 4. Bulk actions across a selection of posts.
 5. The settings screen, for choosing which post types have a workflow.
+6. The workflow box in the classic editor.
 
 == Changelog ==
 
@@ -177,6 +183,8 @@ using application passwords.
 * Workflow comments and a full activity history in a dedicated indexed table.
 * Optimistic concurrency: conflicting edits are rejected, not silently merged.
 * Gutenberg sidebar with an activity timeline.
+* Classic editor support: the same workflow controls in an Editorial Workflow
+  meta box.
 * Admin dashboard with server-side filtering, sorting, pagination, row actions
   and bulk actions.
 * Settings screen for choosing workflow-enabled post types.

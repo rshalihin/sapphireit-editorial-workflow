@@ -219,6 +219,36 @@ test.describe( 'Documentation screenshots', () => {
 		} );
 	} );
 
+	test( 'classic editor box', async ( { admin, page, requestUtils } ) => {
+		// Needs the Classic Editor plugin installed on the target site. It is
+		// active only for this shot, so the block editor shots stay as they are.
+		await requestUtils.activatePlugin( 'classic-editor' );
+
+		try {
+			await admin.visitAdminPage(
+				'post.php',
+				`post=${ ids[ 'Q3 launch announcement' ] }&action=edit`
+			);
+
+			const box = page.locator( '#sit-cwm-workflow' );
+			const timeline = box.locator( '.sit-cwm-activity' );
+
+			// The same settled state as the sidebar shot: no skeletons, no spinner.
+			await expect( box ).toContainText( 'Review' );
+			await expect( timeline ).toContainText( 'changed status from' );
+			await expect( timeline ).toHaveAttribute( 'aria-busy', 'false' );
+			await expect(
+				box.locator( '.sit-cwm-reviewer .components-spinner' )
+			).toHaveCount( 0 );
+
+			await box.screenshot( {
+				path: path.join( OUT, 'classic-editor.png' ),
+			} );
+		} finally {
+			await requestUtils.deactivatePlugin( 'classic-editor' );
+		}
+	} );
+
 	test( 'dashboard and bulk actions', async ( { admin, page } ) => {
 		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-dashboard' );
 

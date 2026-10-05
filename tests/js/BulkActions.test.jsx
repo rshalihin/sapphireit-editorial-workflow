@@ -17,6 +17,7 @@ import ChangeStatusModal from '../../src/dashboard/bulk/ChangeStatusModal';
 import {
 	BulkActionContext,
 	reachableStatuses,
+	toBulkRequest,
 } from '../../src/dashboard/bulk/shared';
 
 beforeEach( () => {
@@ -139,5 +140,20 @@ describe( 'ChangeStatusModal', () => {
 			{ labels: { 1: 'One', 2: 'Two' } }
 		);
 		await waitFor( () => expect( closeModal ).toHaveBeenCalled() );
+	} );
+} );
+
+describe( 'toBulkRequest', () => {
+	it( 'labels items with decoded titles', () => {
+		expect(
+			toBulkRequest( [
+				{ post_id: 1, title: 'Q&amp;A' },
+				{ post_id: 2, title: '' },
+				{ post_id: 0, title: 'Skipped' },
+			] )
+		).toEqual( {
+			postIds: [ 1, 2 ],
+			labels: { 1: 'Q&A', 2: '(no title)' },
+		} );
 	} );
 } );

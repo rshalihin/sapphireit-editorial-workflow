@@ -308,7 +308,9 @@ final class Settings implements Bootable {
 			esc_html__( 'Enabled content types', 'sapphireit-editorial-workflow' )
 		);
 
-		foreach ( $this->settings->available_post_types() as $post_type ) {
+		$unsupported = $this->settings->unsupported_enabled_post_types();
+
+		foreach ( $this->settings->selectable_post_types() as $post_type ) {
 			$object = get_post_type_object( $post_type );
 
 			if ( null === $object ) {
@@ -316,11 +318,12 @@ final class Settings implements Bootable {
 			}
 
 			printf(
-				'<label><input type="checkbox" name="%1$s" value="%2$s" %3$s /> %4$s</label><br />',
+				'<label><input type="checkbox" name="%1$s" value="%2$s" %3$s /> %4$s</label>%5$s<br />',
 				esc_attr( SettingsStore::OPTION . '[post_types][]' ),
 				esc_attr( $post_type ),
 				checked( in_array( $post_type, $enabled, true ), true, false ),
-				esc_html( $object->labels->name )
+				esc_html( $object->labels->name ),
+				wp_kses_post( $this->post_type_note( in_array( $post_type, $unsupported, true ) ) )
 			);
 		}
 
@@ -407,6 +410,24 @@ final class Settings implements Bootable {
 	}
 
 	/**
+	 * Note printed after a post type's checkbox label, if any.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param bool $unsupported Whether it is enabled but no longer offered.
+	 * @return string Escaped HTML, or `''` when there is nothing to say.
+	 */
+	private function post_type_note( bool $unsupported ): string {
+		if ( ! $unsupported ) {
+			return '';
+		}
+
+		$note = __( '(not supported: kept because it is already enabled; once turned off it will not be offered again)', 'sapphireit-editorial-workflow' );
+
+		return sprintf( ' <span class="description">%s</span>', esc_html( $note ) );
+	}
+
+	/**
 	 * Intersects submitted post types with the post types that may be enabled.
 	 *
 	 * @since 1.0.0
@@ -422,7 +443,7 @@ final class Settings implements Bootable {
 			return $current;
 		}
 
-		$available = $this->settings->available_post_types();
+		$available = $this->settings->selectable_post_types();
 		$types     = array();
 		$rejected  = false;
 

@@ -75,6 +75,12 @@ depends on a handle 6.8 does not register.
 
 - Gutenberg sidebar: status, reviewer, due date, transition buttons and the
   activity timeline, with confirmations on rollbacks and on publishing.
+- Classic editor support: the same workflow panel in an *Editorial Workflow*
+  meta box on `post.php` / `post-new.php` when a post type uses the classic
+  editor (Classic Editor plugin, WooCommerce products). Changes save
+  immediately through REST, independently of **Update**. The settings screen
+  no longer marks these types as "dashboard only".
+- Workflow comments can be submitted with Ctrl/Cmd+Enter in both editors.
 - Admin dashboard built on `@wordpress/dataviews`, with server-side search,
   filtering, sorting and pagination, row actions and bulk actions.
 - Activity timeline grouped by day.

@@ -11,6 +11,11 @@ import { __, sprintf } from '@wordpress/i18n';
 import { cog, commentAuthorAvatar, Icon } from '@wordpress/icons';
 
 /**
+ * Internal dependencies
+ */
+import { decodeText } from '../utils/format';
+
+/**
  * Avatar size in pixels.
  *
  * @type {number}
@@ -70,7 +75,7 @@ export function toPlainText( html ) {
  */
 export function actorName( entry ) {
 	if ( entry.user?.name ) {
-		return entry.user.name;
+		return decodeText( entry.user.name );
 	}
 
 	if ( ! entry.user && entry.user_id === 0 ) {
@@ -100,7 +105,10 @@ function sentenceTemplate( entry ) {
 			if ( entry.old_label && entry.new_label ) {
 				return sprintf(
 					/* translators: 1: user name, 2: previous status, 3: new status */
-					__( '%1$s changed status from %2$s to %3$s', 'sapphireit-editorial-workflow' ),
+					__(
+						'%1$s changed status from %2$s to %3$s',
+						'sapphireit-editorial-workflow'
+					),
 					actor,
 					from,
 					to
@@ -109,7 +117,10 @@ function sentenceTemplate( entry ) {
 
 			return sprintf(
 				/* translators: 1: user name, 2: new status */
-				__( '%1$s set the status to %2$s', 'sapphireit-editorial-workflow' ),
+				__(
+					'%1$s set the status to %2$s',
+					'sapphireit-editorial-workflow'
+				),
 				actor,
 				to
 			);
@@ -117,7 +128,10 @@ function sentenceTemplate( entry ) {
 		case 'reviewer_assigned':
 			return sprintf(
 				/* translators: 1: user name, 2: reviewer name */
-				__( '%1$s assigned %2$s as reviewer', 'sapphireit-editorial-workflow' ),
+				__(
+					'%1$s assigned %2$s as reviewer',
+					'sapphireit-editorial-workflow'
+				),
 				actor,
 				to
 			);
@@ -126,7 +140,10 @@ function sentenceTemplate( entry ) {
 			if ( entry.old_label ) {
 				return sprintf(
 					/* translators: 1: user name, 2: reviewer name */
-					__( '%1$s removed %2$s as reviewer', 'sapphireit-editorial-workflow' ),
+					__(
+						'%1$s removed %2$s as reviewer',
+						'sapphireit-editorial-workflow'
+					),
 					actor,
 					from
 				);
@@ -134,14 +151,20 @@ function sentenceTemplate( entry ) {
 
 			return sprintf(
 				/* translators: %s: user name */
-				__( '%s removed the reviewer', 'sapphireit-editorial-workflow' ),
+				__(
+					'%s removed the reviewer',
+					'sapphireit-editorial-workflow'
+				),
 				actor
 			);
 
 		case 'due_date_set':
 			return sprintf(
 				/* translators: 1: user name, 2: due date */
-				__( '%1$s set the due date to %2$s', 'sapphireit-editorial-workflow' ),
+				__(
+					'%1$s set the due date to %2$s',
+					'sapphireit-editorial-workflow'
+				),
 				actor,
 				to
 			);
@@ -149,7 +172,10 @@ function sentenceTemplate( entry ) {
 		case 'due_date_cleared':
 			return sprintf(
 				/* translators: %s: user name */
-				__( '%s removed the due date', 'sapphireit-editorial-workflow' ),
+				__(
+					'%s removed the due date',
+					'sapphireit-editorial-workflow'
+				),
 				actor
 			);
 

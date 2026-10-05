@@ -12,7 +12,11 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { getBootstrap, getStatusDefinition } from '../../utils/format';
+import {
+	displayTitle,
+	getBootstrap,
+	getStatusDefinition,
+} from '../../utils/format';
 
 /**
  * Bulk runner for the modals, provided by `<BulkActions />`.
@@ -106,8 +110,7 @@ export function toBulkRequest( items ) {
 	( Array.isArray( items ) ? items : [] ).forEach( ( item ) => {
 		if ( item && Number.isInteger( item.post_id ) && item.post_id > 0 ) {
 			postIds.push( item.post_id );
-			labels[ item.post_id ] =
-				item.title || __( '(no title)', 'sapphireit-editorial-workflow' );
+			labels[ item.post_id ] = displayTitle( item.title );
 		}
 	} );
 

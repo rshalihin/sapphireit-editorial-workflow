@@ -17,6 +17,7 @@ import ModalActions from './ModalActions';
 import useRowMutation from './useRowMutation';
 import { updateWorkflow } from '../../api/client';
 import { isCalendarDate } from '../../hooks/usePosts';
+import { displayTitle } from '../../utils/format';
 
 /**
  * Due date field.
@@ -51,7 +52,7 @@ export default function DueDateModal( { items, closeModal, onChanged } ) {
 	const [ data, setData ] = useState( { due_date: current } );
 	const { run, isBusy, error } = useRowMutation( { closeModal, onChanged } );
 
-	const title = item.title || __( '(no title)', 'sapphireit-editorial-workflow' );
+	const title = displayTitle( item.title );
 
 	const save = ( date ) =>
 		run( async () => {
@@ -61,12 +62,18 @@ export default function DueDateModal( { items, closeModal, onChanged } ) {
 				success: date
 					? sprintf(
 							/* translators: %s: Post title. */
-							__( 'Due date updated for “%s”.', 'sapphireit-editorial-workflow' ),
+							__(
+								'Due date updated for “%s”.',
+								'sapphireit-editorial-workflow'
+							),
 							title
 						)
 					: sprintf(
 							/* translators: %s: Post title. */
-							__( 'Due date removed from “%s”.', 'sapphireit-editorial-workflow' ),
+							__(
+								'Due date removed from “%s”.',
+								'sapphireit-editorial-workflow'
+							),
 							title
 						),
 			};
@@ -115,7 +122,10 @@ export default function DueDateModal( { items, closeModal, onChanged } ) {
 						onClick={ () => save( '' ) }
 						disabled={ isBusy }
 					>
-						{ __( 'Remove due date', 'sapphireit-editorial-workflow' ) }
+						{ __(
+							'Remove due date',
+							'sapphireit-editorial-workflow'
+						) }
 					</Button>
 				) }
 			</ModalActions>

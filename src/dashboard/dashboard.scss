@@ -23,6 +23,34 @@
 	background: #fff;
 }
 
+// Our own DataViews header (see WorkflowDataViews), laid out like the default
+// one: search, filter toggle and "Clear all filters" left; view config right.
+.sit-cwm-view-actions {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 4px;
+}
+
+.sit-cwm-view-search {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+}
+
+.sit-cwm-view-config {
+	display: flex;
+	flex-shrink: 0;
+	gap: 4px;
+}
+
+.sit-cwm-dashboard .dataviews-filters__visibility-toggle {
+	border: 1px solid #949494;
+	border-radius: 4px;
+}
+
 .sit-cwm-dashboard-error {
 	margin: 0 0 12px;
 }

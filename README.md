@@ -3,7 +3,8 @@
 An editorial approval workflow for WordPress. Posts, pages and custom post
 types get a **workflow status**, an assigned **reviewer**, a **due date**,
 threaded **workflow comments** and a complete **activity history** — managed
-from a Gutenberg sidebar and an admin dashboard, and enforced entirely in PHP.
+from a Gutenberg sidebar, a classic editor meta box and an admin dashboard, and
+enforced entirely in PHP.
 
 ![The editor sidebar](docs/screenshots/sidebar.png)
 
@@ -44,6 +45,9 @@ back for the server to re-derive from scratch. See
   meta array.
 - **Gutenberg editor sidebar** — status, reviewer, due date, transition buttons
   and the timeline, without leaving the editor.
+- **Classic editor meta box** — the same panel in an *Editorial Workflow* box
+  for sites and post types (e.g. WooCommerce products) that use the classic
+  editor. Changes save immediately through REST, independently of **Update**.
 - **Admin dashboard** built on `@wordpress/dataviews`: server-side search,
   filtering, sorting and pagination, row actions and bulk actions over up to
   100 posts per request.
@@ -172,8 +176,9 @@ includes/
   Content/    PostMeta, PostRepository
   Activity/   ActivityLogger, ActivityEntry
   REST/       Workflow / Activity / Posts / Batch / User controllers
+  Editor/     SidebarAssets, ClassicMetaBox
 admin/        Dashboard, Settings
-src/          React source (sidebar + dashboard)
+src/          React source (sidebar, classic meta box, dashboard)
 assets/build/ compiled output (committed)
 ```
 
@@ -220,6 +225,7 @@ touching a core file. Every one is prefixed `sit_cwm_`.
 | `sit_cwm_can_transition` | `( bool $allowed, int $post_id, string $from, string $to, int $user_id )` | **The last word on a permission decision.** Runs after the capability checks; only boolean `true` allows. |
 | `sit_cwm_available_transitions` | `( array $transitions, int $post_id, string $from, int $user_id )` | The UI's button list. May remove, reorder or relabel — never add a move the user was not already allowed. |
 | `sit_cwm_enabled_post_types` | `( string[] $post_types )` | Which post types have a workflow. |
+| `sit_cwm_available_post_types` | `( array $post_types )` | Which post types the settings screen offers (slug => slug). Defaults to types with an admin UI, REST support and the `editor` feature; internal types are always removed. |
 | `sit_cwm_activity_actions` | `( string[] $actions )` | Loggable action slugs. |
 | `sit_cwm_activity_action_labels` | `( array $labels )` | Human-readable labels for those slugs. |
 | `sit_cwm_assignable_reviewers` | `( array $query, int $post_id, int $user_id )` | `get_users()` arguments behind `GET /users`. `fields` and `count_total` are re-forced afterwards. |

@@ -13,43 +13,11 @@
 import { expect, test } from '@wordpress/e2e-test-utils-playwright';
 
 /**
- * External dependencies
- */
-import AxeBuilder from '@axe-core/playwright';
-
-/**
  * Internal dependencies
  */
-import { openWorkflowSidebar } from './utils';
+import { axeViolations as violations, openWorkflowSidebar } from './utils';
 
 const TITLE = 'E2E a11y post';
-
-/**
- * Violations of WCAG A/AA rules inside one element.
- *
- * @param {Object} page     Playwright page.
- * @param {string} selector CSS selector to scan.
- * @return {Promise<Object[]>} `{ id, impact, help, targets }` per violation.
- */
-async function violations( page, selector ) {
-	const { violations: found, passes } = await new AxeBuilder( { page } )
-		.include( selector )
-		.withTags( [ 'wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa' ] )
-		.analyze();
-
-	// Proves the selector matched: an empty scope would pass vacuously.
-	expect(
-		passes.length,
-		`axe checked nothing in ${ selector }`
-	).toBeGreaterThan( 5 );
-
-	return found.map( ( { id, impact, help, nodes } ) => ( {
-		id,
-		impact,
-		help,
-		targets: nodes.map( ( node ) => node.target.join( ' ' ) ),
-	} ) );
-}
 
 test.describe( 'Accessibility', () => {
 	let post;
