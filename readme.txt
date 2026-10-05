@@ -94,8 +94,11 @@ https://github.com/rshalihin/sapphireit-editorial-workflow
    the top-right toolbar. In the classic editor, use the **Editorial Workflow**
    box in the sidebar column instead.
 
-Uninstalling removes the activity table, the plugin's post meta, its options and
-its capabilities.
+Deactivating or deleting the plugin keeps your workflow data by default. To
+remove everything when the plugin is deleted, tick **Delete all workflow data
+when the plugin is deleted** under **Editorial Workflow → Settings** first;
+deleting the plugin then removes the activity table, the plugin's post meta, its
+options and its capabilities.
 
 == Frequently Asked Questions ==
 
@@ -126,8 +129,8 @@ the final word on every decision.
 
 The `sit_cwm_statuses` and `sit_cwm_transition_map` filters replace the status
 registry and the transition graph. Both results are validated, so a mistake in
-your code cannot leave the plugin in a broken state. A settings UI for multiple
-configurable workflows is Pro scope.
+your code cannot leave the plugin in a broken state. There is no settings screen
+for editing statuses or building multiple workflows in version 1.0.
 
 = Does it work with custom post types? =
 
@@ -146,20 +149,44 @@ independently of the Update button.
 = What happens to my data if I deactivate it? =
 
 Deactivating changes nothing — your statuses, reviewers, due dates and history
-stay. Only uninstalling (deleting the plugin) removes them.
+stay. Deleting the plugin keeps them too, unless you have ticked **Delete all
+workflow data when the plugin is deleted** under **Editorial Workflow →
+Settings**. With that option on, deleting the plugin permanently removes the
+activity table, workflow post meta, settings and capabilities.
 
 = Where are the workflow comments? =
 
 In the plugin's own activity table, shown in the timeline in the sidebar (or
-the classic editor box). They
-are editorial notes, so they never appear on the front end and are not mixed in
+the classic editor box). They are editorial notes, so they never appear on the front end and are not mixed in
 with your readers' comments.
 
 = Is there an API? =
 
 Yes, at `/wp-json/sit-cwm/v1/`. Eight documented endpoints, all authenticated,
-all with JSON schemas. See REST-API.md in the repository for `curl` examples
-using application passwords.
+all with JSON schemas. See
+[REST-API.md](https://github.com/rshalihin/sapphireit-editorial-workflow/blob/main/REST-API.md)
+for `curl` examples using application passwords.
+
+= Does the plugin contact any external service? =
+
+No. It makes no remote requests, loads nothing from a CDN, sets no cookies of
+its own and collects no usage data. Everything stays in your WordPress
+database.
+
+= Where is the source code for the JavaScript? =
+
+The editor sidebar, classic editor box and dashboard ship as compiled files in
+`assets/build/`. The human-readable React source is in the `src/` directory of
+the public repository at
+https://github.com/rshalihin/sapphireit-editorial-workflow. Run `npm install`
+and then `npm run build` to rebuild the compiled files.
+
+== Privacy ==
+
+The plugin stores, in your own database: the user ID of whoever makes each
+workflow change, the user ID of the assigned reviewer, the text of workflow
+comments and the time of each action. This information is visible to users who
+have the `sit_cwm_view_activity` capability. Nothing is sent off your site.
 
 == Screenshots ==
 
