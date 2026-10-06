@@ -1,0 +1,81 @@
+# Files and directories excluded from the distributable plugin zip.
+#
+# Format matches `wp dist-archive`: one path per line, relative to the plugin
+# root, matched against both files and directories. Comments and blank lines
+# are ignored.
+#
+# Keep this in sync with the `export-ignore` attributes in .gitattributes,
+# which do the same job for `git archive`.
+
+# Version control and CI
+.git
+.gitattributes
+.github
+.gitignore
+.distignore
+
+# Agent / editor state
+.claude
+.editorconfig
+.idea
+.vscode
+
+# Source that is only needed to produce assets/build/ (which IS shipped)
+src
+node_modules
+package.json
+package-lock.json
+webpack.config.js
+eslint.config.js
+.prettierrc.js
+.stylelintignore
+
+# Tests and test tooling
+tests
+bin
+artifacts
+coverage
+jest.config.js
+playwright.config.js
+phpunit.xml.dist
+phpunit.xml
+.phpunit.result.cache
+.phpunit.cache
+
+# Coding standards
+phpcs.xml.dist
+phpcs.xml
+.phpcs-cache
+
+# Development environment
+.wp-env.json
+.wp-env.override.json
+
+# Composer: the plugin has no runtime dependencies, and ships a fallback
+# autoloader, so vendor/ (dev-only packages) is excluded along with the
+# manifests.
+composer.json
+composer.lock
+vendor
+
+# Documentation. readme.txt is the one the plugin ships with; the Markdown
+# docs live in the repository.
+ARCHITECTURE.md
+CHANGELOG.md
+CLAUDE.md
+CONTRIBUTING.md
+DEVELOPMENT.md
+README.md
+REST-API.md
+WORKFLOW.md
+docs
+
+# Placeholders that only exist to keep empty directories in git
+.gitkeep
+
+# Local cruft
+dist
+*.zip
+*.log
+.DS_Store
+Thumbs.db

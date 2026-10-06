@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<ruleset name="SapphireIT Editorial Workflow">
+	<description>WordPress Coding Standards for SapphireIT Editorial Workflow.</description>
+
+	<file>.</file>
+
+	<exclude-pattern>/vendor/*</exclude-pattern>
+	<exclude-pattern>/node_modules/*</exclude-pattern>
+	<exclude-pattern>/assets/build/*</exclude-pattern>
+	<!-- Generated output: coverage reports (serialized PHP), Playwright, release zips. -->
+	<exclude-pattern>/coverage/*</exclude-pattern>
+	<exclude-pattern>/artifacts/*</exclude-pattern>
+	<exclude-pattern>/dist/*</exclude-pattern>
+
+	<arg name="extensions" value="php"/>
+	<arg name="colors"/>
+	<arg name="parallel" value="8"/>
+	<arg value="sp"/>
+
+	<!-- Environment. -->
+	<config name="testVersion" value="7.4-"/>
+	<config name="minimum_wp_version" value="6.8"/>
+
+	<!-- Standards. -->
+	<rule ref="WordPress">
+		<!--
+			Decision D2 (01-decisions-and-conventions.md): classes are namespaced
+			PSR-4 (Sit_Cwm\Workflow\WorkflowManager in includes/Workflow/WorkflowManager.php),
+			which conflicts with WordPress' class-*.php file naming.
+		-->
+		<exclude name="WordPress.Files.FileName"/>
+	</rule>
+	<rule ref="WordPress-Extra"/>
+	<rule ref="WordPress-Docs"/>
+	<rule ref="PHPCompatibilityWP"/>
+
+	<!-- Text domain (D1). -->
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="sapphireit-editorial-workflow"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!--
+		The Docker-free test-environment scripts in /bin run before WordPress is
+		loaded, so WP_Filesystem, the WP HTTP API and $wpdb do not exist there.
+		bin/seed.php runs inside WP-CLI and stays fully checked.
+	-->
+	<rule ref="WordPress.WP.AlternativeFunctions">
+		<exclude-pattern>/bin/install-wp-tests.php</exclude-pattern>
+		<exclude-pattern>/bin/setup-e2e-site.php</exclude-pattern>
+		<exclude-pattern>/bin/lib/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.DB.RestrictedFunctions">
+		<exclude-pattern>/bin/lib/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.DB.RestrictedClasses">
+		<exclude-pattern>/bin/lib/*</exclude-pattern>
+	</rule>
+
+	<!-- Global prefixes (D1). -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="sit_cwm"/>
+				<element value="Sit_Cwm"/>
+				<element value="SIT_CWM"/>
+			</property>
+		</properties>
+	</rule>
+</ruleset>

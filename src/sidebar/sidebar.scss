@@ -1,0 +1,137 @@
+// Named sidebar.scss, not style.scss: @wordpress/scripts splits style.scss
+// into a separate style-sidebar.css chunk, while Sit_Cwm\Core\Assets loads
+// sidebar.css.
+
+.sit-cwm-sidebar-loading {
+	display: flex;
+	justify-content: center;
+	padding: 16px;
+}
+
+.sit-cwm-sidebar-notice {
+	margin: 0;
+}
+
+.sit-cwm-sidebar-refreshing {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 16px;
+	color: #757575;
+	font-size: 12px;
+
+	.components-spinner {
+		margin: 0;
+	}
+}
+
+.sit-cwm-field + .sit-cwm-field {
+	margin-top: 16px;
+}
+
+.sit-cwm-field-label {
+	display: block;
+	margin-bottom: 8px;
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1.4;
+	text-transform: uppercase;
+}
+
+.sit-cwm-help {
+	margin: 8px 0 0;
+	color: #757575;
+}
+
+.sit-cwm-error {
+	margin: 8px 0 0;
+	color: #cc1818;
+}
+
+.sit-cwm-status-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	max-width: 100%;
+	padding: 2px 8px;
+	border: 1px solid #ddd;
+	border-radius: 2px;
+	background: #fff;
+	color: #1e1e1e;
+	font-weight: 500;
+	overflow-wrap: anywhere;
+}
+
+// The swatch only repeats the label; the outline keeps light colours
+// (e.g. Review) visible against the white panel.
+.sit-cwm-status-swatch {
+	flex-shrink: 0;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.sit-cwm-avatar {
+	flex-shrink: 0;
+	border-radius: 50%;
+}
+
+.sit-cwm-due-date-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.sit-cwm-due-date-value {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	max-width: 100%;
+
+	&.components-button {
+		height: auto;
+		min-height: 36px;
+		white-space: normal;
+		text-align: start;
+	}
+}
+
+.sit-cwm-due-date-value.is-overdue {
+	color: #cc1818;
+	font-weight: 500;
+}
+
+.sit-cwm-overdue-icon {
+	flex-shrink: 0;
+	fill: currentcolor;
+}
+
+.sit-cwm-due-date-picker {
+	padding: 8px;
+}
+
+// Long translated labels wrap instead of overflowing the narrow sidebar.
+.sit-cwm-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+
+	.components-button {
+		max-width: 100%;
+		height: auto;
+		min-height: 36px;
+		white-space: normal;
+		text-align: start;
+		overflow-wrap: anywhere;
+	}
+}
+
+.sit-cwm-comment-form .components-notice {
+	margin: 0 0 8px;
+}
+
+.sit-cwm-comment-form__submit {
+	margin-top: 8px;
+}

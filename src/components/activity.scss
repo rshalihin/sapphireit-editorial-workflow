@@ -1,0 +1,150 @@
+// Activity timeline. Imported by ActivityTimeline.jsx, so it lands in the CSS
+// file of whichever entry point renders the timeline.
+
+.sit-cwm-activity-day + .sit-cwm-activity-day {
+	margin-top: 16px;
+}
+
+.sit-cwm-activity-day-heading {
+	margin: 0 0 8px;
+	color: #757575;
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1.4;
+	text-transform: uppercase;
+}
+
+.sit-cwm-activity-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.sit-cwm-activity-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin: 0;
+}
+
+.sit-cwm-activity-item + .sit-cwm-activity-item {
+	margin-top: 12px;
+}
+
+.sit-cwm-activity-avatar {
+	flex-shrink: 0;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+}
+
+.sit-cwm-activity-avatar.is-generic {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: #f0f0f0;
+	color: #757575;
+
+	svg {
+		fill: currentcolor;
+	}
+}
+
+.sit-cwm-activity-body {
+	flex: 1;
+	min-width: 0;
+}
+
+.sit-cwm-activity-sentence {
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+.sit-cwm-activity-message {
+	margin: 4px 0 0;
+	padding: 8px;
+	border-radius: 2px;
+	background: #f0f0f0;
+	white-space: pre-line;
+	overflow-wrap: anywhere;
+}
+
+.sit-cwm-activity-time {
+	display: block;
+	margin-top: 2px;
+	color: #757575;
+	font-size: 12px;
+}
+
+.sit-cwm-activity-empty {
+	color: #757575;
+
+	p {
+		margin: 0;
+	}
+
+	p + p {
+		margin-top: 4px;
+	}
+}
+
+.sit-cwm-activity-refreshing {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0 0 12px;
+	color: #757575;
+	font-size: 12px;
+
+	.components-spinner {
+		margin: 0;
+	}
+}
+
+.sit-cwm-activity-error {
+	margin-bottom: 16px;
+
+	.components-notice {
+		margin: 0 0 8px;
+	}
+}
+
+.sit-cwm-activity-more {
+	margin-top: 16px;
+}
+
+.sit-cwm-activity-skeleton .sit-cwm-activity-avatar,
+.sit-cwm-skeleton-line {
+	background: #f0f0f0;
+	animation: sit-cwm-skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+.sit-cwm-skeleton-line {
+	display: block;
+	width: 100%;
+	height: 10px;
+	border-radius: 2px;
+
+	& + & {
+		margin-top: 6px;
+	}
+
+	&.is-short {
+		width: 40%;
+	}
+}
+
+@keyframes sit-cwm-skeleton-pulse {
+
+	50% {
+		opacity: 0.5;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+	.sit-cwm-activity-skeleton .sit-cwm-activity-avatar,
+	.sit-cwm-skeleton-line {
+		animation: none;
+	}
+}

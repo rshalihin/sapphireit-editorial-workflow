@@ -1,0 +1,69 @@
+{
+	"name": "sapphireit/sapphireit-editorial-workflow",
+	"description": "Editorial approval workflow for WordPress posts, pages and custom post types.",
+	"type": "wordpress-plugin",
+	"license": "GPL-2.0-or-later",
+	"authors": [
+		{
+			"name": "SapphireIT"
+		}
+	],
+	"require": {
+		"php": ">=7.4"
+	},
+	"require-dev": {
+		"dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+		"phpcompatibility/phpcompatibility-wp": "^2.1",
+		"phpunit/phpunit": "^9.6",
+		"squizlabs/php_codesniffer": "^3.9",
+		"wp-coding-standards/wpcs": "^3.1",
+		"wp-phpunit/wp-phpunit": "^6.7",
+		"yoast/phpunit-polyfills": "^2.0"
+	},
+	"autoload": {
+		"psr-4": {
+			"Sit_Cwm\\Admin\\": "admin/",
+			"Sit_Cwm\\": "includes/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Sit_Cwm\\Tests\\": "tests/php/"
+		}
+	},
+	"config": {
+		"platform": {
+			"php": "7.4.33"
+		},
+		"sort-packages": true,
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		}
+	},
+	"scripts": {
+		"lint": "@php vendor/bin/phpcs",
+		"lint:fix": "@php vendor/bin/phpcbf",
+		"test": "@php vendor/bin/phpunit",
+		"test:setup": "@php bin/install-wp-tests.php",
+		"test:integration": [
+			"@putenv WP_PHPUNIT__TESTS_CONFIG=tests/php/wp-tests-config.php",
+			"@php vendor/bin/phpunit --testsuite integration"
+		],
+		"test:coverage": [
+			"@putenv XDEBUG_MODE=coverage",
+			"@php vendor/bin/phpunit --testsuite unit --coverage-php coverage/unit.cov",
+			"@putenv WP_PHPUNIT__TESTS_CONFIG=tests/php/wp-tests-config.php",
+			"@php vendor/bin/phpunit --testsuite integration --coverage-php coverage/integration.cov --coverage-html coverage/html",
+			"@php vendor/bin/phpunit --testsuite integration --filter WorkflowManagerTest --path-coverage --coverage-php coverage/branches.cov",
+			"@php bin/coverage-report.php"
+		]
+	},
+	"scripts-descriptions": {
+		"lint": "phpcs with the WordPress ruleset.",
+		"lint:fix": "phpcbf: fix what phpcs can fix automatically.",
+		"test": "PHP unit tests (no WordPress, no database).",
+		"test:setup": "Download a WordPress core checkout and create the test database (no Docker).",
+		"test:integration": "PHP integration tests against the WordPress test library. Drops all tables in the test database.",
+		"test:coverage": "Coverage of both suites plus WorkflowManager branch coverage, checked against the release minimums. Needs Xdebug (branch coverage); reports in coverage/."
+	}
+}

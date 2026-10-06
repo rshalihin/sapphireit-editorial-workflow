@@ -1,0 +1,63 @@
+# Dependencies
+/vendor/
+/node_modules/
+/.claude/
+
+# Tooling caches / local config
+.phpunit.result.cache
+/.phpunit.cache/
+.phpcs-cache
+.eslintcache
+.stylelintcache
+/tests/php/wp-tests-config.php
+npm-debug.log*
+yarn-error.log*
+*.log
+
+# Local overrides of the committed *.dist configs
+/phpcs.xml
+/phpunit.xml
+/.wp-env.override.json
+
+# Test coverage reports (phpunit --coverage-*, jest --coverage)
+/coverage/
+/clover.xml
+/coverage.xml
+
+# Playwright output (screenshots, traces, storage states)
+/artifacts/
+
+# Local environment secrets
+.env
+.env.*
+!.env.example
+
+# Release archives built from the working tree
+/*.zip
+/dist/
+/release/
+
+# Agent/editor scratch state (the committed .claude/.plan/ stays tracked)
+/.claude/settings.local.json
+.idea/
+.vscode/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# OS / editor
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# NOTE: assets/build/ is deliberately NOT ignored (D11). The compiled JS/CSS
+# and their *.asset.php dependency files are committed so the plugin runs from
+# a git clone or release zip without `npm install && npm run build`. Rebuild
+# with `npm run build` and commit the output together with the src/ change.
+#
+# NOTE: composer.lock and package-lock.json are also deliberately committed so
+# CI and every contributor resolve the same dependency tree.

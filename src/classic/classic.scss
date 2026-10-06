@@ -1,0 +1,52 @@
+// Classic editor meta box (#sit-cwm-workflow). Named classic.scss, not
+// style.scss, for the same reason as sidebar.scss: Sit_Cwm\Core\Assets loads
+// classic.css.
+
+// The postbox already draws a frame: let the panel bodies span its full width
+// and drop the outer borders, keeping only the separators between them.
+#sit-cwm-workflow .inside {
+	margin: 0;
+	padding: 0;
+}
+
+.sit-cwm-classic {
+
+	.components-panel__body {
+		border-top: 0;
+		border-bottom: 0;
+	}
+
+	.components-panel__body + .components-panel__body {
+		border-top: 1px solid #f0f0f0;
+	}
+
+	// The side column is narrow; keep a long history from pushing the rest
+	// of the column down.
+	.sit-cwm-activity {
+		max-height: 320px;
+		overflow-y: auto;
+	}
+}
+
+.sit-cwm-classic__hint {
+	margin: 0;
+	padding: 12px 16px 0;
+	color: #646970;
+	font-style: italic;
+}
+
+// Fixed at the bottom of the screen, past the admin menu. RTL flips `left`.
+.sit-cwm-snackbars--classic {
+	position: fixed;
+	bottom: 24px;
+	left: 180px;
+	z-index: 100000;
+
+	.folded & {
+		left: 56px;
+	}
+
+	@media (max-width: 782px) {
+		left: 16px;
+	}
+}

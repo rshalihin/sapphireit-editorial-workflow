@@ -1,0 +1,138 @@
+name: Release
+
+# Builds the distributable zip on a v* tag, verifies it, and attaches it to the
+# GitHub release. Also runnable by hand against any ref to inspect the zip
+# without publishing anything.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish the plugin zip
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          # The lowest supported version, so a syntax error that only PHP 7.4
+          # rejects cannot ship.
+          php-version: '7.4'
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # 1. The version must be identical in all four places (release step 23.7).
+      #    On a tag push it must also equal the tag.
+      - name: Verify the version string
+        run: php bin/check-version.php "${{ github.ref_type == 'tag' && github.ref_name || '' }}"
+
+      # The plugin has no runtime Composer dependencies and ships a fallback
+      # autoloader, so only the JS toolchain is needed to build the zip.
+      - name: Install the JS toolchain
+        run: npm ci
+
+      # 2. assets/build/ is committed (D11). A rebuild must reproduce it
+      #    exactly, or the tag does not match the code that was tested.
+      - name: Rebuild and check the committed build output
+        run: |
+          npm run build
+          git diff --exit-code -- assets/build
+
+      # 3. Everything the zip excludes comes from .distignore. The same script
+      #    runs locally (`php bin/build-zip.php`), so what a developer inspects
+      #    is what CI publishes.
+      - name: Build the zip
+        run: |
+          set -euo pipefail
+          php bin/build-zip.php --out=dist
+          VERSION="$(php -r '
+            $s = file_get_contents("readme.txt");
+            preg_match("/^Stable tag:\s*(.+)$/m", $s, $m);
+            echo trim($m[1]);
+          ')"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      # 4. A zip that is missing the compiled assets or the main file installs
+      #    and then does nothing. Fail here rather than in someone's wp-admin.
+      - name: Verify the zip contents
+        run: |
+          set -euo pipefail
+          SLUG=sapphireit-editorial-workflow
+          ZIP="dist/${SLUG}.zip"
+
+          unzip -l "$ZIP"
+
+          required=(
+            "${SLUG}/${SLUG}.php"
+            "${SLUG}/readme.txt"
+            "${SLUG}/LICENSE"
+            "${SLUG}/uninstall.php"
+            "${SLUG}/assets/build/sidebar.js"
+            "${SLUG}/assets/build/sidebar.asset.php"
+            "${SLUG}/assets/build/sidebar.css"
+            "${SLUG}/assets/build/dashboard.js"
+            "${SLUG}/assets/build/dashboard.asset.php"
+            "${SLUG}/assets/build/dashboard.css"
+            "${SLUG}/languages/${SLUG}.pot"
+          )
+          for path in "${required[@]}"; do
+            if ! unzip -l "$ZIP" | grep -qF " ${path}"; then
+              echo "::error::Missing from the zip: ${path}"
+              exit 1
+            fi
+          done
+
+          forbidden=( "${SLUG}/tests/" "${SLUG}/src/" "${SLUG}/node_modules/" "${SLUG}/.github/" "${SLUG}/.claude/" "${SLUG}/bin/" "${SLUG}/vendor/" )
+          for path in "${forbidden[@]}"; do
+            if unzip -l "$ZIP" | grep -qF " ${path}"; then
+              echo "::error::Development files leaked into the zip: ${path}"
+              exit 1
+            fi
+          done
+
+          # readme.txt is the only documentation that ships; the Markdown docs
+          # stay in the repository.
+          if unzip -l "$ZIP" | grep -qE '\.md$'; then
+            echo "::error::Markdown docs leaked into the zip"
+            exit 1
+          fi
+
+          echo "Zip verified."
+
+      # 5. Every shipped file must parse on the minimum supported PHP.
+      - name: Lint every shipped PHP file on PHP 7.4
+        run: |
+          set -euo pipefail
+          rm -rf verify && mkdir verify
+          unzip -q dist/sapphireit-editorial-workflow.zip -d verify
+          find verify -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
+          echo "All shipped PHP files parse on PHP 7.4."
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sapphireit-editorial-workflow-${{ env.VERSION }}
+          path: dist/sapphireit-editorial-workflow.zip
+          retention-days: 30
+
+      # Published as a draft: the maintainer installs it into a clean WordPress
+      # and runs the editorial flow once before making the release public.
+      - name: Attach the zip to the GitHub release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: SapphireIT Editorial Workflow ${{ env.VERSION }}
+          files: dist/sapphireit-editorial-workflow.zip
+          generate_release_notes: true
+          draft: true
+          fail_on_unmatched_files: true

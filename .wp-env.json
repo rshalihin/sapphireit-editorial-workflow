@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/wp-env.json",
+  "core": "WordPress/WordPress#6.8",
+  "phpVersion": "7.4",
+  "plugins": [ ".", "https://downloads.wordpress.org/plugin/query-monitor.zip" ],
+  "config": {
+    "WP_DEBUG": true,
+    "WP_DEBUG_DISPLAY": true,
+    "SCRIPT_DEBUG": true
+  },
+  "env": {
+    "tests": {
+      "mappings": {
+        "wp-content/plugins/sapphireit-editorial-workflow/tests": "./tests",
+        "wp-content/plugins/classic-editor": "https://downloads.wordpress.org/plugin/classic-editor.zip"
+      }
+    }
+  }
+}

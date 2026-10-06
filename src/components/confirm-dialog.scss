@@ -1,0 +1,14 @@
+// Confirmation dialog. Imported by ConfirmDialog.jsx, so it lands in the CSS
+// file of whichever entry point renders the dialog.
+
+.sit-cwm-confirm-message p {
+	margin: 0;
+}
+
+.sit-cwm-confirm-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 24px;
+}
