@@ -9,7 +9,7 @@
  * WordPress dependencies
  */
 import { Button } from '@wordpress/components';
-import { useRef, useState } from '@wordpress/element';
+import { useEffect, useRef, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 
 /**
@@ -38,6 +38,25 @@ function actionLabel( transition ) {
 }
 
 /**
+ * Whether the server still offers a transition.
+ *
+ * @param {Object[]} transitions Available transitions.
+ * @param {Object}   transition  `{ slug }`.
+ * @return {boolean} Whether it is offered.
+ */
+function isOffered( transitions, transition ) {
+	return (
+		Array.isArray( transitions ) &&
+		transitions.some( ( { slug } ) => slug === transition.slug )
+	);
+}
+
+/**
+ * A click that lands while another workflow change (reviewer, due date,
+ * comment) is saving is queued and runs once that save finishes, instead of
+ * being swallowed by a disabled button. It is dropped if the transition is no
+ * longer offered by then.
+ *
  * @param {Object}   props              Props.
  * @param {Object[]} props.transitions  Available transitions.
  * @param {Function} props.onTransition Receives the target status slug.
@@ -53,18 +72,8 @@ export default function TransitionActions( {
 } ) {
 	const [ pending, setPending ] = useState( null );
 	const [ activeSlug, setActiveSlug ] = useState( null );
+	const [ queued, setQueued ] = useState( null );
 	const groupRef = useRef( null );
-
-	if ( ! Array.isArray( transitions ) || transitions.length === 0 ) {
-		return (
-			<p className="sit-cwm-help">
-				{ __(
-					'No workflow actions are available to you right now. The actions offered depend on the current status and your role.',
-					'sapphireit-editorial-workflow'
-				) }
-			</p>
-		);
-	}
 
 	// The clicked button is disabled while saving and may be replaced once the
 	// status changes; keep keyboard focus in the actions rather than on <body>.
@@ -97,6 +106,46 @@ export default function TransitionActions( {
 		}
 	};
 
+	// Runs now, or once the save in flight finishes.
+	const start = ( transition ) => {
+		if ( isSaving ) {
+			setQueued( transition );
+		} else {
+			run( transition );
+		}
+	};
+
+	// Runs the queued transition after the other save. A queued transition or
+	// open confirmation that the server no longer offers is dropped.
+	useEffect( () => {
+		if ( pending && ! isOffered( transitions, pending ) ) {
+			setPending( null );
+		}
+
+		if ( ! queued || isSaving ) {
+			return;
+		}
+
+		setQueued( null );
+
+		if ( ! isDisabled && isOffered( transitions, queued ) ) {
+			run( queued );
+		}
+		// `run` is rebuilt every render; the queue only advances on these.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [ queued, pending, isSaving, isDisabled, transitions ] );
+
+	if ( ! Array.isArray( transitions ) || transitions.length === 0 ) {
+		return (
+			<p className="sit-cwm-help">
+				{ __(
+					'No workflow actions are available to you right now. The actions offered depend on the current status and your role.',
+					'sapphireit-editorial-workflow'
+				) }
+			</p>
+		);
+	}
+
 	const confirmation = pending ? getTransitionConfirmation( pending ) : null;
 
 	return (
@@ -115,12 +164,19 @@ export default function TransitionActions( {
 							transition.is_rollback ? 'secondary' : 'primary'
 						}
 						isDestructive={ !! transition.is_rollback }
-						isBusy={ activeSlug === transition.slug }
-						disabled={ isSaving || isDisabled }
+						isBusy={
+							activeSlug === transition.slug ||
+							queued?.slug === transition.slug
+						}
+						// Only a running or queued transition blocks the others;
+						// any other save in flight just queues the click.
+						disabled={
+							isDisabled || activeSlug !== null || queued !== null
+						}
 						onClick={ () =>
 							requiresConfirmation( transition )
 								? setPending( transition )
-								: run( transition )
+								: start( transition )
 						}
 					>
 						{ actionLabel( transition ) }
@@ -138,7 +194,7 @@ export default function TransitionActions( {
 						const transition = pending;
 
 						setPending( null );
-						run( transition );
+						start( transition );
 					} }
 				>
 					{ confirmation.message && <p>{ confirmation.message }</p> }

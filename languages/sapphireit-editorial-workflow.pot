@@ -18,10 +18,6 @@ msgstr ""
 msgid "SapphireIT Editorial Workflow"
 msgstr ""
 
-#. Plugin URI of the plugin
-msgid "https://github.com/rshalihin/sapphireit-editorial-workflow"
-msgstr ""
-
 #. Description of the plugin
 msgid "Adds an editorial approval workflow (Draft, Writing, Review, Needs Changes, Approved, Published) with reviewers, due dates, comments and activity history to posts, pages and custom post types."
 msgstr ""

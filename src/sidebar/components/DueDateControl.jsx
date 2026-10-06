@@ -6,6 +6,7 @@
  * WordPress dependencies
  */
 import { Button, DatePicker, Dropdown } from '@wordpress/components';
+import { useEffect, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import { caution, Icon } from '@wordpress/icons';
 
@@ -27,6 +28,11 @@ function OverdueIcon() {
 }
 
 /**
+ * The picker stays usable while another workflow change is saving: opening it
+ * changes nothing, and a date picked (or cleared) meanwhile is queued and sent
+ * once that save finishes, instead of the click being swallowed by a disabled
+ * button.
+ *
  * @param {Object}   props            Props.
  * @param {string}   props.value      `Y-m-d` due date, or `''`.
  * @param {Function} props.onChange   Receives the new `Y-m-d` date (`''` clears).
@@ -43,8 +49,35 @@ export default function DueDateControl( {
 	isSaving,
 	isComplete,
 } ) {
+	// `Y-m-d`, or `''` to clear; `null` when nothing is waiting.
+	const [ queued, setQueued ] = useState( null );
+
+	useEffect( () => {
+		if ( queued === null || isSaving ) {
+			return;
+		}
+
+		setQueued( null );
+
+		if ( queued !== value ) {
+			onChange( queued );
+		}
+		// `onChange` may be rebuilt every render; the queue only advances on these.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [ queued, isSaving ] );
+
+	// Sends now, or once the save in flight finishes.
+	const change = ( next ) => {
+		if ( isSaving ) {
+			setQueued( next );
+		} else {
+			onChange( next );
+		}
+	};
+
 	const hasDate = isYmd( value );
 	const overdue = hasDate && ! isComplete && isOverdue( value );
+	const isQueued = queued !== null;
 
 	let text = __( 'No due date', 'sapphireit-editorial-workflow' );
 
@@ -85,7 +118,7 @@ export default function DueDateControl( {
 								variant="tertiary"
 								onClick={ onToggle }
 								aria-expanded={ isOpen }
-								disabled={ isSaving }
+								isBusy={ isQueued }
 								label={ sprintf(
 									/* translators: %s: Current due date, or "No due date". */
 									__( 'Change due date: %s', 'sapphireit-editorial-workflow' ),
@@ -109,7 +142,7 @@ export default function DueDateControl( {
 										onClose();
 
 										if ( ymd && ymd !== value ) {
-											onChange( ymd );
+											change( ymd );
 										}
 									} }
 								/>
@@ -120,8 +153,8 @@ export default function DueDateControl( {
 						<Button
 							variant="link"
 							isDestructive
-							onClick={ () => onChange( '' ) }
-							disabled={ isSaving }
+							onClick={ () => change( '' ) }
+							disabled={ isQueued }
 						>
 							{ __( 'Clear', 'sapphireit-editorial-workflow' ) }
 						</Button>

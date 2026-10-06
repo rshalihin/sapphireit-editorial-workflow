@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 /**
@@ -188,20 +188,112 @@ describe( 'TransitionActions', () => {
 		expect( screen.queryByRole( 'dialog' ) ).toBeNull();
 	} );
 
-	it( 'disables every action while saving or when disabled', () => {
+	it( 'queues a click made while another change saves, then runs it', async () => {
+		const onTransition = jest.fn().mockResolvedValue( null );
+		const user = userEvent.setup();
+		const props = { transitions: [ toReview ], onTransition };
+
+		const { rerender } = render(
+			<TransitionActions { ...props } isSaving />
+		);
+
+		const button = screen.getByRole( 'button', { name: 'Move to Review' } );
+
+		expect( button.disabled ).toBe( false );
+
+		await user.click( button );
+
+		expect( onTransition ).not.toHaveBeenCalled();
+		expect( button.disabled ).toBe( true );
+		expect( button.classList.contains( 'is-busy' ) ).toBe( true );
+
+		await act( async () => {
+			rerender( <TransitionActions { ...props } isSaving={ false } /> );
+		} );
+
+		expect( onTransition ).toHaveBeenCalledTimes( 1 );
+		expect( onTransition ).toHaveBeenCalledWith( 'review' );
+	} );
+
+	it( 'queues a confirmed rollback made while another change saves', async () => {
+		const onTransition = jest.fn().mockResolvedValue( null );
+		const user = userEvent.setup();
+		const props = { transitions: [ approve, sendBack ], onTransition };
+
+		const { rerender } = render(
+			<TransitionActions { ...props } isSaving />
+		);
+
+		await user.click(
+			screen.getByRole( 'button', { name: 'Move to Needs Changes' } )
+		);
+		await user.click( dialogButton( 'Move to Needs Changes' ) );
+
+		expect( screen.queryByRole( 'dialog' ) ).toBeNull();
+		expect( onTransition ).not.toHaveBeenCalled();
+
+		await act( async () => {
+			rerender( <TransitionActions { ...props } isSaving={ false } /> );
+		} );
+
+		expect( onTransition ).toHaveBeenCalledWith( 'needs_changes' );
+	} );
+
+	it( 'drops a queued transition the server no longer offers', async () => {
+		const onTransition = jest.fn().mockResolvedValue( null );
+		const user = userEvent.setup();
+
 		const { rerender } = render(
 			<TransitionActions
-				transitions={ [ approve, sendBack ] }
-				onTransition={ jest.fn() }
+				transitions={ [ toReview ] }
+				onTransition={ onTransition }
 				isSaving
 			/>
+		);
+
+		await user.click(
+			screen.getByRole( 'button', { name: 'Move to Review' } )
+		);
+
+		await act( async () => {
+			rerender(
+				<TransitionActions
+					transitions={ [ approve ] }
+					onTransition={ onTransition }
+					isSaving={ false }
+				/>
+			);
+		} );
+
+		expect( onTransition ).not.toHaveBeenCalled();
+		expect(
+			screen.getByRole( 'button', { name: 'Move to Approved' } ).disabled
+		).toBe( false );
+	} );
+
+	it( 'blocks the other actions while a transition runs', async () => {
+		const onTransition = jest.fn( () => new Promise( () => {} ) );
+		const user = userEvent.setup();
+
+		render(
+			<TransitionActions
+				transitions={ [ toReview, sendBack ] }
+				onTransition={ onTransition }
+				isSaving={ false }
+			/>
+		);
+
+		await user.click(
+			screen.getByRole( 'button', { name: 'Move to Review' } )
 		);
 
 		screen
 			.getAllByRole( 'button' )
 			.forEach( ( button ) => expect( button.disabled ).toBe( true ) );
+	} );
 
-		rerender(
+	it( 'disables every action when disabled', () => {
+		render(
 			<TransitionActions
 				transitions={ [ approve, sendBack ] }
 				onTransition={ jest.fn() }

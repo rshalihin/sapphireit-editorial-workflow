@@ -1,7 +1,6 @@
 <?php
 /**
  * Plugin Name:       SapphireIT Editorial Workflow
- * Plugin URI:        https://github.com/rshalihin/sapphireit-editorial-workflow
  * Description:       Adds an editorial approval workflow (Draft, Writing, Review, Needs Changes, Approved, Published) with reviewers, due dates, comments and activity history to posts, pages and custom post types.
  * Version:           1.0.0
  * Requires at least: 6.8

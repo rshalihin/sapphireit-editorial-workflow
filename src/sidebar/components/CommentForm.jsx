@@ -10,7 +10,7 @@
  * WordPress dependencies
  */
 import { Button, Notice, TextareaControl } from '@wordpress/components';
-import { useState } from '@wordpress/element';
+import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 /**
@@ -21,6 +21,10 @@ import { __ } from '@wordpress/i18n';
 const MAX_LENGTH = 5000;
 
 /**
+ * "Add comment" clicked while another workflow change is saving is queued and
+ * sends the text once that save finishes, instead of the click being swallowed
+ * by a disabled button.
+ *
  * @param {Object}   props          Props.
  * @param {Function} props.onSubmit Receives the message; resolves to `null` on
  *                                  success or a normalized error.
@@ -35,19 +39,19 @@ export default function CommentForm( {
 } ) {
 	const [ message, setMessage ] = useState( '' );
 	const [ error, setError ] = useState( null );
+	// This form's own request is in flight.
+	const [ isSending, setIsSending ] = useState( false );
+	const [ isQueued, setIsQueued ] = useState( false );
 
 	const isEmpty = message.trim() === '';
 
-	const handleSubmit = async ( event ) => {
-		event?.preventDefault();
-
-		if ( isEmpty || isSaving || isDisabled ) {
-			return;
-		}
-
+	const send = async ( text ) => {
 		setError( null );
+		setIsSending( true );
 
-		const err = await onSubmit( message );
+		const err = await onSubmit( text );
+
+		setIsSending( false );
 
 		if ( err ) {
 			if ( err.message ) {
@@ -58,7 +62,36 @@ export default function CommentForm( {
 		}
 
 		// Keep anything typed while the request was in flight.
-		setMessage( ( current ) => ( current === message ? '' : current ) );
+		setMessage( ( current ) => ( current === text ? '' : current ) );
+	};
+
+	// Sends the queued comment, as it reads now, once the other save is done.
+	useEffect( () => {
+		if ( ! isQueued || isSaving ) {
+			return;
+		}
+
+		setIsQueued( false );
+
+		if ( ! isDisabled && message.trim() !== '' ) {
+			send( message );
+		}
+		// `send` is rebuilt every render; the queue only advances on these.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [ isQueued, isSaving, isDisabled ] );
+
+	const handleSubmit = ( event ) => {
+		event?.preventDefault();
+
+		if ( isEmpty || isDisabled || isSending || isQueued ) {
+			return;
+		}
+
+		if ( isSaving ) {
+			setIsQueued( true );
+		} else {
+			send( message );
+		}
 	};
 
 	// Ctrl/Cmd+Enter submits; plain Enter still adds a newline.
@@ -97,8 +130,10 @@ export default function CommentForm( {
 				variant="secondary"
 				onClick={ handleSubmit }
 				className="sit-cwm-comment-form__submit"
-				disabled={ isEmpty || isSaving || isDisabled }
-				isBusy={ isSaving && ! isEmpty }
+				// Only this form's own request blocks it; any other save in
+				// flight just queues the click.
+				disabled={ isEmpty || isDisabled || isSending || isQueued }
+				isBusy={ isSending || isQueued }
 			>
 				{ __( 'Add comment', 'sapphireit-editorial-workflow' ) }
 			</Button>

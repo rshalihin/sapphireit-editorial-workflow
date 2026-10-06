@@ -5,11 +5,20 @@ All notable changes to SapphireIT Editorial Workflow are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## Unreleased
 
-Nothing yet.
+### Fixed
 
-## [1.0.0] - 2026-09-17
+- Clicks on the due date, the reviewer picker, "Add comment" and workflow
+  actions were silently lost while another workflow change was still saving,
+  because those controls were disabled (or ignored input) for the whole
+  request. They now stay usable: the date picker and confirmation dialogs open
+  straight away, and a date, reviewer, comment or transition chosen meanwhile
+  is sent as soon as the earlier save finishes. A queued transition is dropped
+  if the server no longer offers it, and a queued comment if its text was
+  cleared.
+
+## 1.0.0 - 2026-09-17
 
 First public release. Free v1.0 feature scope, complete.
 
@@ -121,6 +130,3 @@ v1.0 sends **no email**, and reaching the `published` workflow status does **not
 publish the post**. Email, Slack, the editorial calendar, multiple workflows,
 checklist gating, a rules engine and scheduled publishing are roadmap items, not
 omissions.
-
-[Unreleased]: https://github.com/rshalihin/sapphireit-editorial-workflow/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/rshalihin/sapphireit-editorial-workflow/releases/tag/v1.0.0

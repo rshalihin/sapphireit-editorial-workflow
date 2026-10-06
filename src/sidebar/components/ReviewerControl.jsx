@@ -6,7 +6,7 @@
  * WordPress dependencies
  */
 import { ComboboxControl } from '@wordpress/components';
-import { useState } from '@wordpress/element';
+import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 /**
@@ -27,6 +27,9 @@ const normalize = ( text ) =>
 		.toLocaleLowerCase();
 
 /**
+ * A pick made while another workflow change is saving is shown at once and
+ * sent once that save finishes, instead of being ignored.
+ *
  * @param {Object}   props          Props.
  * @param {number}   props.postId   Post id.
  * @param {?Object}  props.reviewer Current reviewer `{ id, name, avatar }`.
@@ -43,13 +46,33 @@ export default function ReviewerControl( {
 	const { options, isLoading, error, onFilterValueChange } =
 		useReviewerOptions( { postId, reviewer } );
 	const [ filter, setFilter ] = useState( '' );
+	// Reviewer id picked during a save; `null` when nothing is waiting.
+	const [ queued, setQueued ] = useState( null );
 
 	const currentId = reviewer ? reviewer.id : 0;
+
+	useEffect( () => {
+		if ( queued === null || isSaving ) {
+			return;
+		}
+
+		setQueued( null );
+
+		if ( queued !== currentId ) {
+			onChange( queued );
+		}
+		// `onChange` may be rebuilt every render; the queue only advances on these.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [ queued, isSaving ] );
 
 	const handleChange = ( value ) => {
 		const id = value ? parseInt( value, 10 ) || 0 : 0;
 
-		if ( ! isSaving && id !== currentId ) {
+		if ( isSaving ) {
+			// A later pick replaces an earlier one; picking the current
+			// reviewer again cancels it.
+			setQueued( id );
+		} else if ( id !== currentId ) {
 			onChange( id );
 		}
 	};
@@ -85,7 +108,7 @@ export default function ReviewerControl( {
 			   which would render above the "Reviewer" label. */ }
 			<ComboboxControl
 				label={ __( 'Reviewer', 'sapphireit-editorial-workflow' ) }
-				value={ String( currentId ) }
+				value={ String( queued ?? currentId ) }
 				options={ options }
 				onChange={ handleChange }
 				onFilterValueChange={ handleFilterValueChange }

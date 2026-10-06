@@ -101,8 +101,7 @@ older PHP it shows an admin notice instead of fataling.
 
 ### From a release zip
 
-1. Download `sapphireit-editorial-workflow.zip` from the
-   [releases page](https://github.com/rshalihin/sapphireit-editorial-workflow/releases).
+1. Download the `sapphireit-editorial-workflow.zip` release package.
 2. **Plugins → Add New → Upload Plugin**, choose the zip, install, activate.
 
 Activation creates the `wp_sit_cwm_activity` table and grants the six
@@ -113,7 +112,7 @@ capabilities to the administrator, editor, author and contributor roles.
 `assets/build/` is committed, so a clone runs as-is — no build step needed:
 
 ```sh
-git clone https://github.com/rshalihin/sapphireit-editorial-workflow.git
+git clone <repository-url> sapphireit-editorial-workflow
 # into wp-content/plugins/, then activate in wp-admin
 ```
 

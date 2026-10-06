@@ -79,9 +79,6 @@ actions and filters at every lifecycle point (`sit_cwm_status_changed`,
 `sit_cwm_can_transition`, `sit_cwm_transition_map` and more) so it can be
 extended without editing its files.
 
-Source, architecture notes and full REST documentation:
-https://github.com/rshalihin/sapphireit-editorial-workflow
-
 == Installation ==
 
 1. Upload the plugin to `/wp-content/plugins/sapphireit-editorial-workflow/`, or
@@ -163,9 +160,7 @@ with your readers' comments.
 = Is there an API? =
 
 Yes, at `/wp-json/sit-cwm/v1/`. Eight documented endpoints, all authenticated,
-all with JSON schemas. See
-[REST-API.md](https://github.com/rshalihin/sapphireit-editorial-workflow/blob/main/REST-API.md)
-for `curl` examples using application passwords.
+all with JSON schemas, and usable with application passwords.
 
 = Does the plugin contact any external service? =
 

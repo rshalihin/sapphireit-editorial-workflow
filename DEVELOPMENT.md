@@ -11,7 +11,7 @@ tests, standards, performance budgets and the release process.
 From a clean clone, with Node 20+, PHP 7.4+ and Docker:
 
 ```sh
-git clone https://github.com/rshalihin/sapphireit-editorial-workflow.git
+git clone <repository-url> sapphireit-editorial-workflow
 cd sapphireit-editorial-workflow
 
 composer install     # dev tooling: phpcs, phpunit

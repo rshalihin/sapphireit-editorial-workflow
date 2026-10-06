@@ -183,6 +183,67 @@ describe( 'CommentForm', () => {
 		expect( field().value ).toBe( 'Draft note' );
 	} );
 
+	it( 'sends a comment added while another change saves once it finishes', async () => {
+		const onSubmit = jest.fn().mockResolvedValue( null );
+
+		const { rerender } = render(
+			<CommentForm onSubmit={ onSubmit } isSaving />
+		);
+
+		fireEvent.change( field(), { target: { value: 'Needs a source.' } } );
+
+		expect( submit().disabled ).toBe( false );
+
+		fireEvent.click( submit() );
+
+		expect( onSubmit ).not.toHaveBeenCalled();
+		expect( submit().disabled ).toBe( true );
+		expect( submit().classList.contains( 'is-busy' ) ).toBe( true );
+
+		await act( async () => {
+			rerender(
+				<CommentForm onSubmit={ onSubmit } isSaving={ false } />
+			);
+		} );
+
+		expect( onSubmit ).toHaveBeenCalledTimes( 1 );
+		expect( onSubmit ).toHaveBeenCalledWith( 'Needs a source.' );
+		expect( field().value ).toBe( '' );
+	} );
+
+	it( 'drops a queued comment whose text was cleared meanwhile', async () => {
+		const onSubmit = jest.fn().mockResolvedValue( null );
+
+		const { rerender } = render(
+			<CommentForm onSubmit={ onSubmit } isSaving />
+		);
+
+		fireEvent.change( field(), { target: { value: 'Oops' } } );
+		fireEvent.click( submit() );
+		fireEvent.change( field(), { target: { value: '' } } );
+
+		await act( async () => {
+			rerender(
+				<CommentForm onSubmit={ onSubmit } isSaving={ false } />
+			);
+		} );
+
+		expect( onSubmit ).not.toHaveBeenCalled();
+	} );
+
+	it( 'sends a comment only once while its own save runs', async () => {
+		const onSubmit = jest.fn( () => new Promise( () => {} ) );
+
+		render( <CommentForm onSubmit={ onSubmit } isSaving={ false } /> );
+
+		fireEvent.change( field(), { target: { value: 'Once.' } } );
+		fireEvent.click( submit() );
+		fireEvent.click( submit() );
+
+		expect( onSubmit ).toHaveBeenCalledTimes( 1 );
+		expect( submit().disabled ).toBe( true );
+	} );
+
 	it( 'is read-only while disabled', () => {
 		render(
 			<CommentForm onSubmit={ jest.fn() } isSaving={ false } isDisabled />
@@ -268,6 +329,57 @@ describe( 'DueDateControl', () => {
 		expect( onChange ).toHaveBeenCalledWith( '2026-10-15' );
 	} );
 
+	it( 'sends a date picked while another change saves once it finishes', () => {
+		const onChange = jest.fn();
+		const props = {
+			value: '',
+			onChange,
+			canEdit: true,
+			isComplete: false,
+		};
+
+		const { rerender } = render( <DueDateControl { ...props } isSaving /> );
+
+		const toggle = screen.getByRole( 'button', {
+			name: 'Change due date: No due date',
+		} );
+
+		expect( toggle.disabled ).toBe( false );
+
+		fireEvent.click( screen.getByText( 'Pick October 15' ) );
+
+		expect( onChange ).not.toHaveBeenCalled();
+		expect( toggle.classList.contains( 'is-busy' ) ).toBe( true );
+
+		rerender( <DueDateControl { ...props } isSaving={ false } /> );
+
+		expect( onChange ).toHaveBeenCalledTimes( 1 );
+		expect( onChange ).toHaveBeenCalledWith( '2026-10-15' );
+	} );
+
+	it( 'sends a Clear made while another change saves once it finishes', () => {
+		const onChange = jest.fn();
+		const props = {
+			value: '2026-10-01',
+			onChange,
+			canEdit: true,
+			isComplete: false,
+		};
+
+		const { rerender } = render( <DueDateControl { ...props } isSaving /> );
+
+		fireEvent.click( screen.getByRole( 'button', { name: 'Clear' } ) );
+
+		expect( onChange ).not.toHaveBeenCalled();
+		expect( screen.getByRole( 'button', { name: 'Clear' } ).disabled ).toBe(
+			true
+		);
+
+		rerender( <DueDateControl { ...props } isSaving={ false } /> );
+
+		expect( onChange ).toHaveBeenCalledWith( '' );
+	} );
+
 	it( 'offers no Clear without a date', () => {
 		render(
 			<DueDateControl
@@ -322,27 +434,32 @@ describe( 'ReviewerControl', () => {
 		);
 	} );
 
-	it( 'ignores picks while saving', async () => {
+	it( 'sends a pick made while another change saves once it finishes', async () => {
 		apiFetch.mockResolvedValue( [ omar ] );
 		const onChange = jest.fn();
+		const props = { postId: 12, reviewer: null, onChange };
 
-		render(
-			<ReviewerControl
-				postId={ 12 }
-				reviewer={ null }
-				onChange={ onChange }
-				isSaving
-			/>
+		const { rerender } = render(
+			<ReviewerControl { ...props } isSaving />
 		);
 
 		const input = screen.getByRole( 'combobox', { name: 'Reviewer' } );
 		fireEvent.focus( input );
 		fireEvent.change( input, { target: { value: 'Om' } } );
-		fireEvent.click(
-			await screen.findByRole( 'option', { name: 'Omar' } )
-		);
+		const option = await screen.findByRole( 'option', { name: 'Omar' } );
+		await act( async () => {
+			fireEvent.click( option );
+		} );
 
 		expect( onChange ).not.toHaveBeenCalled();
+		expect( screen.getByDisplayValue( 'Omar' ) ).toBeTruthy();
+
+		await act( async () => {
+			rerender( <ReviewerControl { ...props } isSaving={ false } /> );
+		} );
+
+		expect( onChange ).toHaveBeenCalledTimes( 1 );
+		expect( onChange ).toHaveBeenCalledWith( 7 );
 	} );
 
 	it( 'does not unassign on Enter when the search matches nobody', async () => {
