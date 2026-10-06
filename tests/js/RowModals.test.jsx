@@ -212,7 +212,13 @@ describe( 'TransitionModal', () => {
 
 		fireEvent.click( screen.getByRole( 'button', { name: 'Approve' } ) );
 
-		expect( await screen.findByText( 'Not allowed.' ) ).toBeTruthy();
+		// Scoped to the notice: Notice also speak()s the message into an
+		// aria-live region, which would otherwise be a second match.
+		expect(
+			await screen.findByText( 'Not allowed.', {
+				selector: '.components-notice__content',
+			} )
+		).toBeTruthy();
 		expect( closeModal ).not.toHaveBeenCalled();
 		expect( onChanged ).not.toHaveBeenCalled();
 	} );

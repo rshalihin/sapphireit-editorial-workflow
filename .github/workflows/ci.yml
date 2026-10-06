@@ -16,6 +16,8 @@ jobs:
   php:
     name: PHP ${{ matrix.php }} / WP ${{ matrix.wp }}
     runs-on: ubuntu-latest
+    # A stuck leg otherwise runs to GitHub's 6-hour default.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
