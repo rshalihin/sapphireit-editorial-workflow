@@ -54,14 +54,6 @@ final class Dashboard implements Bootable {
 	const ROOT_ID = 'sit-cwm-dashboard';
 
 	/**
-	 * Menu position: right below Comments.
-	 *
-	 * @since 1.0.0
-	 * @var int
-	 */
-	const MENU_POSITION = 25;
-
-	/**
 	 * Asset loader.
 	 *
 	 * @since 1.0.0
@@ -135,8 +127,7 @@ final class Dashboard implements Bootable {
 			Capabilities::VIEW_ACTIVITY,
 			self::MENU_SLUG,
 			array( $this, 'render' ),
-			'dashicons-clipboard',
-			self::MENU_POSITION
+			'dashicons-clipboard'
 		);
 
 		// Name the first submenu entry explicitly; otherwise core points the
