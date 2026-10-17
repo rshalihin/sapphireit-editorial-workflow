@@ -201,7 +201,11 @@ test.describe( 'Keyboard-only workflow', () => {
 		await page.getByRole( 'checkbox', { name: BULK_TITLE } ).focus();
 		await keyboard.press( 'Space' );
 
-		const trigger = page.getByRole( 'button', { name: 'Change status' } );
+		// A selection shows the bulk bar above the table and in the footer; the
+		// top one is the keyboard path under test.
+		const trigger = page
+			.locator( '.sit-cwm-bulk-actions-top' )
+			.getByRole( 'button', { name: 'Change status' } );
 		const dialog = page.getByRole( 'dialog', {
 			name: 'Change workflow status',
 		} );

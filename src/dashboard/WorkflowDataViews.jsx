@@ -343,6 +343,16 @@ export default function WorkflowDataViews() {
 					</div>
 				</div>
 				<DataViews.FiltersToggled className="dataviews-filters__container" />
+				{ /* Classic WP list-table convention: the bulk actions sit above
+				   the rows as well as in the sticky footer, so acting on a
+				   selection never needs a scroll to the bottom. Rendered only
+				   while something is selected, so the top of the page stays
+				   quiet the rest of the time. */ }
+				{ selection.length > 0 && (
+					<div className="sit-cwm-bulk-actions-top">
+						<DataViews.BulkActionToolbar />
+					</div>
+				) }
 				<DataViews.Layout />
 				<DataViews.Footer />
 			</DataViews>

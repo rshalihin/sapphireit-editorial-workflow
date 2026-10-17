@@ -148,6 +148,32 @@ export default function TransitionActions( {
 
 	const confirmation = pending ? getTransitionConfirmation( pending ) : null;
 
+	// Forward moves and send-backs are grouped visually; the buttons themselves
+	// are unchanged, and the focusable container stays a single `.sit-cwm-actions`.
+	const renderButton = ( transition ) => (
+		<Button
+			key={ transition.slug }
+			variant={ transition.is_rollback ? 'secondary' : 'primary' }
+			isDestructive={ !! transition.is_rollback }
+			isBusy={
+				activeSlug === transition.slug ||
+				queued?.slug === transition.slug
+			}
+			// Only a running or queued transition blocks the others;
+			// any other save in flight just queues the click.
+			disabled={ isDisabled || activeSlug !== null || queued !== null }
+			onClick={ () =>
+				requiresConfirmation( transition )
+					? setPending( transition )
+					: start( transition )
+			}
+		>
+			{ actionLabel( transition ) }
+		</Button>
+	);
+	const forward = transitions.filter( ( transition ) => ! transition.is_rollback );
+	const rollback = transitions.filter( ( transition ) => transition.is_rollback );
+
 	return (
 		<>
 			<div
@@ -157,31 +183,13 @@ export default function TransitionActions( {
 				aria-label={ __( 'Workflow actions', 'sapphireit-editorial-workflow' ) }
 				tabIndex={ -1 }
 			>
-				{ transitions.map( ( transition ) => (
-					<Button
-						key={ transition.slug }
-						variant={
-							transition.is_rollback ? 'secondary' : 'primary'
-						}
-						isDestructive={ !! transition.is_rollback }
-						isBusy={
-							activeSlug === transition.slug ||
-							queued?.slug === transition.slug
-						}
-						// Only a running or queued transition blocks the others;
-						// any other save in flight just queues the click.
-						disabled={
-							isDisabled || activeSlug !== null || queued !== null
-						}
-						onClick={ () =>
-							requiresConfirmation( transition )
-								? setPending( transition )
-								: start( transition )
-						}
-					>
-						{ actionLabel( transition ) }
-					</Button>
-				) ) }
+				{ forward.map( renderButton ) }
+				{ rollback.length > 0 && (
+					<p className="sit-cwm-actions__caption">
+						{ __( 'Send back', 'sapphireit-editorial-workflow' ) }
+					</p>
+				) }
+				{ rollback.map( renderButton ) }
 			</div>
 
 			{ confirmation && (

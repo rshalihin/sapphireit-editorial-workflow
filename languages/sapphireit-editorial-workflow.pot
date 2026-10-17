@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-05T16:37:58+00:00\n"
+"POT-Creation-Date: 2026-10-17T17:44:27+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.9.0\n"
 "X-Domain: sapphireit-editorial-workflow\n"
@@ -26,21 +26,21 @@ msgstr ""
 msgid "SapphireIT"
 msgstr ""
 
-#: admin/Dashboard.php:130
-#: admin/Dashboard.php:197
+#: admin/Dashboard.php:122
+#: admin/Dashboard.php:188
 #: includes/Editor/ClassicMetaBox.php:130
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: assets/build/sidebar.js:22
 #: src/dashboard/App.jsx:24
 #: src/sidebar/Sidebar.jsx:52
 msgid "Editorial Workflow"
 msgstr ""
 
-#: admin/Dashboard.php:147
+#: admin/Dashboard.php:138
 msgid "Dashboard"
 msgstr ""
 
-#: admin/Dashboard.php:192
+#: admin/Dashboard.php:183
 #: admin/Settings.php:266
 msgid "Sorry, you are not allowed to access this page."
 msgstr ""
@@ -559,13 +559,13 @@ msgid "This workflow transition is not allowed."
 msgstr ""
 
 #. translators: 1: Required PHP version, 2: Current PHP version.
-#: sapphireit-editorial-workflow.php:115
+#: sapphireit-editorial-workflow.php:114
 msgid "SapphireIT Editorial Workflow requires PHP %1$s or higher. This site runs PHP %2$s, so the plugin is not loaded."
 msgstr ""
 
 #: assets/build/classic.js:1
 #: assets/build/dashboard.js:157
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: assets/build/sidebar.js:1
 #: src/api/client.js:125
 #: src/api/client.js:162
@@ -582,36 +582,34 @@ msgstr ""
 
 #: assets/build/classic.js:1
 #: assets/build/sidebar.js:1
-#: src/sidebar/components/CommentForm.jsx:74
+#: src/sidebar/components/CommentForm.jsx:108
 msgid "Workflow comment"
 msgstr ""
 
 #: assets/build/classic.js:1
 #: assets/build/sidebar.js:1
-#: src/sidebar/components/CommentForm.jsx:77
+#: src/sidebar/components/CommentForm.jsx:111
 msgid "Add a workflow comment"
 msgstr ""
 
 #: assets/build/classic.js:1
 #: assets/build/sidebar.js:1
-#: src/sidebar/components/CommentForm.jsx:102
+#: src/sidebar/components/CommentForm.jsx:138
 msgid "Add comment"
 msgstr ""
 
 #: assets/build/classic.js:1
-#: assets/build/dashboard.js:184
+#: assets/build/dashboard.js:183
 #: assets/build/sidebar.js:1
-#: src/dashboard/fields.js:143
-#: src/sidebar/components/DueDateControl.jsx:49
+#: src/dashboard/fields.js:146
+#: src/sidebar/components/DueDateControl.jsx:82
 msgid "No due date"
 msgstr ""
 
 #. translators: %s: Due date.
 #: assets/build/classic.js:2
-#: assets/build/dashboard.js:184
 #: assets/build/sidebar.js:2
-#: src/dashboard/fields.js:158
-#: src/sidebar/components/DueDateControl.jsx:55
+#: src/sidebar/components/DueDateControl.jsx:88
 msgid "%s (overdue)"
 msgstr ""
 
@@ -621,20 +619,20 @@ msgstr ""
 #: assets/build/sidebar.js:2
 #: src/dashboard/bulk/SetDueDateModal.jsx:33
 #: src/dashboard/modals/DueDateModal.jsx:31
-#: src/sidebar/components/DueDateControl.jsx:68
+#: src/sidebar/components/DueDateControl.jsx:101
 msgid "Due date"
 msgstr ""
 
 #. translators: %s: Current due date, or "No due date".
 #: assets/build/classic.js:3
 #: assets/build/sidebar.js:3
-#: src/sidebar/components/DueDateControl.jsx:91
+#: src/sidebar/components/DueDateControl.jsx:124
 msgid "Change due date: %s"
 msgstr ""
 
 #: assets/build/classic.js:3
 #: assets/build/sidebar.js:3
-#: src/sidebar/components/DueDateControl.jsx:126
+#: src/sidebar/components/DueDateControl.jsx:159
 msgid "Clear"
 msgstr ""
 
@@ -648,20 +646,20 @@ msgstr ""
 #: assets/build/classic.js:3
 #: assets/build/dashboard.js:157
 #: assets/build/dashboard.js:160
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: assets/build/sidebar.js:3
 #: src/dashboard/bulk/AssignReviewerModal.jsx:85
-#: src/dashboard/fields.js:270
+#: src/dashboard/fields.js:278
 #: src/dashboard/modals/ReviewerModal.jsx:83
-#: src/sidebar/components/ReviewerControl.jsx:48
+#: src/sidebar/components/ReviewerControl.jsx:110
 msgid "Reviewer"
 msgstr ""
 
 #: assets/build/classic.js:3
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: assets/build/sidebar.js:3
-#: src/dashboard/fields.js:255
-#: src/sidebar/components/StatusControl.jsx:32
+#: src/dashboard/fields.js:263
+#: src/sidebar/components/StatusControl.jsx:56
 msgid "Status"
 msgstr ""
 
@@ -691,7 +689,7 @@ msgstr ""
 
 #: assets/build/classic.js:4
 #: assets/build/sidebar.js:4
-#: src/sidebar/components/TransitionActions.jsx:61
+#: src/sidebar/components/TransitionActions.jsx:141
 msgid "No workflow actions are available to you right now. The actions offered depend on the current status and your role."
 msgstr ""
 
@@ -716,7 +714,7 @@ msgstr ""
 
 #: assets/build/classic.js:6
 #: assets/build/dashboard.js:178
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: assets/build/sidebar.js:6
 #: src/dashboard/actions.jsx:74
 #: src/utils/confirmations.js:74
@@ -732,7 +730,7 @@ msgstr ""
 
 #: assets/build/classic.js:6
 #: assets/build/dashboard.js:178
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: assets/build/sidebar.js:6
 #: src/dashboard/actions.jsx:40
 #: src/dashboard/actions.jsx:73
@@ -765,9 +763,15 @@ msgstr ""
 #: assets/build/classic.js:22
 #: assets/build/sidebar.js:8
 #: assets/build/sidebar.js:22
-#: src/components/WorkflowPanel.jsx:257
-#: src/sidebar/components/TransitionActions.jsx:108
+#: src/components/WorkflowPanel.jsx:261
+#: src/sidebar/components/TransitionActions.jsx:183
 msgid "Workflow actions"
+msgstr ""
+
+#: assets/build/classic.js:8
+#: assets/build/sidebar.js:8
+#: src/sidebar/components/TransitionActions.jsx:189
+msgid "Send back"
 msgstr ""
 
 #: assets/build/classic.js:8
@@ -887,7 +891,7 @@ msgstr[1] ""
 
 #: assets/build/classic.js:18
 #: assets/build/classic.js:21
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: assets/build/sidebar.js:18
 #: assets/build/sidebar.js:21
 #: src/components/ActivityTimeline.jsx:145
@@ -1007,7 +1011,7 @@ msgid "You can follow this workflow, but your role doesn’t allow you to change
 msgstr ""
 
 #: assets/build/classic.js:22
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: assets/build/sidebar.js:22
 #: src/components/WorkflowPanel.jsx:229
 #: src/dashboard/WorkflowDataViews.jsx:300
@@ -1016,13 +1020,13 @@ msgstr ""
 
 #: assets/build/classic.js:22
 #: assets/build/sidebar.js:22
-#: src/components/WorkflowPanel.jsx:267
+#: src/components/WorkflowPanel.jsx:271
 msgid "Comment"
 msgstr ""
 
 #: assets/build/classic.js:22
 #: assets/build/sidebar.js:22
-#: src/components/WorkflowPanel.jsx:278
+#: src/components/WorkflowPanel.jsx:282
 msgid "Activity"
 msgstr ""
 
@@ -1284,139 +1288,144 @@ msgid "The previous workflow status is no longer available."
 msgstr ""
 
 #: assets/build/dashboard.js:183
-#: assets/build/dashboard.js:187
-#: src/dashboard/fields.js:116
-#: src/dashboard/fields.js:276
+#: assets/build/dashboard.js:186
+#: src/dashboard/fields.js:119
+#: src/dashboard/fields.js:284
 msgid "Unassigned"
 msgstr ""
 
-#: assets/build/dashboard.js:184
-#: src/dashboard/fields.js:170
+#: assets/build/dashboard.js:183
+#: src/dashboard/fields.js:163
+msgid "(overdue)"
+msgstr ""
+
+#: assets/build/dashboard.js:183
+#: src/dashboard/fields.js:174
 msgid "Unknown author"
 msgstr ""
 
-#: assets/build/dashboard.js:184
-#: src/dashboard/fields.js:190
+#: assets/build/dashboard.js:183
+#: src/dashboard/fields.js:198
 msgid "No activity"
 msgstr ""
 
-#: assets/build/dashboard.js:184
-#: assets/build/dashboard.js:187
-#: src/dashboard/fields.js:219
-#: src/dashboard/fields.js:331
+#: assets/build/dashboard.js:183
+#: assets/build/dashboard.js:186
+#: src/dashboard/fields.js:227
+#: src/dashboard/fields.js:339
 msgid "Overdue"
 msgstr ""
 
-#: assets/build/dashboard.js:184
-#: src/dashboard/fields.js:223
+#: assets/build/dashboard.js:183
+#: src/dashboard/fields.js:231
 msgid "Not overdue"
 msgstr ""
 
 #. translators: %d: Number of updated posts.
-#: assets/build/dashboard.js:185
+#: assets/build/dashboard.js:184
 #: src/hooks/useBulkAction.js:134
 msgid "%d post updated."
 msgid_plural "%d posts updated."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/dashboard.js:185
+#: assets/build/dashboard.js:184
 #: src/hooks/useBulkAction.js:142
 msgid "No posts were updated."
 msgstr ""
 
 #. translators: %d: Number of posts that could not be updated.
-#: assets/build/dashboard.js:186
+#: assets/build/dashboard.js:185
 #: src/hooks/useBulkAction.js:149
 msgid "%d could not be updated."
 msgid_plural "%d could not be updated."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/dashboard.js:186
+#: assets/build/dashboard.js:185
 #: src/dashboard/WorkflowDataViews.jsx:138
 msgid "No content is in the workflow yet."
 msgstr ""
 
-#: assets/build/dashboard.js:186
+#: assets/build/dashboard.js:185
 #: src/dashboard/WorkflowDataViews.jsx:140
 msgid "Content of the workflow-enabled post types appears here as soon as it is created."
 msgstr ""
 
 #. translators: %s: Singular post type label, e.g. "Post".
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: src/dashboard/WorkflowDataViews.jsx:149
 msgid "Add new %s"
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: src/dashboard/WorkflowDataViews.jsx:169
 msgid "No content matches the current search and filters."
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: src/dashboard/WorkflowDataViews.jsx:175
 #: src/dashboard/WorkflowDataViews.jsx:336
 msgid "Clear all filters"
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: src/dashboard/WorkflowDataViews.jsx:190
 msgid "Content could not be loaded."
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: src/hooks/useBulkAction.js:105
 msgid "The server did not report a result for this item."
 msgstr ""
 
-#: assets/build/dashboard.js:187
-#: src/dashboard/fields.js:244
+#: assets/build/dashboard.js:186
+#: src/dashboard/fields.js:252
 msgid "Title"
 msgstr ""
 
-#: assets/build/dashboard.js:187
-#: src/dashboard/fields.js:286
+#: assets/build/dashboard.js:186
+#: src/dashboard/fields.js:294
 msgid "Due"
 msgstr ""
 
-#: assets/build/dashboard.js:187
-#: src/dashboard/fields.js:295
+#: assets/build/dashboard.js:186
+#: src/dashboard/fields.js:303
 msgid "Author"
 msgstr ""
 
-#: assets/build/dashboard.js:187
-#: src/dashboard/fields.js:308
+#: assets/build/dashboard.js:186
+#: src/dashboard/fields.js:316
 msgid "Type"
 msgstr ""
 
-#: assets/build/dashboard.js:187
-#: src/dashboard/fields.js:322
+#: assets/build/dashboard.js:186
+#: src/dashboard/fields.js:330
 msgid "Last activity"
 msgstr ""
 
-#: assets/build/dashboard.js:187
-#: src/dashboard/fields.js:337
+#: assets/build/dashboard.js:186
+#: src/dashboard/fields.js:345
 msgid "Overdue only"
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: src/dashboard/actions.jsx:61
 msgid "Edit"
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: src/dashboard/actions.jsx:51
 #: src/dashboard/actions.jsx:80
 msgid "Request changes"
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: src/dashboard/actions.jsx:81
 msgid "Request changes?"
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:186
 #: src/dashboard/WorkflowDataViews.jsx:327
 msgid "Search content"
 msgstr ""

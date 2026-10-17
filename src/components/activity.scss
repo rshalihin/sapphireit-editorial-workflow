@@ -14,10 +14,22 @@
 	text-transform: uppercase;
 }
 
+// The list carries the vertical rail that threads the markers together, so no
+// extra DOM is added (list/heading counts stay the same for tests and a11y).
 .sit-cwm-activity-list {
+	position: relative;
 	margin: 0;
 	padding: 0;
 	list-style: none;
+
+	&::before {
+		content: "";
+		position: absolute;
+		inset-block: 6px;
+		inset-inline-start: 11px;
+		width: 2px;
+		background: #dcdcde;
+	}
 }
 
 .sit-cwm-activity-item {
@@ -29,6 +41,28 @@
 
 .sit-cwm-activity-item + .sit-cwm-activity-item {
 	margin-top: 12px;
+}
+
+// Holds the avatar and the action dot; sits above the rail so the line passes
+// behind it.
+.sit-cwm-activity-marker {
+	position: relative;
+	z-index: 1;
+	flex-shrink: 0;
+	width: 24px;
+	height: 24px;
+}
+
+.sit-cwm-activity-marker__dot {
+	position: absolute;
+	bottom: -3px;
+	inset-inline: 0;
+	width: 10px;
+	height: 10px;
+	margin-inline: auto;
+	border: 2px solid #fff;
+	border-radius: 50%;
+	background: #757575;
 }
 
 .sit-cwm-activity-avatar {
@@ -50,6 +84,21 @@
 	}
 }
 
+// The dot only repeats the entry's action; the sentence carries the meaning.
+.sit-cwm-activity-item[data-action="status_changed"] .sit-cwm-activity-marker__dot {
+	background: #3858e9;
+}
+
+.sit-cwm-activity-item[data-action="reviewer_assigned"] .sit-cwm-activity-marker__dot,
+.sit-cwm-activity-item[data-action="reviewer_cleared"] .sit-cwm-activity-marker__dot {
+	background: #7f54b3;
+}
+
+.sit-cwm-activity-item[data-action="due_date_set"] .sit-cwm-activity-marker__dot,
+.sit-cwm-activity-item[data-action="due_date_cleared"] .sit-cwm-activity-marker__dot {
+	background: #996800;
+}
+
 .sit-cwm-activity-body {
 	flex: 1;
 	min-width: 0;
@@ -62,9 +111,10 @@
 
 .sit-cwm-activity-message {
 	margin: 4px 0 0;
-	padding: 8px;
+	padding: 8px 12px;
+	border-inline-start: 3px solid #dcdcde;
 	border-radius: 2px;
-	background: #f0f0f0;
+	background: #f6f7f7;
 	white-space: pre-line;
 	overflow-wrap: anywhere;
 }

@@ -275,9 +275,9 @@ test.describe( 'Documentation screenshots', () => {
 			.getByRole( 'checkbox', { name: 'Migrating to block themes' } )
 			.check();
 
-		const changeStatus = page.getByRole( 'button', {
-			name: 'Change status',
-		} );
+		const changeStatus = page
+			.locator( '.sit-cwm-bulk-actions-top' )
+			.getByRole( 'button', { name: 'Change status' } );
 
 		await expect( changeStatus ).toBeVisible();
 		await changeStatus.click();
