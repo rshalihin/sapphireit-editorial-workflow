@@ -22,19 +22,19 @@ php bin/setup-e2e-site.php --install \
 
 It seeds six posts spread across the workflow (one per status, plus a second in
 Review), a reviewer named Dana Okafor, due dates and a workflow comment, then
-photographs each surface at a fixed 1440×900 viewport so the crops stay
-comparable between runs.
+photographs each surface as a full-page shot at a fixed 1280×960 viewport so
+the images stay comparable between runs.
 
 ## The files
 
 | File | Shows | Captured from |
 |---|---|---|
-| `sidebar.png` | The editor sidebar: status, reviewer, due date, the transitions this user may perform, the comment box and the timeline. | The block editor, clipped to the sidebar panel. |
-| `timeline.png` | The activity timeline, grouped by day. | The same sidebar's `.sit-cwm-activity` region. |
+| `sidebar.png` | The editor sidebar: status, reviewer, due date, the transitions this user may perform, the comment box and the timeline. | The block editor, full page, with the workflow sidebar open. |
+| `timeline.png` | The activity timeline, grouped by day. | The block editor, full page, scrolled to the activity timeline. |
 | `dashboard.png` | The admin dashboard: every managed post with status, reviewer, due date, author, type and last activity. | **Editorial Workflow → Dashboard**, full page. |
 | `bulk-actions.png` | Two rows selected, the bulk action bar, and the *Change workflow status* dialog. | The same page mid-interaction. |
 | `settings.png` | The settings screen: enabled post types and the uninstall option. | **Editorial Workflow → Settings**, full page. |
-| `classic-editor.png` | The **Editorial Workflow** meta box in the classic editor, on the same post as `sidebar.png`. | `post.php` with the Classic Editor plugin briefly activated (it must be installed on the target site), clipped to `#sit-cwm-workflow`. |
+| `classic-editor.png` | The **Editorial Workflow** meta box in the classic editor, on the same post as `sidebar.png`. | `post.php` with the Classic Editor plugin briefly activated (it must be installed on the target site), full page, with the workflow box scrolled into view. |
 
 ## Notes
 
@@ -42,9 +42,9 @@ comparable between runs.
   the timeline, no spinner on the reviewer field) before shooting, so the
   images never show loading skeletons. If you add a new async control, add its
   settled state to that wait or it will be photographed mid-load.
-- `sidebar.png` clips the page to the panel's box rather than screenshotting
-  the element, because the panel's box extends past the viewport and an element
-  screenshot pads the overflow with blank space.
+- Every shot is a full-page screenshot at the same viewport, not an element
+  capture, so the sidebar, timeline and classic editor box read as real
+  surfaces in context rather than narrow panels.
 - For **WordPress.org**, these become `screenshot-1.png` … `screenshot-6.png`
   in the SVN `assets/` directory, in the order listed in `readme.txt`'s
   Screenshots section: sidebar, dashboard, timeline, bulk actions, settings,

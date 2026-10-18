@@ -96,8 +96,8 @@ test.describe( 'Documentation screenshots', () => {
 		'Set CWM_CAPTURE=1 (npm run screenshots) to regenerate the docs images.'
 	);
 
-	// One wide, stable viewport, so every image crops the same way.
-	test.use( { viewport: { width: 1440, height: 900 } } );
+	// One stable 4:3 viewport, so every WordPress.org screenshot is the same size.
+	test.use( { viewport: { width: 1280, height: 960 } } );
 
 	let reviewerId;
 	let ids = {};
@@ -196,25 +196,15 @@ test.describe( 'Documentation screenshots', () => {
 			panel.locator( '.sit-cwm-reviewer .components-spinner' )
 		).toHaveCount( 0 );
 
-		// The sidebar alone, not the whole editor: the panel is the subject.
-		// Clipping the page rather than screenshotting the element keeps the
-		// shot to what is actually painted — the panel's box runs past the
-		// viewport, and an element screenshot pads the overflow with blank.
-		const box = await panel.boundingBox();
-		const viewport = page.viewportSize();
-
+		// Full-page shots, not element clips: WordPress.org screenshots should
+		// show the whole interface at a consistent size, so the sidebar and
+		// timeline read as real editor surfaces rather than cropped panels.
 		await page.screenshot( {
 			path: path.join( OUT, 'sidebar.png' ),
-			clip: {
-				x: box.x,
-				y: box.y,
-				width: box.width,
-				height: Math.min( box.height, viewport.height - box.y ),
-			},
 		} );
 
 		await timeline.scrollIntoViewIfNeeded();
-		await timeline.screenshot( {
+		await page.screenshot( {
 			path: path.join( OUT, 'timeline.png' ),
 		} );
 	} );
@@ -241,7 +231,10 @@ test.describe( 'Documentation screenshots', () => {
 				box.locator( '.sit-cwm-reviewer .components-spinner' )
 			).toHaveCount( 0 );
 
-			await box.screenshot( {
+			// Scroll the workflow box into view before the full-page shot, so
+			// the right-column meta box is not below the fold in the capture.
+			await box.scrollIntoViewIfNeeded();
+			await page.screenshot( {
 				path: path.join( OUT, 'classic-editor.png' ),
 			} );
 		} finally {

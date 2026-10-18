@@ -652,8 +652,8 @@ npm run screenshots -- --base-url=http://127.0.0.1/cwm-e2e
 ```
 
 `tests/e2e/screenshots.spec.js` seeds a small editorial queue, then photographs
-the sidebar, the timeline, the dashboard, the bulk-action dialog and the
-settings screen at a fixed 1440×900 viewport. It is skipped unless
+the sidebar, the timeline, the classic editor box, the dashboard, the bulk-action
+dialog and the settings screen at a fixed 1280×960 viewport. It is skipped unless
 `CWM_CAPTURE` is set, so the CI end-to-end job never runs it. **It deletes every
 post on the target site** — point it at a scratch site.
 See [docs/screenshots/README.md](docs/screenshots/README.md).
@@ -735,7 +735,7 @@ contents, lints every shipped file on PHP 7.4, and attaches the zip to a
 
 Copy the tagged tree into SVN `trunk/`, tag it, and put
 `docs/screenshots/*.png` into SVN `assets/` renamed `screenshot-1.png` …
-`screenshot-5.png`, in the order `readme.txt` lists them (sidebar, dashboard,
-timeline, bulk actions, settings). `Stable tag` is what controls which version
+`screenshot-6.png`, in the order `readme.txt` lists them (sidebar, dashboard,
+timeline, bulk actions, settings, classic editor). `Stable tag` is what controls which version
 is served — it is already checked in step 1, but it is the one line worth
 re-reading before committing.
