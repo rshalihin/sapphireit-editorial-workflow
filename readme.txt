@@ -4,7 +4,7 @@ Tags: editorial workflow, approval workflow, content review, reviewer, publishin
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -296,6 +296,26 @@ however your site already sends email.
 
 == Changelog ==
 
+= 1.1.0 =
+* New: publish gate per content type (Off, Log only, Enforce). In Enforce mode,
+  content has to be approved in the workflow before it can be published or
+  scheduled, from the block editor, classic editor, Quick Edit, Bulk Edit, the
+  REST API, WP-CLI or the scheduler.
+* New: administrators can still publish unapproved content in Enforce mode, and
+  every such publish is recorded as a bypass.
+* New: every publication and unpublication is logged in the activity history,
+  with who did it, when, and the workflow status at the time, even with the
+  gate off.
+* New: optional email notifications when a reviewer is assigned, content is
+  submitted for review, changes are requested, content is approved, or a
+  workflow comment is added.
+* New: optional setting to stop people approving their own content.
+* New: Settings link on the Plugins screen.
+* Fix: clicks on the due date, reviewer, comment and workflow buttons are no
+  longer lost while another workflow change is still saving.
+* Developer: new filters and actions for the publish gate, notifications and
+  self-approval. See ARCHITECTURE.md.
+
 = 1.0.0 =
 * Initial release.
 * Six-status editorial workflow with a validated transition graph and rollback
@@ -315,6 +335,9 @@ however your site already sends email.
   plugin.
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Adds an optional publish gate, publication logging, email notifications and a self-approval setting. All new options start off, so nothing changes until you turn them on.
 
 = 1.0.0 =
 First release. Activation creates the activity table and grants the workflow

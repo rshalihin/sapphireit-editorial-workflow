@@ -5,7 +5,110 @@ All notable changes to SapphireIT Editorial Workflow are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 1.1.0 - 2026-10-29
+
+"Enforce what it promises." The workflow can now stop unapproved content from
+going live, every publication is on the record, and the people involved can be
+told by email when something needs them.
+
+Every new feature is off until a site owner turns it on. Upgrading from 1.0.0
+changes no behaviour and needs no database migration: the schema is unchanged
+and `sit_cwm_db_version` stays `1.0.0`.
+
+### Added
+
+**Publish gate**
+
+- Per-post-type publish gate in the *Publish gate* settings section, with three
+  modes: *Off* (the default), *Log only* (publishing below Approved is allowed
+  and recorded as a bypass) and *Enforce* (content has to be Approved or
+  Published in the workflow before it can be published or scheduled).
+- *Enforce* covers every route that publishes through WordPress:
+  - the block editor, which shows **Submit for Review** instead of **Publish**;
+  - the classic editor, Quick Edit and Bulk Edit;
+  - `wp/v2` REST, which refuses with `sit_cwm_publish_gated` (HTTP 403);
+  - `wp_insert_post()` / `wp_update_post()` from anywhere, including WP-CLI;
+  - scheduled publishing, judged again at go-live, so a post sent back for
+    changes after it was scheduled never goes live.
+
+  A backstop on `transition_post_status` reverts anything else that publishes
+  a post without passing those checks, such as a direct `wp_publish_post()`.
+- A live post sent back for re-review stays live, and an already scheduled post
+  is not re-judged on unrelated edits.
+- New capability `sit_cwm_bypass_publish_gate`, granted to administrators only.
+  Its holders can still publish unapproved content in *Enforce* mode, and each
+  such publish is recorded. Existing sites receive it on the first request
+  after updating, without reactivation. Capabilities a site owner removed are
+  not restored.
+- The gate fails open: if it throws, the publish goes ahead, is recorded as a
+  bypass with reason `error`, and fires `sit_cwm_publish_gate_failed`.
+- The editor sidebar and the classic editor meta box tell the current user
+  whether publishing is locked or will be recorded as a bypass. A refused
+  classic or scheduled publish leaves an admin notice saying what the post was
+  saved as instead.
+- The `sit-cwm/v1` workflow response gains `publish_gate` (`mode`, `outcome`).
+
+**Publication log**
+
+- Every publication and unpublication of workflow-enabled content is written to
+  the activity history in every gate mode, *Off* included. Each entry records
+  the actor, the workflow status at that moment, the gate mode and the source
+  (admin, REST, AJAX, cron, WP-CLI).
+- Gate refusals and bypasses are recorded too. The activity timeline labels
+  them *Publishing blocked* and *Published without approval*.
+- REST activity items gain `workflow_status`, `workflow_status_label` and
+  `gate_reason`, which are `null` for the 1.0 actions.
+
+**Email notifications**
+
+- Opt-in, site-level plain-text emails in the *Email notifications* settings
+  section, one switch per event: a reviewer is assigned, content is submitted
+  for review, changes are requested, content is approved, and a workflow
+  comment is added. All are off by default.
+- Each event goes to the assigned reviewer or the post author, as its label
+  says. Submitting for review with no reviewer assigned emails nobody.
+- Nobody is emailed about their own action. Users who cannot read the post, or
+  have no valid email address, are skipped. Comment text is included only for
+  recipients allowed to view the activity history.
+- Exactly one email per recipient per event: a repeat of the same event within
+  two minutes is not sent again. Each email is written in the recipient's own
+  language.
+
+**Self-approval prevention**
+
+- Optional *Prevent people from approving their own content* setting. When it
+  is on, nobody can move content they authored to Approved, administrators
+  included, by any route: sidebar, classic meta box, dashboard bulk action and
+  `sit-cwm/v1` REST. The author is also left out of their own post's reviewer
+  list.
+- A refused self-approval returns `sit_cwm_self_approval` (HTTP 403), and the
+  workflow panel explains why Approve is not offered.
+- In *Enforce* mode an administrator can still publish through the bypass
+  capability, which is recorded, so a one-person site is never stuck.
+
+**Extensibility**
+
+- New filters: `sit_cwm_publish_gate_mode`, `sit_cwm_publish_gate_passes`,
+  `sit_cwm_notification_recipients`, `sit_cwm_notification_message` and
+  `sit_cwm_prevent_self_approval`.
+- New actions: `sit_cwm_publish_gate_refused`, `sit_cwm_publish_gate_bypassed`,
+  `sit_cwm_publish_gate_failed` and `sit_cwm_notification_sent`.
+- All are documented in [ARCHITECTURE.md](ARCHITECTURE.md).
+
+**Admin**
+
+- A *Settings* link on the plugin's row in the Plugins screen, for users who
+  can open the workflow dashboard.
+- On the plugin's dashboard and settings screens, the admin footer shows the
+  plugin's version and invites a WordPress.org review.
+
+### Changed
+
+- The WordPress.org listing, README, WORKFLOW.md, REST-API.md and
+  ARCHITECTURE.md now cover the publish gate, the publication log and email
+  notifications. The "sends no email" and "does not gate publishing" caveats
+  are gone.
+- All five WordPress.org screenshots were replaced.
 
 ### Fixed
 
@@ -17,6 +120,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is sent as soon as the earlier save finishes. A queued transition is dropped
   if the server no longer offers it, and a queued comment if its text was
   cleared.
+
+### Known limitations
+
+Documented in [WORKFLOW.md](WORKFLOW.md):
+
+- The gate cannot see direct `$wpdb` writes to `post_status`, or code that
+  removes the plugin's hooks.
+- In *Enforce* mode, WP-CLI without `--user` and imports run from cron act as
+  no user and are refused. Run them as a user with the bypass capability
+  (`wp --user=<admin>`).
+- Self-approval prevention compares against `post_author` only. Someone who
+  rewrote a post they are not the author of can still approve it.
+- Choosing which roles may approve is not a setting. `sit_cwm_approve_content`
+  is a normal capability that a role-editor plugin can grant or remove.
 
 ## 1.0.0 - 2026-09-17
 
