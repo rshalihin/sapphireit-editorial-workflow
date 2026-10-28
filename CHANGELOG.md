@@ -97,8 +97,8 @@ and `sit_cwm_db_version` stays `1.0.0`.
 
 **Admin**
 
-- A *Settings* link on the plugin's row in the Plugins screen, for users who
-  can open the workflow dashboard.
+- A *Settings* link on the plugin's row in the Plugins screen, leading to the
+  workflow settings, for users who can manage them.
 - On the plugin's dashboard and settings screens, the admin footer shows the
   plugin's version and invites a WordPress.org review.
 

@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * The plugin's row on the Plugins screen leads with a Settings link, for users
- * who can open the dashboard.
+ * who can open the settings screen.
  *
  * @since 1.1.0
  *
@@ -63,7 +63,7 @@ final class PluginActionLinksTest extends TestCase {
 	}
 
 	/**
-	 * A user who can open the dashboard gets the Settings link ahead of Deactivate.
+	 * A user who can open the settings screen gets the Settings link ahead of Deactivate.
 	 *
 	 * @return void
 	 */
@@ -74,18 +74,19 @@ final class PluginActionLinksTest extends TestCase {
 
 		$this->assertSame( array( 'settings', 'deactivate' ), array_keys( $links ) );
 		$this->assertSame(
-			'<a href="' . esc_url( admin_url( 'admin.php?page=sit-cwm-dashboard' ) ) . '">Settings</a>',
+			'<a href="' . esc_url( admin_url( 'admin.php?page=sit-cwm-settings' ) ) . '">Settings</a>',
 			$links['settings']
 		);
 	}
 
 	/**
-	 * A user who cannot open the dashboard gets the row unchanged.
+	 * A user who cannot open the settings screen gets the row unchanged, even
+	 * when they can open the dashboard.
 	 *
 	 * @return void
 	 */
-	public function test_no_link_without_dashboard_access() {
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+	public function test_no_link_without_settings_access() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
 
 		$given = array( 'deactivate' => '<a href="#">Deactivate</a>' );
 

@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Adds a "Settings" link beside core's "Deactivate" on the Plugins screen.
  *
- * The link points at the dashboard page slug rather than a menu path, so it
+ * The link points at the settings page slug rather than a menu path, so it
  * keeps working wherever the page sits in the admin menu.
  *
  * @since 1.1.0
@@ -58,7 +58,8 @@ final class PluginActionLinks implements Bootable {
 	/**
 	 * Puts the Settings link first in the plugin's row.
 	 *
-	 * Skipped for a user who could not open the dashboard anyway.
+	 * Skipped for a user who could not open the settings screen anyway, by the
+	 * same check that registers its menu.
 	 *
 	 * @since 1.1.0
 	 *
@@ -66,13 +67,13 @@ final class PluginActionLinks implements Bootable {
 	 * @return string[]
 	 */
 	public function filter_action_links( $links ): array {
-		if ( ! $this->permissions->can_access_dashboard() ) {
+		if ( ! $this->permissions->can_manage() ) {
 			return (array) $links;
 		}
 
 		$settings = sprintf(
 			'<a href="%1$s">%2$s</a>',
-			esc_url( admin_url( 'admin.php?page=' . Dashboard::MENU_SLUG ) ),
+			esc_url( admin_url( 'admin.php?page=' . Settings::MENU_SLUG ) ),
 			esc_html__( 'Settings', 'sapphireit-editorial-workflow' )
 		);
 
