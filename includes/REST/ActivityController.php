@@ -373,46 +373,46 @@ class ActivityController extends AbstractController {
 			'title'      => 'sit-cwm-activity',
 			'type'       => 'object',
 			'properties' => array(
-				'id'               => array(
+				'id'                    => array(
 					'description' => __( 'Activity ID.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'integer',
 					'readonly'    => true,
 				),
-				'action'           => array(
+				'action'                => array(
 					'description' => __( 'Action slug.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
-				'action_label'     => array(
+				'action_label'          => array(
 					'description' => __( 'Action label.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
-				'old_value'        => $nullable_string,
-				'old_label'        => $nullable_string,
-				'new_value'        => $nullable_string,
-				'new_label'        => $nullable_string,
-				'message'          => array(
+				'old_value'             => $nullable_string,
+				'old_label'             => $nullable_string,
+				'new_value'             => $nullable_string,
+				'new_label'             => $nullable_string,
+				'message'               => array(
 					'description' => __( 'Comment text, post-safe HTML.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 				),
-				'created_at'       => array(
+				'created_at'            => array(
 					'description' => __( 'Creation time, ISO 8601, UTC.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'format'      => 'date-time',
 					'readonly'    => true,
 				),
-				'created_at_human' => array(
+				'created_at_human'      => array(
 					'description' => __( 'Creation time relative to now.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
 					'readonly'    => true,
 				),
-				'user_id'          => array(
+				'user_id'               => array(
 					'description' => __( 'Acting user ID; 0 for the system.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'integer',
 					'readonly'    => true,
 				),
-				'user'             => array(
+				'user'                  => array(
 					'description' => __( 'Acting user; null for the system or a deleted user.', 'sapphireit-editorial-workflow' ),
 					'type'        => array( 'object', 'null' ),
 					'readonly'    => true,
@@ -424,6 +424,24 @@ class ActivityController extends AbstractController {
 							'format' => 'uri',
 						),
 					),
+				),
+				'workflow_status'       => array(
+					'description' => __( 'Workflow status slug at the time of a publication event; null for other entries.', 'sapphireit-editorial-workflow' ),
+					'type'        => array( 'string', 'null' ),
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+				),
+				'workflow_status_label' => array(
+					'description' => __( 'Workflow status label at the time of a publication event; null for other entries.', 'sapphireit-editorial-workflow' ),
+					'type'        => array( 'string', 'null' ),
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+				),
+				'gate_reason'           => array(
+					'description' => __( 'Why a publish went ahead without approval: log_only, capability or error; null otherwise.', 'sapphireit-editorial-workflow' ),
+					'type'        => array( 'string', 'null' ),
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
 				),
 			),
 		);

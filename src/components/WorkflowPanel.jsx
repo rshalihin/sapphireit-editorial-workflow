@@ -27,6 +27,7 @@ import StatusControl from '../sidebar/components/StatusControl';
 import TransitionActions from '../sidebar/components/TransitionActions';
 import { getStatusDefinition } from '../utils/format';
 import ActivityTimeline from './ActivityTimeline';
+import PublishGateNotice from './PublishGateNotice';
 
 /**
  * Shown when the post has no workflow.
@@ -94,13 +95,19 @@ function LoadError( { error, onRetry } ) {
  * The root keeps the `sit-cwm-sidebar` class in both editors so the shared
  * styles and e2e selectors apply; `className` is appended to it.
  *
- * @param {Object}  props             Props.
- * @param {number}  props.postId      Post id.
- * @param {string}  [props.className] Extra class for the root element.
- * @param {boolean} [props.isClassic] Rendered in the classic editor meta box.
+ * @param {Object}   props                   Props.
+ * @param {number}   props.postId            Post id.
+ * @param {string}   [props.className]       Extra class for the root element.
+ * @param {boolean}  [props.isClassic]       Rendered in the classic editor meta box.
+ * @param {Function} [props.onStatusChanged] Called after a successful status change.
  * @return {Element} Panel.
  */
-function WorkflowPanel( { postId, className, isClassic = false } ) {
+function WorkflowPanel( {
+	postId,
+	className,
+	isClassic = false,
+	onStatusChanged,
+} ) {
 	const {
 		workflow,
 		isLoading,
@@ -116,6 +123,17 @@ function WorkflowPanel( { postId, className, isClassic = false } ) {
 		clearError,
 	} = useWorkflow( postId );
 	const [ isGoneDismissed, setIsGoneDismissed ] = useState( false );
+
+	// `updateStatus` resolves to null on success, or the error.
+	const changeStatus = async ( to ) => {
+		const err = await updateStatus( to );
+
+		if ( ! err ) {
+			onStatusChanged?.();
+		}
+
+		return err;
+	};
 
 	if ( ! workflow && isLoading ) {
 		return (
@@ -236,6 +254,11 @@ function WorkflowPanel( { postId, className, isClassic = false } ) {
 					label={ workflow.status_label }
 				/>
 
+				<PublishGateNotice
+					gate={ workflow.publish_gate }
+					postStatus={ workflow.post_status }
+				/>
+
 				{ capabilities.can_assign_reviewer && (
 					<ReviewerControl
 						postId={ postId }
@@ -257,7 +280,7 @@ function WorkflowPanel( { postId, className, isClassic = false } ) {
 			<PanelBody title={ __( 'Workflow actions', 'sapphireit-editorial-workflow' ) }>
 				<TransitionActions
 					transitions={ workflow.available_transitions }
-					onTransition={ updateStatus }
+					onTransition={ changeStatus }
 					isSaving={ isSaving }
 					isDisabled={ isGone }
 				/>

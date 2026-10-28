@@ -13,6 +13,7 @@ import userEvent from '@testing-library/user-event';
 /**
  * Internal dependencies
  */
+import ActivityItem from '../../src/components/ActivityItem';
 import ActivityTimeline from '../../src/components/ActivityTimeline';
 
 jest.mock( '@wordpress/api-fetch' );
@@ -325,4 +326,90 @@ describe( 'ActivityTimeline', () => {
 			container.querySelector( '[aria-live="polite"]' ).textContent
 		).toBe( '1 new activity entry.' );
 	} );
+} );
+
+describe( 'ActivityItem publication sentences', () => {
+	const dana = { id: 5, name: 'Dana', avatar: '' };
+
+	const sentenceOf = ( overrides ) => {
+		const { container } = render(
+			<ul>
+				<ActivityItem
+					entry={ entry( 1, {
+						user_id: 5,
+						user: dana,
+						old_value: 'draft',
+						new_value: 'publish',
+						workflow_status_label: null,
+						gate_reason: null,
+						...overrides,
+					} ) }
+				/>
+			</ul>
+		);
+
+		return itemTexts( container )[ 0 ];
+	};
+
+	it.each( [
+		[
+			'post_published',
+			{ workflow_status_label: 'Review' },
+			'Dana published this while it was at Review',
+		],
+		[
+			'post_published',
+			{
+				user: null,
+				user_id: 0,
+				old_value: 'future',
+				workflow_status_label: 'Approved',
+			},
+			'System published this on schedule while it was at Approved',
+		],
+		[
+			'post_unpublished',
+			{ new_label: 'Draft' },
+			'Dana unpublished this (now Draft)',
+		],
+		[
+			'publish_gate_refused',
+			{ new_label: 'Published', workflow_status_label: 'Writing' },
+			'Publishing by Dana was blocked: it was at Writing, not approved',
+		],
+		[
+			'publish_gate_bypassed',
+			{ gate_reason: 'capability', workflow_status_label: 'Draft' },
+			'Dana published this without approval (it was at Draft)',
+		],
+		[
+			'publish_gate_bypassed',
+			{ gate_reason: 'error' },
+			'Dana published this without the approval check (internal error)',
+		],
+	] )( '%s renders %p', ( action, extras, expected ) => {
+		expect( sentenceOf( { action, ...extras } ) ).toBe( expected );
+	} );
+
+	it( 'decodes entities in the workflow status label', () => {
+		expect(
+			sentenceOf( {
+				action: 'post_published',
+				workflow_status_label: 'Legal &amp; review',
+			} )
+		).toBe( 'Dana published this while it was at Legal & review' );
+	} );
+
+	it.each( [
+		[ 'post_published', 'Published' ],
+		[ 'publish_gate_refused', 'Publishing blocked' ],
+		[ 'publish_gate_bypassed', 'Published without approval' ],
+	] )(
+		'%s without a workflow status label falls back to the action label',
+		( action, label ) => {
+			expect( sentenceOf( { action, action_label: label } ) ).toBe(
+				`Dana: ${ label }`
+			);
+		}
+	);
 } );

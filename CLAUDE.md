@@ -7,7 +7,8 @@ This file guides Claude Code (and any other AI assistant) when working on the **
 SapphireIT Editorial Workflow (CWM internally) is a WordPress plugin that adds an editorial approval workflow on top of normal posts/pages/CPTs: **Draft → Writing → Review → Needs Changes → Approved → Published**. Each managed post gets a workflow status, an assigned reviewer, a due date, workflow comments, and an activity history. Full architecture and phased build order live in `.claude/.plan/` (start at `00-INDEX.md`) — read it before proposing structure for any new feature.
 
 - **Free v1.0 scope**: workflow statuses, transition validation, permissions, reviewer assignment, due dates, comments, activity history, REST API, Gutenberg sidebar, admin dashboard (DataViews).
-- **Pro scope (do not build into Free core)**: multiple workflows, role-based workflow configuration, email notifications, Slack integration, editorial calendar, checklist gating, workflow rules engine, advanced audit logs.
+- **Free 1.1 adds**: the publish gate (off / log only / enforce), publication logging, site-level email notifications, and an optional "prevent self-approval" setting (see .claude/.plan/v-1.1.0/). Choosing which roles may approve stays Pro.
+- **Pro scope (do not build into Free core)**: multiple workflows, role-based workflow configuration, per-user notification preferences and digests, Slack integration, editorial calendar, checklist gating, workflow rules engine, advanced audit logs.
 - Do not build Pro features prematurely, but **do** structure Free code (hooks/filters, isolated classes) so Pro can extend it later without rewrites. See "Extensibility" below.
 
 ## Naming conventions — always use these, never invent new ones
@@ -137,6 +138,6 @@ assets/            compiled JS/CSS (build output)
 - Add PHPUnit tests for workflow transitions/permissions as they're built, not at the end.
 
 **Don't (Free v1.0):**
-- Slack, email notifications, calendar view, multiple workflows, role-configurable workflows, complex automation/rules engine, AI features, team management.
+- Slack, per-user notification preferences or digests, calendar view, multiple workflows, role-configurable workflows, complex automation/rules engine, AI features, team management.
 - Custom post type for workflow content — CWM must work with existing `post`/`page`/CPTs via post meta, not a new CPT.
 - Hard-coded role checks (`current_user_can( 'editor' )` style) — always go through the `sit_cwm_*` capability layer so Pro can later make roles/permissions configurable.

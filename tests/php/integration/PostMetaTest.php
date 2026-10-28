@@ -222,6 +222,33 @@ final class PostMetaTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The publish gate bypass marker (E8) is registered, written by nobody
+	 * through the meta API, and never exposed in REST.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_publish_bypass_meta_is_registered_locked_and_hidden_from_rest() {
+		$registered = get_registered_meta_keys( 'post', 'post' );
+		$this->assertArrayHasKey( PostRepository::META_PUBLISH_BYPASS, $registered );
+		$this->assertSame( 'integer', $registered[ PostRepository::META_PUBLISH_BYPASS ]['type'] );
+		$this->assertFalse( $registered[ PostRepository::META_PUBLISH_BYPASS ]['show_in_rest'] );
+
+		$admin = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$post  = self::factory()->post->create( array( 'post_author' => $admin ) );
+		update_post_meta( $post, PostRepository::META_PUBLISH_BYPASS, $admin );
+
+		foreach ( PostMeta::STATUS_LOCKED_CAPS as $cap ) {
+			$this->assertContains( 'do_not_allow', map_meta_cap( $cap, $admin, $post, PostRepository::META_PUBLISH_BYPASS ), $cap );
+		}
+
+		wp_set_current_user( $admin );
+		$this->assertFalse( current_user_can( 'edit_post_meta', $post, PostRepository::META_PUBLISH_BYPASS ) );
+		$this->assertArrayNotHasKey( PostRepository::META_PUBLISH_BYPASS, $this->get_meta( $post, 'edit' ) );
+	}
+
+	/**
 	 * An editor can set reviewer and due date through core's meta REST.
 	 *
 	 * @return void

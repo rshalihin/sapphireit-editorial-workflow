@@ -74,6 +74,7 @@ abstract class TestCase extends WP_UnitTestCase {
 
 		delete_option( Settings::OPTION );
 		Capabilities::add_caps();
+		Capabilities::mark_current();
 
 		$statuses       = new StatusManager();
 		$settings       = new Settings();

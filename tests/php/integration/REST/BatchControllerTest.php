@@ -118,6 +118,7 @@ final class BatchControllerTest extends TestCase {
 		$other  = self::factory()->user->create( array( 'role' => 'author' ) );
 		$own    = $this->create_managed_post( $this->post_args( $author, 'writing' ) );
 		$theirs = $this->create_managed_post( $this->post_args( $other, 'writing', 'publish' ) );
+		$rows   = $this->activity->count_for_post( $theirs ); // Its publication row.
 
 		wp_set_current_user( $author );
 
@@ -140,7 +141,7 @@ final class BatchControllerTest extends TestCase {
 		);
 		$this->assert_status( $own, 'review' );
 		$this->assert_status( $theirs, 'writing' );
-		$this->assert_activity_count( $theirs, 0 );
+		$this->assert_activity_count( $theirs, $rows );
 	}
 
 	/**

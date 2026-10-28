@@ -33,9 +33,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class ActivityLogger implements Bootable {
 
 	/**
-	 * Action slugs accepted in v1.0 (D8), before `sit_cwm_activity_actions`.
+	 * Action slugs accepted in v1.1 (D8 + E7), before `sit_cwm_activity_actions`.
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Adds the publication actions.
 	 * @var string[]
 	 */
 	const ACTIONS = array(
@@ -45,7 +46,31 @@ final class ActivityLogger implements Bootable {
 		'due_date_set',
 		'due_date_cleared',
 		'comment_added',
+		...self::PUBLICATION_ACTIONS,
 	);
+
+	/**
+	 * Actions recording a change of the native post status to or from
+	 * `publish`, or a publish-gate verdict (E7). Their old/new values are
+	 * native post statuses, not workflow statuses.
+	 *
+	 * @since 1.1.0
+	 * @var string[]
+	 */
+	const PUBLICATION_ACTIONS = array(
+		'post_published',
+		'post_unpublished',
+		'publish_gate_refused',
+		'publish_gate_bypassed',
+	);
+
+	/**
+	 * Context keys `log_publication_event()` keeps (E7).
+	 *
+	 * @since 1.1.0
+	 * @var string[]
+	 */
+	const CONTEXT_KEYS = array( 'workflow_status', 'gate_mode', 'layer', 'source', 'reason' );
 
 	/**
 	 * Default page size for reads.
@@ -321,6 +346,56 @@ final class ActivityLogger implements Bootable {
 		}
 
 		return $this->log( $post_id, 'comment_added', $this->with_user( array( 'message' => $message ), $user_id ) );
+	}
+
+	/**
+	 * Logs a publication event or publish-gate verdict (E7).
+	 *
+	 * Context keys outside `CONTEXT_KEYS` and non-scalar values are dropped;
+	 * every kept value is reduced to a key with `sanitize_key()`.
+	 *
+	 * @since 1.1.0
+	 * @internal Callers must authorize first.
+	 *
+	 * @param int      $post_id    Post id.
+	 * @param string   $action     One of `PUBLICATION_ACTIONS`.
+	 * @param string   $old_status Previous (or stored) native post status.
+	 * @param string   $new_status New (or attempted) native post status.
+	 * @param array    $context    Context; see `CONTEXT_KEYS`.
+	 * @param int|null $user_id    Acting user; `null` for the current user.
+	 * @return int Inserted id, `0` on failure or a non-publication action.
+	 */
+	public function log_publication_event( int $post_id, string $action, string $old_status, string $new_status, array $context, ?int $user_id = null ): int {
+		if ( ! in_array( $action, self::PUBLICATION_ACTIONS, true ) ) {
+			return 0;
+		}
+
+		$clean = array();
+
+		foreach ( self::CONTEXT_KEYS as $key ) {
+			if ( ! isset( $context[ $key ] ) || is_bool( $context[ $key ] ) || ! is_scalar( $context[ $key ] ) ) {
+				continue;
+			}
+
+			$value = sanitize_key( (string) $context[ $key ] );
+
+			if ( '' !== $value ) {
+				$clean[ $key ] = $value;
+			}
+		}
+
+		return $this->log(
+			$post_id,
+			$action,
+			$this->with_user(
+				array(
+					'old_value' => $old_status,
+					'new_value' => $new_status,
+					'context'   => $clean,
+				),
+				$user_id
+			)
+		);
 	}
 
 	/**

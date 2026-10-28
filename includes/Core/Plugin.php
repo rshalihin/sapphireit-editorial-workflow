@@ -16,6 +16,18 @@ use Sit_Cwm\Content\PostRepository;
 use Sit_Cwm\Core\Interfaces\Bootable;
 use Sit_Cwm\Editor\ClassicMetaBox;
 use Sit_Cwm\Editor\SidebarAssets;
+use Sit_Cwm\Notifications\Deduplicator;
+use Sit_Cwm\Notifications\MessageBuilder;
+use Sit_Cwm\Notifications\Notifier;
+use Sit_Cwm\Notifications\RecipientResolver;
+use Sit_Cwm\Publishing\GateLedger;
+use Sit_Cwm\Publishing\GateRecorder;
+use Sit_Cwm\Publishing\Layers\RestLayer;
+use Sit_Cwm\Publishing\Layers\SaveLayer;
+use Sit_Cwm\Publishing\Layers\ScheduleLayer;
+use Sit_Cwm\Publishing\PublicationLogger;
+use Sit_Cwm\Publishing\PublishGate;
+use Sit_Cwm\Publishing\RefusalNotices;
 use Sit_Cwm\REST\ActivityController;
 use Sit_Cwm\REST\ActivityFormatter;
 use Sit_Cwm\REST\BatchController;
@@ -24,6 +36,7 @@ use Sit_Cwm\REST\UserController;
 use Sit_Cwm\REST\UserSummaries;
 use Sit_Cwm\REST\WorkflowController;
 use Sit_Cwm\Workflow\BulkProcessor;
+use Sit_Cwm\Workflow\Capabilities;
 use Sit_Cwm\Workflow\PermissionManager;
 use Sit_Cwm\Workflow\StatusManager;
 use Sit_Cwm\Workflow\TransitionManager;
@@ -65,6 +78,13 @@ final class Plugin {
 			'post_repository',
 			'activity_logger',
 			'workflow_manager',
+			'publish_gate.recorder',
+			'publish_gate.notices',
+			'publication_logger',
+			'publish_gate.layer.save',
+			'publish_gate.layer.rest',
+			'publish_gate.layer.schedule',
+			'notifications',
 		),
 		'admin' => array(
 			'admin.dashboard',
@@ -126,6 +146,7 @@ final class Plugin {
 
 		// No load_plugin_textdomain(): WordPress.org translations load just in time (WP 4.6+).
 		add_action( 'plugins_loaded', array( $this, 'maybe_upgrade_database' ), 20 );
+		add_action( 'plugins_loaded', array( Capabilities::class, 'maybe_upgrade' ), 20 );
 		add_action( 'rest_api_init', array( $this, 'register_rest_services' ), 5 );
 
 		// Priority 11: after core creates the new site's tables at 10.
@@ -256,6 +277,90 @@ final class Plugin {
 		);
 
 		$this->container->set(
+			'publication_logger',
+			static function ( Container $c ) {
+				return new PublicationLogger( $c->get( 'activity_logger' ), $c->get( 'post_repository' ), $c->get( 'settings' ), $c->get( 'publish_gate' ) );
+			}
+		);
+
+		$this->container->set(
+			'publish_gate',
+			static function ( Container $c ) {
+				return new PublishGate( $c->get( 'settings' ), $c->get( 'post_repository' ), $c->get( 'permission_manager' ) );
+			}
+		);
+
+		$this->container->set(
+			'publish_gate.ledger',
+			static function () {
+				return new GateLedger();
+			}
+		);
+
+		$this->container->set(
+			'publish_gate.notices',
+			static function () {
+				return new RefusalNotices();
+			}
+		);
+
+		$this->container->set(
+			'publish_gate.recorder',
+			static function ( Container $c ) {
+				return new GateRecorder( $c->get( 'activity_logger' ), $c->get( 'publish_gate.ledger' ), $c->get( 'publish_gate.notices' ) );
+			}
+		);
+
+		$this->container->set(
+			'publish_gate.layer.save',
+			static function ( Container $c ) {
+				return new SaveLayer( $c->get( 'publish_gate' ), $c->get( 'publish_gate.ledger' ), $c->get( 'publish_gate.recorder' ) );
+			}
+		);
+
+		$this->container->set(
+			'publish_gate.layer.rest',
+			static function ( Container $c ) {
+				return new RestLayer( $c->get( 'publish_gate' ), $c->get( 'publish_gate.ledger' ), $c->get( 'publish_gate.recorder' ), $c->get( 'settings' ) );
+			}
+		);
+
+		$this->container->set(
+			'publish_gate.layer.schedule',
+			static function ( Container $c ) {
+				return new ScheduleLayer( $c->get( 'publish_gate' ), $c->get( 'publish_gate.ledger' ), $c->get( 'publish_gate.recorder' ), $c->get( 'permission_manager' ), $c->get( 'settings' ) );
+			}
+		);
+
+		$this->container->set(
+			'notifications.recipients',
+			static function ( Container $c ) {
+				return new RecipientResolver( $c->get( 'post_repository' ), $c->get( 'permission_manager' ) );
+			}
+		);
+
+		$this->container->set(
+			'notifications.messages',
+			static function ( Container $c ) {
+				return new MessageBuilder( $c->get( 'permission_manager' ) );
+			}
+		);
+
+		$this->container->set(
+			'notifications.dedup',
+			static function () {
+				return new Deduplicator();
+			}
+		);
+
+		$this->container->set(
+			'notifications',
+			static function ( Container $c ) {
+				return new Notifier( $c->get( 'settings' ), $c->get( 'notifications.recipients' ), $c->get( 'notifications.messages' ), $c->get( 'notifications.dedup' ) );
+			}
+		);
+
+		$this->container->set(
 			'bulk_processor',
 			static function ( Container $c ) {
 				return new BulkProcessor( $c->get( 'workflow_manager' ) );
@@ -270,7 +375,8 @@ final class Plugin {
 					$c->get( 'permission_manager' ),
 					$c->get( 'status_manager' ),
 					$c->get( 'transition_manager' ),
-					$c->get( 'post_repository' )
+					$c->get( 'post_repository' ),
+					$c->get( 'publish_gate' )
 				);
 			}
 		);

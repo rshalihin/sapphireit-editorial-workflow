@@ -162,6 +162,8 @@ A staff writer drafts a post; an editor reviews and approves it.
 someone still hits *Publish* in the editor. The workflow status records that the
 editorial process finished, and those two facts are allowed to disagree — see
 [ARCHITECTURE.md](ARCHITECTURE.md#why-workflow-status-is-not-wordpress-post-status).
+With the [publish gate](#publishing-and-the-publish-gate) set to *Enforce*,
+*Publish* only becomes available from step 6 on.
 
 At step 2, the author's sidebar offers exactly one button. The graph allows only
 `draft → writing`, so there is nothing else to offer — not because the UI hides
@@ -238,6 +240,135 @@ between two PHP processes. See
 
 ---
 
+## Publishing and the publish gate
+
+Workflow status and WordPress post status stay separate fields: publishing a
+post never changes its workflow status, and reaching `published` in the workflow
+never publishes the post. What the publish gate adds is a rule *between* them:
+optionally, WordPress may not make content live until its workflow says it was
+approved.
+
+### Modes
+
+Each workflow-enabled post type has its own mode, set under **Editorial
+Workflow → Settings → Publish gate** and stored in `sit_cwm_settings` under
+`publish_gate`.
+
+| Mode | Rule checked? | Publishing restricted? | What is recorded |
+|---|---|---|---|
+| **Off** (default) | no | no | Nothing from the gate. Publications are still logged ([below](#what-gets-recorded)). |
+| **Log only** | yes | no | A publish that fails the rule: `publish_gate_bypassed`, reason `log_only`. |
+| **Enforce** | yes | yes | A refused attempt: `publish_gate_refused`. A publish by someone holding the bypass capability: `publish_gate_bypassed`, reason `capability`. |
+
+A missing or unknown mode, and a post type that is no longer workflow-enabled,
+both count as **Off**. Upgrading from 1.0 therefore leaves every type at Off.
+The `sit_cwm_publish_gate_mode` filter can change the mode per post type (and
+receives the post id, or `0` when the question is not about one post).
+
+### The rule
+
+A publish attempt **passes** when the post's stored workflow status is
+`approved` or `published`. Anything else fails, including an unknown stored
+status and a brand-new post, which starts at `draft`.
+
+The result goes through `sit_cwm_publish_gate_passes( $passes, $post_id,
+$workflow_status, $mode )`. Only boolean `true` passes; `false` and a `WP_Error`
+both fail.
+
+### When the gate judges a write
+
+Only a write that **moves content into a published state** is judged. All of
+these must hold:
+
+1. The post type is workflow-enabled and its mode is not Off.
+2. Either the target post status is `publish` and the stored one is not
+   `publish`, or the target is `future` and the stored one is neither `publish`
+   nor `future`.
+3. The write is not an autosave or a revision.
+
+So:
+
+- **Live content is never taken down by the gate.** A published post that goes
+  back to `writing` or `review` for a correction stays `publish` through every
+  later Update, Quick Edit or REST save. This is the carve-out that the
+  [re-review flow](#3-the-re-review-flow) depends on.
+- **An already scheduled post is not re-judged on unrelated edits.** It is
+  judged again at go-live, when cron publishes it. A post scheduled while
+  `approved` and then sent back to `needs_changes` does not go live.
+- **`private` is not gated.**
+
+### What happens on a refusal
+
+| Path | What the user sees |
+|---|---|
+| Block editor | The **Publish** / **Schedule** button becomes **Submit for Review**, and the workflow panel says *Publishing is locked until this content is approved.* No JavaScript from the plugin is involved: the `wp:action-publish` link core's editor reads is removed from the REST response. |
+| `wp/v2` REST create or update | `403` with code `sit_cwm_publish_gated`. Nothing is written. |
+| Classic editor, Quick Edit, Bulk Edit, `wp_insert_post()` / `wp_update_post()` from any code, WP-CLI `wp post create\|update` | The save goes through, but as `draft` (or `pending`, when that is what was stored) instead of `publish`/`future`. An admin notice tells the person on their next screen: *"…" was not published: it has to be approved in the editorial workflow first.* |
+| Scheduled publishing (cron) | The post is set back to `draft` before core publishes it, and the post's author gets the same admin notice. |
+| Anything else that makes a post `publish` (e.g. `wp_publish_post()` on a draft) | The backstop puts it back to `draft` straight after the transition, and notifies the actor (or the author, when there is no actor). |
+
+**Who is judged:** the logged-in user. Scheduled publishing, other cron jobs and
+WP-CLI without `--user` run as user `0`, who never holds the bypass capability,
+so in *Enforce* they are refused. Run imports as an administrator:
+`wp --user=<admin> …`.
+
+### The bypass capability
+
+`sit_cwm_bypass_publish_gate` lets its holder publish unapproved content while
+the gate is set to *Enforce*. Administrators get it (on activation, and on
+upgrade from 1.0 without reactivation); no other role does. In the editor they
+see *This content is not approved yet. You can still publish it, and that will
+be recorded as a bypass of the review.*
+
+Every use is recorded as `publish_gate_bypassed`, reason `capability`, **when
+the post actually goes live**, not when it is scheduled. Scheduling unapproved
+content under the bypass stores the scheduler's user id in
+`_sit_cwm_publish_bypass_by`; at go-live the bypass is honoured only if that
+user still holds the capability. The marker is deleted whenever the post leaves
+`future`.
+
+### Failing open
+
+Every gate layer runs inside a `try`/`catch`. If one throws, the publish goes
+ahead rather than locking the site, and it is recorded as
+`publish_gate_bypassed` with reason `error` (when the post id is known). The
+`sit_cwm_publish_gate_failed` action fires, and with `WP_DEBUG` on the error is
+written to the PHP error log.
+
+### What the gate covers
+
+The block editor, the classic editor, Quick Edit, Bulk Edit, the `wp/v2` REST
+API (including application passwords), WP-CLI `wp post create|update`,
+scheduled publishing, and any plugin that publishes through `wp_insert_post()`,
+`wp_update_post()` or `wp_publish_post()`. Code that asks
+`current_user_can( 'publish_post', $id )` gets an answer that agrees with the
+gate. Which layer covers which path is in
+[ARCHITECTURE.md](ARCHITECTURE.md#publishing).
+
+### What the gate does not cover
+
+Stated plainly, because a governance claim is only worth what it does not
+overstate:
+
+- **Direct database writes.** Code that updates `wp_posts.post_status` through
+  `$wpdb` (or any SQL) never passes a WordPress hook, so the gate cannot see it.
+  Neither the publication log nor the gate records it.
+- **Code that removes the plugin's hooks**, e.g. `remove_all_filters(
+  'wp_insert_post_data' )`.
+- **`private` content.** Making content private is not gated.
+- **Post types without a workflow**, or with the gate set to Off.
+- **The backstop acts after the fact.** A path that only the backstop catches
+  (one that skips `wp_insert_post_data`, like `wp_publish_post()`) does reach
+  `publish` for a moment before it is reverted, so hooks other plugins run on
+  that transition (social sharing, pings, caches) may already have fired.
+- **A refused REST create is not recorded.** A `wp/v2` request that tries to
+  *create* content as `publish` is refused before the post exists, so there is
+  no post to record the refusal against. A refused create through
+  `wp_insert_post()` (including WP-CLI) is saved as a draft and recorded under
+  its new id.
+
+---
+
 ## What gets recorded
 
 Every successful change writes exactly one row to `wp_sit_cwm_activity`:
@@ -250,10 +381,22 @@ Every successful change writes exactly one row to `wp_sit_cwm_activity`:
 | `due_date_set` | A due date is set or changed. |
 | `due_date_cleared` | The due date is removed. |
 | `comment_added` | A workflow comment is posted. `message` holds the text. |
+| `post_published` | Managed content goes live (`publish`), in every gate mode including Off. Values are post statuses. |
+| `post_unpublished` | Managed content stops being live, including to the trash. |
+| `publish_gate_refused` | The gate refused a publish or schedule in *Enforce*. |
+| `publish_gate_bypassed` | Unapproved content went live: in *Log only*, under the bypass capability, or because a gate layer failed open. |
+
+The four publication rows also store, in `context`, the workflow status at that
+moment, the gate mode, where the request came from (`cron`, `cli`, `rest`,
+`ajax`, `admin` or `other`) and, for the gate rows, the layer and the bypass
+reason. The timeline shows them as *Published*, *Unpublished*, *Publishing
+blocked* and *Published without approval*.
 
 Rules:
 
-- **A failed change writes nothing** — no meta, no activity row, no action hook.
+- **A failed workflow change writes nothing** — no meta, no activity row, no
+  action hook. (A refused *publish* is the exception: recording it is the
+  point.)
 - **A no-op writes nothing.** Re-assigning the same reviewer or re-setting the
   same date returns success and logs nothing.
 - **A bulk action writes one row per affected post**, not one aggregate row.

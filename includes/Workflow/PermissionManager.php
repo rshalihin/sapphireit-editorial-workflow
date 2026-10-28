@@ -82,6 +82,23 @@ final class PermissionManager {
 	}
 
 	/**
+	 * Whether a user may publish managed content that is not approved while a
+	 * publish gate is on (E9).
+	 *
+	 * Multisite super admins pass implicitly (core behaviour).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param int|null $user_id User id; null for the current user.
+	 * @return bool
+	 */
+	public function can_bypass_publish_gate( ?int $user_id = null ): bool {
+		$user = $this->resolve_user( $user_id );
+
+		return null !== $user && user_can( $user, Capabilities::BYPASS_PUBLISH_GATE );
+	}
+
+	/**
 	 * Whether a user may submit a bulk workflow request at all.
 	 *
 	 * Only the gate to *attempt* a batch: every post in it is authorized again,

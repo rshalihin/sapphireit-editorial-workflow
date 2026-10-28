@@ -8,6 +8,9 @@
 
 namespace Sit_Cwm\Core;
 
+use Sit_Cwm\Notifications\NotificationEvents;
+use Sit_Cwm\Publishing\PublishGate;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -42,14 +45,20 @@ final class Settings {
 	/**
 	 * Default settings.
 	 *
-	 * @since 1.0.0
+	 * Every gate mode is off (an empty map) and every email event is off, so
+	 * upgrading from 1.0.0 changes no behaviour (E1, E12).
 	 *
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool}
+	 * @since 1.0.0
+	 * @since 1.1.0 Added `publish_gate` and `notifications`.
+	 *
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>}
 	 */
 	public function defaults(): array {
 		return array(
 			'post_types'               => array( 'post', 'page' ),
 			'delete_data_on_uninstall' => false,
+			'publish_gate'             => array(),
+			'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
 		);
 	}
 
@@ -58,7 +67,7 @@ final class Settings {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>}
 	 */
 	public function all(): array {
 		$defaults = $this->defaults();
@@ -93,7 +102,13 @@ final class Settings {
 	 * array or `post_types` is not a list of post types that may be enabled
 	 * (see `selectable_post_types()`). Unknown keys are ignored.
 	 *
+	 * `publish_gate` must map selectable post types to `PublishGate::MODES`
+	 * and replaces the stored map, so omitted types go back to off.
+	 * `notifications` must use known event keys and is merged over the stored
+	 * toggles, so omitted events keep their value.
+	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Accepts `publish_gate` and `notifications`.
 	 *
 	 * @param mixed $partial Partial settings, e.g. `[ 'post_types' => [ 'post' ] ]`.
 	 * @return bool True when the settings are valid and stored.
@@ -119,6 +134,26 @@ final class Settings {
 			$settings['delete_data_on_uninstall'] = rest_sanitize_boolean( $partial['delete_data_on_uninstall'] );
 		}
 
+		if ( array_key_exists( 'publish_gate', $partial ) ) {
+			$modes = $this->sanitize_gate_modes( $partial['publish_gate'] );
+
+			if ( null === $modes ) {
+				return false;
+			}
+
+			$settings['publish_gate'] = $modes;
+		}
+
+		if ( array_key_exists( 'notifications', $partial ) ) {
+			$toggles = $this->sanitize_notifications( $partial['notifications'] );
+
+			if ( null === $toggles ) {
+				return false;
+			}
+
+			$settings['notifications'] = array_merge( $this->notification_toggles(), $toggles );
+		}
+
 		if ( get_option( self::OPTION ) === $settings ) {
 			return true;
 		}
@@ -138,6 +173,43 @@ final class Settings {
 	 */
 	public function seed(): void {
 		add_option( self::OPTION, $this->defaults(), '', true );
+	}
+
+	/**
+	 * Stored publish gate modes, keyed by post type.
+	 *
+	 * Raw stored values with invalid entries dropped. A post type that is
+	 * missing here reads as off. The `sit_cwm_publish_gate_mode` filter and
+	 * the enabled-type check are applied by `PublishGate`, not here.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return array<string, string> Post type => mode.
+	 */
+	public function gate_modes(): array {
+		$modes = array();
+
+		foreach ( (array) $this->get( 'publish_gate', array() ) as $post_type => $mode ) {
+			if ( is_string( $post_type ) && in_array( $mode, PublishGate::MODES, true ) ) {
+				$modes[ $post_type ] = $mode;
+			}
+		}
+
+		return $modes;
+	}
+
+	/**
+	 * Whether email for a notification event is turned on.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param string $event Event key, one of `NotificationEvents::all()`.
+	 * @return bool False for unknown events.
+	 */
+	public function is_notification_enabled( string $event ): bool {
+		$toggles = $this->notification_toggles();
+
+		return in_array( $event, NotificationEvents::all(), true ) && ! empty( $toggles[ $event ] );
 	}
 
 	/**
@@ -308,5 +380,83 @@ final class Settings {
 		}
 
 		return array_values( array_unique( $types ) );
+	}
+
+	/**
+	 * Stored notification toggles: every known event, as a boolean.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return array<string, bool> Event => enabled, in `NotificationEvents::all()` order.
+	 */
+	private function notification_toggles(): array {
+		$stored  = (array) $this->get( 'notifications', array() );
+		$toggles = array();
+
+		foreach ( NotificationEvents::all() as $event ) {
+			$toggles[ $event ] = isset( $stored[ $event ] ) && true === $stored[ $event ];
+		}
+
+		return $toggles;
+	}
+
+	/**
+	 * Validates a publish gate map against `selectable_post_types()` and
+	 * `PublishGate::MODES`.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param mixed $value Raw value.
+	 * @return array<string, string>|null Post type => mode, or null when invalid.
+	 */
+	private function sanitize_gate_modes( $value ): ?array {
+		if ( ! is_array( $value ) ) {
+			return null;
+		}
+
+		$available = $this->selectable_post_types();
+		$modes     = array();
+
+		foreach ( $value as $post_type => $mode ) {
+			if ( ! is_string( $post_type ) ) {
+				return null;
+			}
+
+			$post_type = sanitize_key( $post_type );
+
+			if ( ! isset( $available[ $post_type ] ) || ! in_array( $mode, PublishGate::MODES, true ) ) {
+				return null;
+			}
+
+			$modes[ $post_type ] = $mode;
+		}
+
+		return $modes;
+	}
+
+	/**
+	 * Validates notification toggles against `NotificationEvents::all()`.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param mixed $value Raw value.
+	 * @return array<string, bool>|null Event => enabled, or null when invalid.
+	 */
+	private function sanitize_notifications( $value ): ?array {
+		if ( ! is_array( $value ) ) {
+			return null;
+		}
+
+		$toggles = array();
+
+		foreach ( $value as $event => $enabled ) {
+			if ( ! in_array( $event, NotificationEvents::all(), true ) ) {
+				return null;
+			}
+
+			$toggles[ $event ] = rest_sanitize_boolean( $enabled );
+		}
+
+		return $toggles;
 	}
 }

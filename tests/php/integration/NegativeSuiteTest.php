@@ -43,13 +43,15 @@ final class NegativeSuiteTest extends TestCase {
 			)
 		);
 
+		$rows = $this->activity->count_for_post( $post ); // The fixture's own publication row.
+
 		wp_set_current_user( $editor );
 
 		$response = $this->rest_request( 'POST', '/wp/v2/posts/' . $post, array( 'meta' => array( PostRepository::META_STATUS => 'published' ) ) );
 
 		$this->assertSame( 403, $response->get_status() );
 		$this->assert_status( $post, 'review' );
-		$this->assert_activity_count( $post, 0 );
+		$this->assert_activity_count( $post, $rows );
 	}
 
 	/**
@@ -66,11 +68,13 @@ final class NegativeSuiteTest extends TestCase {
 			)
 		);
 
+		$rows = $this->activity->count_for_post( $post ); // The fixture's own publication row.
+
 		wp_set_current_user( $author );
 
 		$this->assert_error_response( $this->workflow_post( $post, 'review', 'approved' ), 'sit_cwm_forbidden', 403 );
 		$this->assert_status( $post, 'review' );
-		$this->assert_activity_count( $post, 0 );
+		$this->assert_activity_count( $post, $rows );
 	}
 
 	/**

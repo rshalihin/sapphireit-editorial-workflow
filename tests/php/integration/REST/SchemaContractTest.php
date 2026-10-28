@@ -8,6 +8,8 @@
 
 namespace Sit_Cwm\Tests\Integration\REST;
 
+use Sit_Cwm\Publishing\GateDecision;
+use Sit_Cwm\Publishing\PublishGate;
 use Sit_Cwm\Tests\TestCase;
 use WP_REST_Request;
 
@@ -123,6 +125,66 @@ final class SchemaContractTest extends TestCase {
 				$this->assert_matches_schema( $item, $this->schema( $route ), $route );
 			}
 		}
+	}
+
+	/**
+	 * Activity items of publication actions match the item schema, which
+	 * declares their three extra fields as nullable strings.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_publication_activity_matches_its_schema() {
+		$route = $this->route( 'activity' );
+
+		$this->activity->log_publication_event(
+			$this->post_id,
+			'publish_gate_bypassed',
+			'draft',
+			'publish',
+			array(
+				'workflow_status' => 'writing',
+				'gate_mode'       => 'enforce',
+				'reason'          => 'capability',
+			)
+		);
+
+		$schema   = $this->schema( $route );
+		$response = $this->rest_request( 'GET', $route );
+
+		foreach ( array( 'workflow_status', 'workflow_status_label', 'gate_reason' ) as $property ) {
+			$this->assertArrayHasKey( $property, $schema['properties'], $property );
+			$this->assertSame( array( 'string', 'null' ), $schema['properties'][ $property ]['type'], $property );
+		}
+
+		$this->assertSame( 200, $response->get_status() );
+
+		foreach ( $response->get_data() as $item ) {
+			$this->assert_matches_schema( $item, $schema, $route );
+		}
+
+		$this->assertSame( 'capability', $response->get_data()[0]['gate_reason'] );
+	}
+
+	/**
+	 * The workflow schema declares the read-only gate state with closed enums (E10).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_workflow_schema_declares_publish_gate() {
+		$schema = $this->schema( $this->route( 'workflow' ) );
+
+		$this->assertArrayHasKey( 'publish_gate', $schema['properties'] );
+
+		$gate = $schema['properties']['publish_gate'];
+
+		$this->assertSame( 'object', $gate['type'] );
+		$this->assertTrue( $gate['readonly'] );
+		$this->assertSame( PublishGate::MODES, $gate['properties']['mode']['enum'] );
+		$this->assertSame( GateDecision::OUTCOMES, $gate['properties']['outcome']['enum'] );
 	}
 
 	/**

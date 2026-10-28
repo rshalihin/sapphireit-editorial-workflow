@@ -8,15 +8,30 @@ Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Editorial approval workflow for posts, pages and custom post types: statuses, reviewers, due dates, comments and a full activity history.
+Editorial approval workflow with an enforceable publish gate and a complete audit trail. AI can draft it. A human approves it.
 
 == Description ==
 
-SapphireIT Editorial Workflow adds a real editorial process on top of the posts
-you already have. Every managed post gets a workflow status, an assigned
-reviewer, a due date, workflow comments and a complete activity history —
-managed from a Gutenberg sidebar, a classic editor meta box and an admin
-dashboard.
+AI can draft it. A human approves it. You can prove who approved what, and
+when.
+
+SapphireIT Editorial Workflow puts a real review step between writing content
+and publishing it, on the posts, pages and custom post types you already have:
+
+* **Enforceable review.** A publish gate for each content type, with three
+  modes. **Off** changes nothing. **Log only** lets people publish but records
+  every publish that skipped approval. **Enforce** stops content from going live
+  until it has been approved in the workflow. Every content type starts at Off.
+* **A complete audit trail.** Every time managed content is published or
+  unpublished, the plugin records who did it, when, and which workflow status
+  the content was at in that moment. This happens even with the gate off.
+* **Notifications.** Opt-in emails when a reviewer is assigned, when content is
+  submitted for review, when changes are requested, when content is approved
+  and when a workflow comment is added.
+
+Every managed post gets a workflow status, an assigned reviewer, a due date,
+workflow comments and a complete activity history, managed from a Gutenberg
+sidebar, a classic editor meta box and an admin dashboard.
 
 **Six statuses, one clear path:** Draft → Writing → Review → Needs Changes →
 Approved → Published, with explicit paths for sending content back and for
@@ -28,15 +43,19 @@ re-editing something that is already live.
   Nobody jumps a draft straight to approved, whatever their role.
 * **Server-side enforcement.** Every transition is re-checked in PHP against the
   graph, the capability map and the post's current stored status. The editor UI
-  shows you what you can do; it does not decide it.
-* **Six dedicated capabilities**, granted to roles at activation and editable
+  shows you what you can do; it does not decide it. The publish gate works the
+  same way: the editor offers **Submit for Review** instead of **Publish** when
+  the gate would refuse, and the server refuses by the same rule whatever the
+  client sends.
+* **Seven dedicated capabilities**, granted to roles at activation and editable
   with any capability-management plugin. No hard-coded role checks.
 * **Reviewer assignment and due dates**, with an "overdue only" filter computed
   in your site's timezone.
 * **Workflow comments** that stay in the editorial log and never appear on the
   front end.
 * **A complete activity history** in a dedicated indexed table: who changed
-  what, when.
+  what, when, including every publish, unpublish, blocked publish and publish
+  without approval.
 * **Conflict protection.** If two editors act on the same post at once, the
   second one is told the post moved instead of silently overwriting the first.
 * **An admin dashboard** with server-side search, filtering, sorting and
@@ -50,13 +69,16 @@ re-editing something that is already live.
 
 Being straight about this matters more than a longer feature list:
 
-* **It does not send email.** Assigning a reviewer notifies nobody in version
-  1.0.
 * **It does not publish anything.** Reaching the "Published" workflow status
   records that the editorial process finished — it does not touch the
   WordPress post status. Publishing stays a deliberate action by a human. The
   two are separate fields on purpose, so that scheduled posts keep their
   schedule and live content can be re-edited without being unpublished.
+* **It does not detect AI-written text.** It records who approved content, not
+  who or what wrote it.
+* **It does not guard database writes made by other code.** Code that updates
+  `post_status` in `wp_posts` directly through `$wpdb`, without WordPress's
+  publishing functions, is not seen by the publish gate.
 * No Slack, no editorial calendar, no multiple workflows, no rules engine. Those
   are on the roadmap, not hidden behind an upsell in this plugin.
 
@@ -66,18 +88,21 @@ Being straight about this matters more than a longer feature list:
 * Needs Changes — `sit_cwm_review_content`
 * Approved — `sit_cwm_approve_content`
 * Published — `sit_cwm_approve_content` plus WordPress `publish_post`
+* Publish unapproved content while the gate is set to Enforce —
+  `sit_cwm_bypass_publish_gate` (recorded every time it is used)
 
 Every change also requires WordPress' own permission to edit that specific post.
 By default administrators get everything, editors can review and approve,
 authors and contributors can move their own content up to Review, and
-subscribers get nothing.
+subscribers get nothing. Only administrators can publish past the gate.
 
 = Developers =
 
 The plugin is built as a thin React client over a PHP workflow engine, and fires
 actions and filters at every lifecycle point (`sit_cwm_status_changed`,
-`sit_cwm_can_transition`, `sit_cwm_transition_map` and more) so it can be
-extended without editing its files.
+`sit_cwm_can_transition`, `sit_cwm_transition_map`,
+`sit_cwm_publish_gate_passes`, `sit_cwm_notification_recipients` and more) so
+it can be extended without editing its files.
 
 == Installation ==
 
@@ -109,18 +134,70 @@ Keeping them apart is what lets a scheduled post keep its schedule while it is
 being approved, and lets an already-live article go back through a round of
 edits without disappearing from your site.
 
-= Does it send email when I assign a reviewer? =
+With the publish gate on, it works the other way round too: content has to
+reach Approved before WordPress will publish it.
 
-Not in version 1.0. Notifications are on the roadmap. The
-`sit_cwm_reviewer_assigned` action fires on every assignment, so a few lines in
-a site plugin can send whatever you need today.
+= Can it stop unapproved content from being published? =
 
-= Can I change who is allowed to approve content? =
+Yes, once you turn it on. Under **Editorial Workflow → Settings → Publish
+gate**, each content type has one of three modes:
 
-Yes. The plugin adds six ordinary WordPress capabilities (`sit_cwm_*`), so any
-role or capability manager can move them around. For finer rules — "only the
-assigned reviewer may approve", say — the `sit_cwm_can_transition` filter has
-the final word on every decision.
+* **Off**: publishing works as it always has. Publishing and unpublishing are
+  still recorded in the activity history.
+* **Log only**: anyone allowed to publish still can, but publishing content
+  that has not been approved is recorded as a publish without approval.
+* **Enforce**: content cannot be published or scheduled until it has reached
+  Approved in the workflow. The editor offers Submit for Review instead of
+  Publish, and blocked attempts on existing content are recorded.
+
+Administrators can still publish, and that is recorded.
+
+The gate covers the block editor, the classic editor, Quick Edit, Bulk Edit,
+the REST API, WP-CLI, scheduled posts, and other plugins that publish through
+WordPress's own publishing functions. A scheduled post is checked again when
+its time comes, so content sent back for changes after it was scheduled does
+not go live.
+
+Code that writes `post_status` straight to the database is not covered. Imports
+run from WP-CLI need `--user=<an administrator>` when the gate is set to
+Enforce. Making content private is not gated.
+
+= Will turning on the gate unpublish anything? =
+
+No. Live content is never taken down: a published post that goes back through
+review stays published while it is edited. Content already scheduled is
+checked when its time comes; if it is not approved by then, it is put back to
+draft and its author sees a notice explaining why.
+
+= Does it send email? =
+
+Only if you turn it on. Under **Editorial Workflow → Settings → Email
+notifications** you can switch on email for five events. All five are off until
+you turn them on.
+
+* A reviewer is assigned: sent to the reviewer.
+* Content is submitted for review: sent to the assigned reviewer, or to nobody
+  if no reviewer is assigned.
+* Changes are requested: sent to the author.
+* Content is approved: sent to the author.
+* A workflow comment is added: sent to the author and the reviewer.
+
+Nobody is emailed about their own action, and nobody is emailed about content
+they are not allowed to read. The text of a workflow comment is only included
+for people allowed to read the workflow activity; everyone else is told that a
+comment was added, with a link to the content. Each email is written in the
+recipient's own language.
+
+= Who can approve content? =
+
+By default, Administrators and Editors. Authors and Contributors cannot.
+
+Approving is the WordPress capability `sit_cwm_approve_content`, so a
+role-editor plugin (for example Members or User Role Editor) can give it to, or
+take it from, any role. For finer rules ("only the assigned reviewer may
+approve", say), the `sit_cwm_can_transition` filter has the final word on every
+decision. Choosing roles from this plugin's own settings is not part of the free
+plugin.
 
 = Can I change the statuses or the order they go in? =
 
@@ -166,7 +243,9 @@ all with JSON schemas, and usable with application passwords.
 
 No. It makes no remote requests, loads nothing from a CDN, sets no cookies of
 its own and collects no usage data. Everything stays in your WordPress
-database.
+database. Email notifications, when you turn them on, go out through
+WordPress's own `wp_mail()`, the same way your site sends password-reset
+emails.
 
 = Where is the source code for the JavaScript? =
 
@@ -180,18 +259,26 @@ and then `npm run build` to rebuild the compiled files.
 
 The plugin stores, in your own database: the user ID of whoever makes each
 workflow change, the user ID of the assigned reviewer, the text of workflow
-comments and the time of each action. This information is visible to users who
-have the `sit_cwm_view_activity` capability. Nothing is sent off your site.
+comments and the time of each action. It also stores the user ID of whoever
+publishes or unpublishes managed content, or tries to publish it while the
+publish gate blocks them. This information is visible to users who have the
+`sit_cwm_view_activity` capability. Apart from the notification emails
+described below, nothing is sent off your site.
+
+When email notifications are turned on, the plugin sends email to the
+registered email addresses of your site's users, through WordPress's own
+`wp_mail()`. No external service is contacted by the plugin; mail is delivered
+however your site already sends email.
 
 == Screenshots ==
 
-1. The workflow sidebar in the block editor: status, reviewer, due date and the
-   transitions you are actually allowed to make.
-2. The admin dashboard, with server-side filtering, sorting and search.
-3. The activity timeline: every change, who made it and when.
-4. Bulk actions across a selection of posts.
-5. The settings screen, for choosing which post types have a workflow.
-6. The workflow box in the classic editor.
+1. The editor sidebar with the "Publishing is locked" notice: the content is
+   not approved yet, so the gate blocks publishing.
+2. The activity timeline, showing content published while it was still at
+   Review, and a publish the gate blocked.
+3. The settings screen, with the Publish gate and Email notifications sections.
+4. The admin dashboard, with server-side filtering, sorting and search.
+5. The workflow box in the classic editor.
 
 == Changelog ==
 

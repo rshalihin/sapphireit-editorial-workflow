@@ -13,12 +13,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * The six `sit_cwm_*` capabilities and their default role grants (D5).
+ * The `sit_cwm_*` capabilities and their default role grants (D5, E9).
  *
  * The constants may be read anywhere, but `add_caps()` and `remove_caps()`
  * run only from activation and uninstall: runtime code checks capabilities
- * (through PermissionManager), it never manages them. This is also the only
- * place in the plugin where role names appear.
+ * (through PermissionManager), it never manages them. The one runtime write
+ * is `maybe_upgrade()`, which applies a later revision's grants once to sites
+ * updated without reactivation. This is also the only place in the plugin
+ * where role names appear.
  *
  * @since 1.0.0
  */
@@ -73,6 +75,31 @@ final class Capabilities {
 	const VIEW_ACTIVITY = 'sit_cwm_view_activity';
 
 	/**
+	 * Publish managed content that is not approved, while a publish gate is
+	 * on. Every use is recorded.
+	 *
+	 * @since 1.1.0
+	 * @var string
+	 */
+	const BYPASS_PUBLISH_GATE = 'sit_cwm_bypass_publish_gate';
+
+	/**
+	 * Current revision of the default grants. 1.0.0 is revision 1.
+	 *
+	 * @since 1.1.0
+	 * @var int
+	 */
+	const REVISION = 2;
+
+	/**
+	 * Option holding the grant revision a site has received (not autoloaded).
+	 *
+	 * @since 1.1.0
+	 * @var string
+	 */
+	const REVISION_OPTION = 'sit_cwm_caps_revision';
+
+	/**
 	 * All plugin capabilities.
 	 *
 	 * @since 1.0.0
@@ -87,6 +114,26 @@ final class Capabilities {
 			self::REVIEW_CONTENT,
 			self::APPROVE_CONTENT,
 			self::VIEW_ACTIVITY,
+			self::BYPASS_PUBLISH_GATE,
+		);
+	}
+
+	/**
+	 * Grants each revision added on top of the previous one (E9): revision =>
+	 * role slug => capabilities.
+	 *
+	 * Revision 1 (1.0.0) is the original `role_map()` and is never listed: a
+	 * site at revision 1 already received it at activation.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return array<int, array<string, string[]>>
+	 */
+	public static function revision_grants(): array {
+		return array(
+			2 => array(
+				'administrator' => array( self::BYPASS_PUBLISH_GATE ),
+			),
 		);
 	}
 
@@ -170,5 +217,65 @@ final class Capabilities {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Applies the grants of every revision newer than the site's, once.
+	 *
+	 * Hooked on `plugins_loaded`, so a site updated from 1.0.0 without
+	 * reactivation receives new capabilities on its next request. Only the
+	 * listed grants are applied, never `add_caps()`, so capabilities a site
+	 * owner removed are not restored. A site without the option is at
+	 * revision 1, because 1.0.0 never wrote it.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public static function maybe_upgrade(): void {
+		$stored = (int) get_option( self::REVISION_OPTION, 1 );
+
+		if ( $stored >= self::REVISION ) {
+			return;
+		}
+
+		$grants = self::revision_grants();
+		ksort( $grants );
+
+		foreach ( $grants as $revision => $role_grants ) {
+			if ( $revision <= $stored || $revision > self::REVISION ) {
+				continue;
+			}
+
+			foreach ( $role_grants as $role_name => $capabilities ) {
+				$role = get_role( $role_name );
+
+				if ( null === $role ) {
+					continue;
+				}
+
+				foreach ( $capabilities as $capability ) {
+					if ( ! $role->has_cap( $capability ) ) {
+						$role->add_cap( $capability );
+					}
+				}
+			}
+		}
+
+		self::mark_current();
+	}
+
+	/**
+	 * Records that the site holds the current revision's grants.
+	 *
+	 * Called right after `add_caps()` at activation, which already grants
+	 * every revision.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public static function mark_current(): void {
+		update_option( self::REVISION_OPTION, self::REVISION, false );
 	}
 }

@@ -59,6 +59,7 @@ function sit_cwm_uninstall_site() {
 	\Sit_Cwm\Workflow\Capabilities::remove_caps();
 
 	delete_option( 'sit_cwm_settings' );
+	delete_option( \Sit_Cwm\Workflow\Capabilities::REVISION_OPTION );
 
 	wp_cache_flush();
 }

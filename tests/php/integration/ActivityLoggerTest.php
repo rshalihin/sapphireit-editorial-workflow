@@ -68,9 +68,11 @@ final class ActivityLoggerTest extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
+		// Draft fixtures throughout: a published post would also get a
+		// `post_published` row from the booted publication logger.
 		$this->database = new Database();
 		$this->activity = new ActivityLogger( $this->database );
-		$this->post     = self::factory()->post->create();
+		$this->post     = self::factory()->post->create( array( 'post_status' => 'draft' ) );
 	}
 
 	/**
@@ -248,6 +250,84 @@ final class ActivityLoggerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The publication actions are part of the accepted set.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_publication_actions_are_registered() {
+		foreach ( ActivityLogger::PUBLICATION_ACTIONS as $action ) {
+			$this->assertTrue( $this->activity->is_valid_action( $action ), $action );
+		}
+	}
+
+	/**
+	 * A publication event stores the post statuses as old/new values and only
+	 * the whitelisted context keys.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_log_publication_event_stores_status_columns_and_whitelisted_context() {
+		$id = $this->activity->log_publication_event(
+			$this->post,
+			'post_published',
+			'draft',
+			'publish',
+			array(
+				'workflow_status' => 'review',
+				'gate_mode'       => 'off',
+				'source'          => 'rest',
+				'evil'            => '<b>x</b>',
+			),
+			7
+		);
+
+		$entry = $this->activity->get( $id );
+
+		$this->assertSame( 'draft', $entry->get_old_value() );
+		$this->assertSame( 'publish', $entry->get_new_value() );
+		$this->assertSame( 7, $entry->get_user_id() );
+		$this->assertSame(
+			array(
+				'workflow_status' => 'review',
+				'gate_mode'       => 'off',
+				'source'          => 'rest',
+			),
+			$entry->get_context()
+		);
+	}
+
+	/**
+	 * Only publication actions go through `log_publication_event()`.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_log_publication_event_rejects_non_publication_actions() {
+		$before = $this->row_count();
+
+		$this->assertSame( 0, $this->activity->log_publication_event( $this->post, 'comment_added', 'draft', 'publish', array() ) );
+		$this->assertSame( $before, $this->row_count() );
+	}
+
+	/**
+	 * Context values are reduced to keys.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_log_publication_event_sanitizes_context_values() {
+		$id = $this->activity->log_publication_event( $this->post, 'publish_gate_refused', 'draft', 'publish', array( 'layer' => 'Save<script>' ) );
+
+		$this->assertSame( 'savescript', $this->activity->get( $id )->get_context()['layer'] );
+	}
+
+	/**
 	 * Reads paginate, default to newest first, clamp page size and filter by
 	 * action; counts agree.
 	 *
@@ -321,7 +401,7 @@ final class ActivityLoggerTest extends WP_UnitTestCase {
 	public function test_get_for_posts_is_one_query() {
 		global $wpdb;
 
-		$posts = self::factory()->post->create_many( 2 );
+		$posts = self::factory()->post->create_many( 2, array( 'post_status' => 'draft' ) );
 
 		foreach ( array( '01', '02', '03' ) as $day ) {
 			$this->activity->log( $posts[0], 'status_changed', array( 'new_value' => $day, 'created_at' => "2026-09-{$day} 00:00:00" ) ); // phpcs:ignore WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound -- Compact fixture.
@@ -361,7 +441,7 @@ final class ActivityLoggerTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_permanent_delete_removes_rows_trash_does_not() {
-		$other = self::factory()->post->create();
+		$other = self::factory()->post->create( array( 'post_status' => 'draft' ) );
 
 		$this->activity->log( $this->post, 'status_changed' );
 		$this->activity->log( $this->post, 'comment_added', array( 'message' => 'Hi' ) );

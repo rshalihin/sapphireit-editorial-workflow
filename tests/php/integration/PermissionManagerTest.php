@@ -238,6 +238,19 @@ final class PermissionManagerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Only holders of the bypass capability (administrators by default) may
+	 * bypass the publish gate.
+	 *
+	 * @return void
+	 */
+	public function test_can_bypass_publish_gate_only_for_holders() {
+		$this->assertTrue( $this->permissions->can_bypass_publish_gate( $this->make_user( 'administrator' ) ) );
+		$this->assertFalse( $this->permissions->can_bypass_publish_gate( $this->make_user( 'editor' ) ) );
+		$this->assertFalse( $this->permissions->can_bypass_publish_gate( 0 ) );
+		$this->assertFalse( $this->permissions->can_bypass_publish_gate( 999999 ) );
+	}
+
+	/**
 	 * Capability map follows D5, is filterable, and unknown statuses fall back
 	 * to the manage capability.
 	 *

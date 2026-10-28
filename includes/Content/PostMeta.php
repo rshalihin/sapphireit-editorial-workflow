@@ -42,6 +42,14 @@ final class PostMeta implements Bootable {
 	const STATUS_LOCKED_CAPS = array( 'add_post_meta', 'edit_post_meta', 'delete_post_meta' );
 
 	/**
+	 * Meta keys no user may write through the meta API, by any route.
+	 *
+	 * @since 1.1.0
+	 * @var string[]
+	 */
+	const LOCKED_META_KEYS = array( PostRepository::META_STATUS, PostRepository::META_PUBLISH_BYPASS );
+
+	/**
 	 * Status registry.
 	 *
 	 * @since 1.0.0
@@ -106,7 +114,7 @@ final class PostMeta implements Bootable {
 	}
 
 	/**
-	 * Registers the three workflow meta keys for every enabled post type.
+	 * Registers the workflow meta keys for every enabled post type.
 	 *
 	 * @since 1.0.0
 	 *
@@ -190,6 +198,24 @@ final class PostMeta implements Bootable {
 				'auth_callback'     => array( $this, 'can_edit_due_date' ),
 			)
 		);
+
+		register_post_meta(
+			$post_type,
+			PostRepository::META_PUBLISH_BYPASS,
+			array(
+				'type'              => 'integer',
+				'description'       => __( 'User id that scheduled this post under the publish gate bypass; 0 when none.', 'sapphireit-editorial-workflow' ),
+				'single'            => true,
+				'default'           => 0,
+				'show_in_rest'      => false,
+				'sanitize_callback' => 'absint',
+				// Always false: only GateRecorder writes this key (E8), directly
+				// with update_post_meta(). See also lock_status_meta().
+				'auth_callback'     => static function () {
+					return false;
+				},
+			)
+		);
 	}
 
 	/**
@@ -223,7 +249,8 @@ final class PostMeta implements Bootable {
 	}
 
 	/**
-	 * Denies every meta capability on the workflow status key to every user.
+	 * Denies every meta capability on the locked keys (the workflow status and,
+	 * since 1.1.0, the publish gate bypass marker) to every user.
 	 *
 	 * `auth_callback => false` alone is not enough: on multisite, super admins
 	 * pass every capability check except `do_not_allow`. Hooked on
@@ -243,7 +270,7 @@ final class PostMeta implements Bootable {
 		if (
 			in_array( $cap, self::STATUS_LOCKED_CAPS, true )
 			&& isset( $args[1] )
-			&& PostRepository::META_STATUS === $args[1]
+			&& in_array( $args[1], self::LOCKED_META_KEYS, true )
 		) {
 			$caps[] = 'do_not_allow';
 		}

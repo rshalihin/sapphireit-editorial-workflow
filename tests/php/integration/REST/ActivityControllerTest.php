@@ -111,12 +111,13 @@ final class ActivityControllerTest extends WP_UnitTestCase {
 	 */
 	public function test_subscriber_is_forbidden() {
 		$post = $this->make_post( $this->make_user( 'author' ), 'publish' );
+		$rows = $this->activity->count_for_post( $post ); // Its publication row.
 
 		wp_set_current_user( $this->make_user( 'subscriber' ) );
 
 		$this->assert_error_response( $this->get_activity( $post ), 'sit_cwm_forbidden', 403 );
 		$this->assert_error_response( $this->post_comment( $post, array( 'message' => 'Hi' ) ), 'sit_cwm_forbidden', 403 );
-		$this->assertSame( 0, $this->activity->count_for_post( $post ) );
+		$this->assertSame( $rows, $this->activity->count_for_post( $post ) );
 	}
 
 	/**
@@ -217,7 +218,7 @@ final class ActivityControllerTest extends WP_UnitTestCase {
 		$this->assertSame( '1', $response->get_headers()['X-WP-Total'] );
 		$this->assertCount( 1, $data );
 		$this->assertSame(
-			array( 'id', 'action', 'action_label', 'old_value', 'old_label', 'new_value', 'new_label', 'message', 'created_at', 'created_at_human', 'user_id', 'user' ),
+			array( 'id', 'action', 'action_label', 'old_value', 'old_label', 'new_value', 'new_label', 'message', 'created_at', 'created_at_human', 'user_id', 'user', 'workflow_status', 'workflow_status_label', 'gate_reason' ),
 			array_keys( $data[0] )
 		);
 		$this->assertSame( $editor, $data[0]['user_id'] );
@@ -236,6 +237,103 @@ final class ActivityControllerTest extends WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'rita-private@example.org', (string) wp_json_encode( $assigned ) );
 
 		$this->assert_error_response( $this->get_activity( $post, array( 'action' => 'bogus' ) ), 'rest_invalid_param', 400 );
+	}
+
+	/**
+	 * Publication entries label their values as native post statuses and
+	 * expose the workflow status and gate reason from their context.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_publication_entry_exposes_post_status_labels_and_workflow_status() {
+		$admin = $this->make_user( 'administrator' );
+		$post  = $this->make_post( $admin );
+
+		$this->activity->log_publication_event(
+			$post,
+			'post_published',
+			'auto-draft',
+			'publish',
+			array(
+				'workflow_status' => 'review',
+				'gate_mode'       => 'log_only',
+			),
+			$admin
+		);
+		$this->activity->log_publication_event(
+			$post,
+			'publish_gate_bypassed',
+			'draft',
+			'publish',
+			array(
+				'workflow_status' => 'review',
+				'reason'          => 'log_only',
+			),
+			$admin
+		);
+
+		wp_set_current_user( $admin );
+
+		$data = $this->get_activity( $post )->get_data();
+
+		$this->assertSame( 'Published without approval', $data[0]['action_label'] );
+		$this->assertSame( 'log_only', $data[0]['gate_reason'] );
+		$this->assertSame( 'Draft', $data[0]['old_label'] );
+		$this->assertSame( 'Published', $data[1]['action_label'] );
+		$this->assertSame( 'New', $data[1]['old_label'] );
+		$this->assertSame( 'Published', $data[1]['new_label'] );
+		$this->assertSame( 'review', $data[1]['workflow_status'] );
+		$this->assertSame( 'Review', $data[1]['workflow_status_label'] );
+		$this->assertNull( $data[1]['gate_reason'] );
+	}
+
+	/**
+	 * 1.0 entries carry the three publication fields as null.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_legacy_entries_have_null_publication_fields() {
+		$admin = $this->make_user( 'administrator' );
+		$post  = $this->make_post( $admin );
+
+		$this->activity->log_status_change( $post, 'draft', 'writing', $admin );
+
+		wp_set_current_user( $admin );
+
+		$item = $this->get_activity( $post )->get_data()[0];
+
+		$this->assertNull( $item['workflow_status'] );
+		$this->assertNull( $item['workflow_status_label'] );
+		$this->assertNull( $item['gate_reason'] );
+	}
+
+	/**
+	 * `action=post_published` is a valid filter value and narrows the results.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_action_filter_accepts_publication_actions() {
+		$admin = $this->make_user( 'administrator' );
+		$post  = $this->make_post( $admin );
+
+		$this->activity->log_status_change( $post, 'draft', 'writing', $admin );
+		$this->activity->log_publication_event( $post, 'post_published', 'draft', 'publish', array( 'workflow_status' => 'approved' ), $admin );
+		$this->activity->log_publication_event( $post, 'post_unpublished', 'publish', 'draft', array( 'workflow_status' => 'approved' ), $admin );
+
+		wp_set_current_user( $admin );
+
+		$response = $this->get_activity( $post, array( 'action' => 'post_published' ) );
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( '1', $response->get_headers()['X-WP-Total'] );
+		$this->assertSame( array( 'post_published' ), array_column( $data, 'action' ) );
 	}
 
 	/**

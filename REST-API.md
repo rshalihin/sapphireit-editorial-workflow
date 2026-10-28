@@ -98,6 +98,10 @@ curl -sS -u "$CWM_AUTH" "$CWM_SITE/wp-json/sit-cwm/v1/posts/125/workflow" | jq
     "can_set_due_date": true,
     "can_comment": true,
     "can_view_activity": true
+  },
+  "publish_gate": {
+    "mode": "enforce",
+    "outcome": "refused"
   }
 }
 ```
@@ -107,6 +111,20 @@ curl -sS -u "$CWM_AUTH" "$CWM_SITE/wp-json/sit-cwm/v1/posts/125/workflow" | jq
 slug is no longer registered (a filter was removed); the default status is
 reported instead. `reviewer` is `null` when none is assigned, `due_date` is `""`
 when unset.
+
+### `publish_gate` (since 1.1)
+
+What the [publish gate](WORKFLOW.md#publishing-and-the-publish-gate) would do
+if **the current user** published this post now.
+
+| Field | Values |
+|---|---|
+| `mode` | `off`, `log_only`, `enforce`: the post type's gate mode |
+| `outcome` | `not_applicable`: the mode is `off`, or the post is already `publish`/`future` (the gate only judges a move *into* a published state). `allowed`: the workflow status passes the rule. `bypassed`: it does not pass, but the publish would go ahead and be recorded as a publish without approval (`log_only`, or `enforce` with `sit_cwm_bypass_publish_gate`). `refused`: `enforce`, and the user cannot bypass. |
+
+Like `capabilities`, it is a display hint for the editor's notice. The gate
+re-decides on the actual write. It appears on `GET` and `POST
+/posts/{post_id}/workflow` only, not on `GET /posts` rows or batch `items`.
 
 ---
 
@@ -200,7 +218,7 @@ plus `edit_post` on the post (`403`).
 | `post_id` | path | integer | required, ≥ 1 |
 | `page` | query | integer | ≥ 1, default `1` |
 | `per_page` | query | integer | 1–100, default `20` |
-| `action` | query | string | one of `status_changed`, `reviewer_assigned`, `reviewer_cleared`, `due_date_set`, `due_date_cleared`, `comment_added` |
+| `action` | query | string | one of `status_changed`, `reviewer_assigned`, `reviewer_cleared`, `due_date_set`, `due_date_cleared`, `comment_added`, `post_published`, `post_unpublished`, `publish_gate_refused`, `publish_gate_bypassed` |
 
 ### Example
 
@@ -230,7 +248,10 @@ X-WP-TotalPages: 6
     "created_at": "2026-09-16T14:22:08+00:00",
     "created_at_human": "18 hours ago",
     "user_id": 7,
-    "user": { "id": 7, "name": "Sam Idrissi", "avatar": "https://…" }
+    "user": { "id": 7, "name": "Sam Idrissi", "avatar": "https://…" },
+    "workflow_status": null,
+    "workflow_status_label": null,
+    "gate_reason": null
   },
   {
     "id": 411,
@@ -244,7 +265,27 @@ X-WP-TotalPages: 6
     "created_at": "2026-09-16T14:20:51+00:00",
     "created_at_human": "18 hours ago",
     "user_id": 4,
-    "user": { "id": 4, "name": "Dana Okafor", "avatar": "https://…" }
+    "user": { "id": 4, "name": "Dana Okafor", "avatar": "https://…" },
+    "workflow_status": null,
+    "workflow_status_label": null,
+    "gate_reason": null
+  },
+  {
+    "id": 409,
+    "action": "publish_gate_bypassed",
+    "action_label": "Published without approval",
+    "old_value": "draft",
+    "old_label": "Draft",
+    "new_value": "publish",
+    "new_label": "Published",
+    "message": "",
+    "created_at": "2026-09-16T09:02:13+00:00",
+    "created_at_human": "1 day ago",
+    "user_id": 1,
+    "user": { "id": 1, "name": "Site Admin", "avatar": "https://…" },
+    "workflow_status": "review",
+    "workflow_status_label": "Review",
+    "gate_reason": "capability"
   }
 ]
 ```
@@ -253,6 +294,28 @@ X-WP-TotalPages: 6
 rows; a non-zero `user_id` with `"user": null` means the account was deleted.
 `old_label`/`new_label` resolve slugs and user IDs to display names so a client
 does not have to.
+
+#### Publication entries (since 1.1)
+
+| `action` | `action_label` | `old_value` → `new_value` |
+|---|---|---|
+| `post_published` | Published | previous post status → `publish` |
+| `post_unpublished` | Unpublished | `publish` → new post status (including `trash`) |
+| `publish_gate_refused` | Publishing blocked | stored post status → attempted `publish`/`future` |
+| `publish_gate_bypassed` | Published without approval | stored post status → `publish` |
+
+For these four, `old_value`/`new_value` are **WordPress post statuses**, not
+workflow statuses, and `old_label`/`new_label` are post status labels (`new`
+and `auto-draft` are labelled "New"). `user_id` is `0` for scheduled
+publishing and for WP-CLI without `--user`.
+
+Every item carries three more fields, `null` for the 1.0 actions:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `workflow_status` | string \| null | The workflow status slug at the moment of the publication event |
+| `workflow_status_label` | string \| null | Its label |
+| `gate_reason` | string \| null | On `publish_gate_bypassed` only: `log_only`, `capability` (the bypass capability) or `error` (a gate layer failed open) |
 
 ---
 
@@ -555,6 +618,7 @@ Errors are standard WordPress `WP_Error` JSON:
 | `sit_cwm_comment_too_long` | **400** | Over 5000 characters. |
 | `sit_cwm_status_conflict` | **409** | `from` does not match the stored status; someone else moved the post. Nothing was written. |
 | `sit_cwm_update_failed` | **500** | The database write failed after every check passed. |
+| `sit_cwm_publish_gated` | **403** | Returned by core's `wp/v2` routes, not this namespace: the publish gate refused a create or update into `publish`/`future`. See [Core routes](#core-routes-wpv2). |
 | `rest_missing_callback_param` | **400** | A required argument is absent — including `from` when `status` is sent. |
 | `rest_invalid_param` | **400** | An argument failed its schema (type, `enum`, range, length). |
 
@@ -580,6 +644,38 @@ plugin's.
 
 Messages are generic by design. They never include post titles, content,
 usernames or email addresses.
+
+---
+
+## Core routes (`wp/v2`)
+
+The plugin adds no routes outside `sit-cwm/v1`, but when a post type's publish
+gate is set to `enforce` it changes two things about core's `wp/v2` post routes
+for that type:
+
+- **Create and update can return `sit_cwm_publish_gated` (403).** A request that
+  would move a post into `publish` or `future` while its workflow status is not
+  `approved`/`published`, by a user without `sit_cwm_bypass_publish_gate`, is
+  refused before anything is written:
+
+  ```json
+  {
+    "code": "sit_cwm_publish_gated",
+    "message": "This content has to be approved in the editorial workflow before it can be published.",
+    "data": { "status": 403 }
+  }
+  ```
+
+  Updating a post that is already `publish` is never gated, so a live post in
+  re-review can still be saved. A refusal on an existing post is recorded as
+  `publish_gate_refused`; a refused *create* is not, because no post exists yet.
+- **The `wp:action-publish` link is removed** from `context=edit` responses
+  when the gate would refuse this user. The block editor reads that link, so it
+  offers *Submit for Review* instead of *Publish*.
+
+In `log_only` neither happens: the write goes through, and when the post goes
+live the publish is recorded as `publish_gate_bypassed` with `gate_reason`
+`log_only`.
 
 ---
 

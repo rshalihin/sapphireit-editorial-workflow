@@ -290,6 +290,38 @@ npm run test:e2e:local -- --base-url=http://flow-manager.test
   build that must not change `assets/build/`, and E2E on a single leg with
   artifacts uploaded on failure.
 
+### Publish gate E2E
+
+The 1.1 acceptance matrix (publish gate, publication log, notifications) is
+proven end to end by these specs in `tests/e2e/`:
+
+| Spec | Covers |
+|---|---|
+| `publish-gate.spec.js` | Block editor: the locked notice, *Submit for Review* instead of *Publish*, bypass by an administrator, a live post in re-review staying live |
+| `publish-gate-classic.spec.js` | Classic editor and Quick Edit (activates the Classic Editor plugin for the file) |
+| `publication-log.spec.js` | A publish at Review logged with actor, time and workflow status while the gate is off |
+| `notifications.spec.js` | One mail per event to the right recipient; turning an event off stops it |
+| `settings-gate.spec.js` | The Publish gate and Email notifications sections of the settings screen |
+| `cli-matrix.spec.js` | WP-CLI: refused without `--user`, bypassed and recorded with `--user=admin`, `post create --post_status=publish` saved as a draft and recorded |
+
+They run with the rest of the suite (`npm run test:e2e`, or
+`npm run test:e2e:local` without Docker), except `cli-matrix.spec.js`. That
+spec shells out to WP-CLI and is **skipped unless `SIT_CWM_E2E_CLI` is set**.
+The variable holds the command prefix for `wp`:
+
+```sh
+# wp-env
+SIT_CWM_E2E_CLI="npx wp-env run tests-cli wp" \
+  npx wp-scripts test-playwright tests/e2e/cli-matrix.spec.js
+
+# a local site, without Docker
+SIT_CWM_E2E_CLI="wp --path=/path/to/site" \
+  npm run test:e2e:local -- tests/e2e/cli-matrix.spec.js
+```
+
+The prefix must reach the same site and database the browser specs use, or the
+spec's assertions read a different site than the one it changed.
+
 ### Coverage
 
 ```sh

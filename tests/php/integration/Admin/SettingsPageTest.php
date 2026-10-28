@@ -15,6 +15,7 @@ use Sit_Cwm\Content\PostRepository;
 use Sit_Cwm\Core\Container;
 use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
+use Sit_Cwm\Notifications\NotificationEvents;
 use Sit_Cwm\Tests\TestCase;
 use Sit_Cwm\Tests\Traits\CreatesWorkflowPosts;
 use Sit_Cwm\Workflow\Capabilities;
@@ -198,6 +199,8 @@ final class SettingsPageTest extends TestCase {
 			array(
 				'post_types'               => array( 'post' ),
 				'delete_data_on_uninstall' => true,
+				'publish_gate'             => array(),
+				'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
 			),
 			$clean
 		);
@@ -234,6 +237,8 @@ final class SettingsPageTest extends TestCase {
 			array(
 				'post_types'               => array(),
 				'delete_data_on_uninstall' => false,
+				'publish_gate'             => array(),
+				'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
 			),
 			$this->page->sanitize( null )
 		);
@@ -252,7 +257,345 @@ final class SettingsPageTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( array( 'post_types', 'delete_data_on_uninstall' ), array_keys( $clean ) );
+		$this->assertSame( array( 'post_types', 'delete_data_on_uninstall', 'publish_gate', 'notifications' ), array_keys( $clean ) );
+	}
+
+	/**
+	 * A programmatic partial save through the option API, while the setting
+	 * is registered, keeps the gate modes and toggles it does not mention.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_programmatic_save_keeps_other_gate_modes_and_toggles() {
+		$this->page->register_settings();
+
+		$this->assertTrue(
+			$this->store->update(
+				array(
+					'publish_gate'  => array( 'post' => 'enforce' ),
+					'notifications' => array( 'approved' => true ),
+				)
+			)
+		);
+		$this->assertTrue( $this->store->update( array( 'publish_gate' => array( 'page' => 'log_only' ) ) ) );
+
+		$this->assertSame( array( 'page' => 'log_only' ), $this->store->gate_modes() );
+		$this->assertTrue( $this->store->is_notification_enabled( 'approved' ) );
+		$this->assertFalse( $this->store->is_notification_enabled( 'comment_added' ) );
+	}
+
+	/**
+	 * The publish gate and notifications sections and fields are registered.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_sections_and_fields_are_registered() {
+		global $wp_settings_sections, $wp_settings_fields;
+
+		$this->page->register_settings();
+
+		$this->assertArrayHasKey( SettingsPage::SECTION_GATE, $wp_settings_sections[ SettingsPage::MENU_SLUG ] );
+		$this->assertArrayHasKey( SettingsPage::SECTION_NOTIFICATIONS, $wp_settings_sections[ SettingsPage::MENU_SLUG ] );
+		$this->assertSame( 'sit_cwm_publish_gate', SettingsPage::SECTION_GATE );
+		$this->assertSame( 'sit_cwm_notifications', SettingsPage::SECTION_NOTIFICATIONS );
+		$this->assertArrayHasKey( 'sit_cwm_publish_gate_modes', $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION_GATE ] );
+		$this->assertArrayHasKey( 'sit_cwm_notification_events', $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION_NOTIFICATIONS ] );
+	}
+
+	/**
+	 * One labelled select per enabled post type, with the stored mode selected.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_gate_field_renders_one_select_per_enabled_type_with_current_value() {
+		$this->assertTrue( $this->store->update( array( 'publish_gate' => array( 'page' => 'log_only' ) ) ) );
+
+		ob_start();
+		$this->page->render_publish_gate_field();
+		$html = ob_get_clean();
+
+		$this->assertStringContainsString( 'name="sit_cwm_settings[publish_gate][post]"', $html );
+		$this->assertStringContainsString( 'name="sit_cwm_settings[publish_gate][page]"', $html );
+		$this->assertStringContainsString( '<label for="sit-cwm-gate-post">', $html );
+		$this->assertStringContainsString( '<label for="sit-cwm-gate-page">', $html );
+		$this->assertStringContainsString( 'id="sit-cwm-gate-page"', $html );
+		$this->assertSame( 2, preg_match_all( '/\sselected=/', $html ), 'one selected option per select' );
+		$this->assertMatchesRegularExpression( '/name="sit_cwm_settings\[publish_gate\]\[page\]">(?:(?!<\/select>).)*<option value="log_only"\s+selected/s', $html );
+		$this->assertMatchesRegularExpression( '/name="sit_cwm_settings\[publish_gate\]\[post\]">(?:(?!<\/select>).)*<option value="off"\s+selected/s', $html );
+		$this->assertStringContainsString( '>Enforce</option>', $html );
+	}
+
+	/**
+	 * With no enabled types there is nothing to choose, and the field says so.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_gate_field_without_enabled_types_explains_why() {
+		$this->assertTrue( $this->store->update( array( 'post_types' => array() ) ) );
+
+		ob_start();
+		$this->page->render_publish_gate_field();
+		$html = ob_get_clean();
+
+		$this->assertStringNotContainsString( '<select', $html );
+		$this->assertStringContainsString( 'Enable a content type above first.', $html );
+	}
+
+	/**
+	 * Every event gets a checkbox, all unchecked on a fresh install.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_notifications_field_renders_every_event_unchecked_by_default() {
+		ob_start();
+		$this->page->render_notifications_field();
+		$html = ob_get_clean();
+
+		foreach ( NotificationEvents::all() as $event ) {
+			$this->assertStringContainsString( 'name="sit_cwm_settings[notifications][' . $event . ']"', $html );
+		}
+
+		$this->assertStringContainsString( '<legend class="screen-reader-text">', $html );
+		$this->assertStringNotContainsString( 'checked', $html );
+	}
+
+	/**
+	 * A stored toggle renders checked.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_notifications_field_checks_enabled_events() {
+		$this->assertTrue( $this->store->update( array( 'notifications' => array( 'approved' => true ) ) ) );
+
+		ob_start();
+		$this->page->render_notifications_field();
+		$html = ob_get_clean();
+
+		$this->assertMatchesRegularExpression( '/name="sit_cwm_settings\[notifications\]\[approved\]" value="1"\s+checked=/', $html );
+		$this->assertSame( 1, substr_count( $html, 'checked=' ) );
+	}
+
+	/**
+	 * Valid modes and toggles survive; an unchecked box is off.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_keeps_valid_modes_and_toggles() {
+		$clean = $this->page->sanitize(
+			array(
+				'post_types'    => array( 'post', 'page' ),
+				'publish_gate'  => array(
+					'post' => 'enforce',
+					'page' => 'off',
+				),
+				'notifications' => array( 'approved' => '1' ),
+			)
+		);
+
+		$this->assertSame(
+			array(
+				'post' => 'enforce',
+				'page' => 'off',
+			),
+			$clean['publish_gate']
+		);
+		$this->assertTrue( $clean['notifications']['approved'] );
+		$this->assertFalse( $clean['notifications']['comment_added'] );
+		$this->assertSame( NotificationEvents::all(), array_keys( $clean['notifications'] ) );
+		$this->assertEmpty( get_settings_errors( Settings::OPTION ) );
+	}
+
+	/**
+	 * Unknown modes and post types are dropped, and a message explains it.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_drops_bad_modes_and_unknown_types_with_a_settings_error() {
+		$clean = $this->page->sanitize(
+			array(
+				'post_types'   => array( 'post' ),
+				'publish_gate' => array(
+					'post'            => 'block',
+					'nonexistent_cpt' => 'enforce',
+					'attachment'      => 'enforce',
+					'page'            => array( 'enforce' ),
+				),
+			)
+		);
+
+		$this->assertSame( array(), $clean['publish_gate'] );
+		$this->assertContains( 'sit_cwm_unknown_publish_gate', array_column( get_settings_errors( Settings::OPTION ), 'code' ) );
+	}
+
+	/**
+	 * A scalar where the gate map is expected keeps the stored modes.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_scalar_gate_value_keeps_stored_modes() {
+		$this->assertTrue( $this->store->update( array( 'publish_gate' => array( 'post' => 'enforce' ) ) ) );
+
+		$clean = $this->page->sanitize(
+			array(
+				'post_types'   => array( 'post' ),
+				'publish_gate' => 'enforce',
+			)
+		);
+
+		$this->assertSame( array( 'post' => 'enforce' ), $clean['publish_gate'] );
+		$this->assertContains( 'sit_cwm_invalid_publish_gate', array_column( get_settings_errors( Settings::OPTION ), 'code' ) );
+	}
+
+	/**
+	 * A mode for a type disabled in the same save is kept; it is inert while
+	 * the type is disabled (E1).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_keeps_modes_for_types_disabled_in_the_same_save() {
+		$clean = $this->page->sanitize(
+			array(
+				'post_types'   => array( 'post' ),
+				'publish_gate' => array( 'page' => 'enforce' ),
+			)
+		);
+
+		$this->assertSame( array( 'post' ), $clean['post_types'] );
+		$this->assertSame( array( 'page' => 'enforce' ), $clean['publish_gate'] );
+	}
+
+	/**
+	 * A disabled type has no select on the form, so saving the form keeps its
+	 * stored mode, which applies again when the type is re-enabled. A type
+	 * that had a select gets exactly what was submitted.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_keeps_stored_modes_for_types_not_shown_on_the_form() {
+		$this->assertTrue(
+			$this->store->update(
+				array(
+					'post_types'   => array( 'post' ),
+					'publish_gate' => array(
+						'post' => 'enforce',
+						'page' => 'enforce',
+					),
+				)
+			)
+		);
+
+		// Saved while page is disabled: page keeps its mode, post takes the new one.
+		$clean = $this->page->sanitize(
+			array(
+				'post_types'   => array( 'post' ),
+				'publish_gate' => array( 'post' => 'log_only' ),
+			)
+		);
+
+		$this->assertSame(
+			array(
+				'post' => 'log_only',
+				'page' => 'enforce',
+			),
+			$clean['publish_gate']
+		);
+
+		// Re-enabled in the next save: the kept mode comes back with it.
+		$clean = $this->page->sanitize(
+			array(
+				'post_types'   => array( 'post', 'page' ),
+				'publish_gate' => array( 'post' => 'off' ),
+			)
+		);
+
+		$this->assertSame( array( 'post', 'page' ), $clean['post_types'] );
+		$this->assertSame(
+			array(
+				'post' => 'off',
+				'page' => 'enforce',
+			),
+			$clean['publish_gate']
+		);
+
+		// A type that had a select and was not submitted is not carried over.
+		$this->assertSame( array( 'page' => 'enforce' ), $this->page->sanitize( array( 'post_types' => array( 'post' ) ) )['publish_gate'] );
+		$this->assertTrue( $this->store->update( array( 'post_types' => array( 'post', 'page' ) ) ) );
+		$this->assertSame( array(), $this->page->sanitize( array( 'post_types' => array( 'post', 'page' ) ) )['publish_gate'] );
+	}
+
+	/**
+	 * Unknown events are ignored; scalar or forged toggles never fatal.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_ignores_unknown_notification_events() {
+		$clean = $this->page->sanitize(
+			array(
+				'notifications' => array(
+					'slack'         => '1',
+					'approved'      => array( '1' ),
+					'comment_added' => 'true',
+				),
+			)
+		);
+
+		$this->assertArrayNotHasKey( 'slack', $clean['notifications'] );
+		$this->assertFalse( $clean['notifications']['approved'] );
+		$this->assertTrue( $clean['notifications']['comment_added'] );
+
+		$this->assertSame(
+			array_fill_keys( NotificationEvents::all(), false ),
+			$this->page->sanitize( array( 'notifications' => '1' ) )['notifications']
+		);
+	}
+
+	/**
+	 * The new keys are saved through the same option group, so `options.php`
+	 * still requires the manage capability.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_saving_without_manage_cap_still_fails() {
+		$this->page->register();
+		$this->page->register_settings();
+
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core's hook, applied here the way options.php applies it.
+		$capability = apply_filters( 'option_page_capability_' . SettingsPage::OPTION_GROUP, 'manage_options' );
+
+		$this->assertSame( Capabilities::MANAGE_WORKFLOWS, $capability );
+		$this->assertArrayHasKey( Settings::OPTION, get_registered_settings() );
+
+		wp_set_current_user( self::fixture_user( 'editor' ) );
+		$this->assertFalse( current_user_can( $capability ) );
+
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+		$this->assertTrue( current_user_can( $capability ) );
 	}
 
 	/**
@@ -413,6 +756,11 @@ final class SettingsPageTest extends TestCase {
 		$this->assertMatchesRegularExpression( '/name="sit_cwm_settings\[post_types\]\[\]" value="page"\s+checked=\'checked\'/', $html );
 		$this->assertDoesNotMatchRegularExpression( '/value="post"\s+checked/', $html );
 		$this->assertStringContainsString( 'name="sit_cwm_settings[delete_data_on_uninstall]"', $html );
+		$this->assertStringContainsString( '<h2>Publish gate</h2>', $html );
+		$this->assertStringContainsString( '<h2>Email notifications</h2>', $html );
+		$this->assertStringContainsString( 'name="sit_cwm_settings[publish_gate][page]"', $html );
+		$this->assertStringNotContainsString( 'name="sit_cwm_settings[publish_gate][post]"', $html );
+		$this->assertStringContainsString( 'name="sit_cwm_settings[notifications][approved]"', $html );
 	}
 
 	/**
@@ -429,6 +777,8 @@ final class SettingsPageTest extends TestCase {
 
 		$this->assertNotNull( $tab );
 		$this->assertStringContainsString( 'Needs Changes', $tab['content'] );
+		$this->assertStringContainsString( 'Publish gate:', $tab['content'] );
+		$this->assertStringContainsString( 'Email notifications:', $tab['content'] );
 	}
 
 	/**
@@ -449,6 +799,8 @@ final class SettingsPageTest extends TestCase {
 		);
 
 		$this->activity->log_status_change( $page, 'writing', 'review', $admin );
+
+		$rows = $this->activity->count_for_post( $page );
 
 		$this->assertTrue( $this->store->update( array( 'post_types' => array( 'post' ) ) ) );
 
@@ -475,7 +827,7 @@ final class SettingsPageTest extends TestCase {
 
 			$this->assertSame( 'review', get_metadata_raw( 'post', $page, PostRepository::META_STATUS, true ) );
 			$this->assertSame( '2026-10-01', get_metadata_raw( 'post', $page, PostRepository::META_DUE_DATE, true ) );
-			$this->assert_activity_count( $page, 1 );
+			$this->assert_activity_count( $page, $rows );
 		} finally {
 			$meta->register_for_post_type( 'page' );
 		}

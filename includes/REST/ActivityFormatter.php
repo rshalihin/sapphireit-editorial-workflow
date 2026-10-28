@@ -11,6 +11,7 @@ namespace Sit_Cwm\REST;
 use DateTimeImmutable;
 use DateTimeZone;
 use Sit_Cwm\Activity\ActivityEntry;
+use Sit_Cwm\Activity\ActivityLogger;
 use Sit_Cwm\Workflow\StatusManager;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -43,6 +44,14 @@ final class ActivityFormatter {
 	 * @var string[]
 	 */
 	const DUE_DATE_ACTIONS = array( 'due_date_set', 'due_date_cleared' );
+
+	/**
+	 * Actions whose old/new values are native post statuses (E7).
+	 *
+	 * @since 1.1.0
+	 * @var string[]
+	 */
+	const PUBLICATION_ACTIONS = ActivityLogger::PUBLICATION_ACTIONS;
 
 	/**
 	 * Status registry.
@@ -95,36 +104,42 @@ final class ActivityFormatter {
 	 * REST item for one entry.
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Adds `workflow_status`, `workflow_status_label` and `gate_reason`.
 	 *
 	 * @param ActivityEntry $entry Entry.
 	 * @param array         $users User id => summary, from UserSummaries::load().
-	 * @return array{id: int, action: string, action_label: string, old_value: string|null, old_label: string|null, new_value: string|null, new_label: string|null, message: string, created_at: string, created_at_human: string, user_id: int, user: array|null}
+	 * @return array{id: int, action: string, action_label: string, old_value: string|null, old_label: string|null, new_value: string|null, new_label: string|null, message: string, created_at: string, created_at_human: string, user_id: int, user: array|null, workflow_status: string|null, workflow_status_label: string|null, gate_reason: string|null}
 	 */
 	public function format( ActivityEntry $entry, array $users ): array {
-		$action  = $entry->get_action();
-		$user_id = $entry->get_user_id();
-		$message = $entry->get_message();
-		$created = DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', $entry->get_created_at(), new DateTimeZone( 'UTC' ) );
+		$action          = $entry->get_action();
+		$user_id         = $entry->get_user_id();
+		$message         = $entry->get_message();
+		$created         = DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', $entry->get_created_at(), new DateTimeZone( 'UTC' ) );
+		$workflow_status = $this->context_string( $entry, 'workflow_status' );
 
 		return array(
-			'id'               => $entry->get_id(),
-			'action'           => $action,
-			'action_label'     => $this->action_label( $action ),
-			'old_value'        => $entry->get_old_value(),
-			'old_label'        => $this->value_label( $action, $entry->get_old_value(), $users ),
-			'new_value'        => $entry->get_new_value(),
-			'new_label'        => $this->value_label( $action, $entry->get_new_value(), $users ),
+			'id'                    => $entry->get_id(),
+			'action'                => $action,
+			'action_label'          => $this->action_label( $action ),
+			'old_value'             => $entry->get_old_value(),
+			'old_label'             => $this->value_label( $action, $entry->get_old_value(), $users ),
+			'new_value'             => $entry->get_new_value(),
+			'new_label'             => $this->value_label( $action, $entry->get_new_value(), $users ),
 			// Stored already sanitized; filtered again so a tampered row cannot inject markup.
-			'message'          => null === $message ? '' : wp_kses_post( $message ),
-			'created_at'       => false === $created ? '' : $created->format( DATE_ATOM ),
-			'created_at_human' => false === $created ? '' : sprintf(
+			'message'               => null === $message ? '' : wp_kses_post( $message ),
+			'created_at'            => false === $created ? '' : $created->format( DATE_ATOM ),
+			'created_at_human'      => false === $created ? '' : sprintf(
 				/* translators: %s: Human-readable time difference, e.g. "2 hours". */
 				__( '%s ago', 'sapphireit-editorial-workflow' ),
 				human_time_diff( $created->getTimestamp(), time() )
 			),
 			// Lets the timeline tell the system (0) from a deleted user (id without summary).
-			'user_id'          => $user_id,
-			'user'             => $user_id > 0 && isset( $users[ $user_id ] ) ? $users[ $user_id ] : null,
+			'user_id'               => $user_id,
+			'user'                  => $user_id > 0 && isset( $users[ $user_id ] ) ? $users[ $user_id ] : null,
+			// The workflow status at the time of a publication event (E7); null for other entries.
+			'workflow_status'       => $workflow_status,
+			'workflow_status_label' => null === $workflow_status ? null : $this->statuses->label( $workflow_status ),
+			'gate_reason'           => $this->context_string( $entry, 'reason' ),
 		);
 	}
 
@@ -138,12 +153,16 @@ final class ActivityFormatter {
 	 */
 	public function action_label( string $action ): string {
 		$core = array(
-			'status_changed'    => __( 'Status changed', 'sapphireit-editorial-workflow' ),
-			'reviewer_assigned' => __( 'Reviewer assigned', 'sapphireit-editorial-workflow' ),
-			'reviewer_cleared'  => __( 'Reviewer removed', 'sapphireit-editorial-workflow' ),
-			'due_date_set'      => __( 'Due date set', 'sapphireit-editorial-workflow' ),
-			'due_date_cleared'  => __( 'Due date removed', 'sapphireit-editorial-workflow' ),
-			'comment_added'     => __( 'Comment added', 'sapphireit-editorial-workflow' ),
+			'status_changed'        => __( 'Status changed', 'sapphireit-editorial-workflow' ),
+			'reviewer_assigned'     => __( 'Reviewer assigned', 'sapphireit-editorial-workflow' ),
+			'reviewer_cleared'      => __( 'Reviewer removed', 'sapphireit-editorial-workflow' ),
+			'due_date_set'          => __( 'Due date set', 'sapphireit-editorial-workflow' ),
+			'due_date_cleared'      => __( 'Due date removed', 'sapphireit-editorial-workflow' ),
+			'comment_added'         => __( 'Comment added', 'sapphireit-editorial-workflow' ),
+			'post_published'        => __( 'Published', 'sapphireit-editorial-workflow' ),
+			'post_unpublished'      => __( 'Unpublished', 'sapphireit-editorial-workflow' ),
+			'publish_gate_refused'  => __( 'Publishing blocked', 'sapphireit-editorial-workflow' ),
+			'publish_gate_bypassed' => __( 'Published without approval', 'sapphireit-editorial-workflow' ),
 		);
 
 		/**
@@ -188,6 +207,10 @@ final class ActivityFormatter {
 			return isset( $users[ $id ] ) ? $users[ $id ]['name'] : __( 'Deleted user', 'sapphireit-editorial-workflow' );
 		}
 
+		if ( in_array( $action, self::PUBLICATION_ACTIONS, true ) ) {
+			return $this->post_status_label( $value );
+		}
+
 		if ( in_array( $action, self::DUE_DATE_ACTIONS, true ) ) {
 			$utc  = new DateTimeZone( 'UTC' );
 			$date = DateTimeImmutable::createFromFormat( '!Y-m-d', $value, $utc );
@@ -199,5 +222,38 @@ final class ActivityFormatter {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * Label of a native post status; `new` and `auto-draft` read as "New".
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param string $status Post status slug.
+	 * @return string Label, or the slug when the status is not registered.
+	 */
+	private function post_status_label( string $status ): string {
+		if ( 'new' === $status || 'auto-draft' === $status ) {
+			return __( 'New', 'sapphireit-editorial-workflow' );
+		}
+
+		$object = get_post_status_object( $status );
+
+		return null !== $object && is_string( $object->label ) && '' !== $object->label ? $object->label : $status;
+	}
+
+	/**
+	 * A non-empty string from an entry's context.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param ActivityEntry $entry Entry.
+	 * @param string        $key   Context key.
+	 * @return string|null Null when absent, empty or not a string.
+	 */
+	private function context_string( ActivityEntry $entry, string $key ): ?string {
+		$context = $entry->get_context();
+
+		return isset( $context[ $key ] ) && is_string( $context[ $key ] ) && '' !== $context[ $key ] ? $context[ $key ] : null;
 	}
 }

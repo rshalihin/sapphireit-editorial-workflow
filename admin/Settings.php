@@ -10,6 +10,8 @@ namespace Sit_Cwm\Admin;
 
 use Sit_Cwm\Core\Interfaces\Bootable;
 use Sit_Cwm\Core\Settings as SettingsStore;
+use Sit_Cwm\Notifications\NotificationEvents;
+use Sit_Cwm\Publishing\PublishGate;
 use Sit_Cwm\Workflow\Capabilities;
 use Sit_Cwm\Workflow\PermissionManager;
 
@@ -18,8 +20,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * "Editorial Workflow → Settings": the post types the workflow applies to and
- * the uninstall data preference. Nothing more in v1.0.
+ * "Editorial Workflow → Settings": the post types the workflow applies to,
+ * the uninstall data preference, and (since 1.1.0) the publish gate mode per
+ * enabled post type and the email notification toggles.
  *
  * Built on the Settings API: the form posts to `options.php`, which verifies
  * the nonce printed by `settings_fields()` and the capability returned for the
@@ -55,6 +58,22 @@ final class Settings implements Bootable {
 	 * @var string
 	 */
 	const SECTION = 'sit_cwm_general';
+
+	/**
+	 * Publish gate settings section id.
+	 *
+	 * @since 1.1.0
+	 * @var string
+	 */
+	const SECTION_GATE = 'sit_cwm_publish_gate';
+
+	/**
+	 * Email notifications settings section id.
+	 *
+	 * @since 1.1.0
+	 * @var string
+	 */
+	const SECTION_NOTIFICATIONS = 'sit_cwm_notifications';
 
 	/**
 	 * Contextual help tab id.
@@ -171,9 +190,10 @@ final class Settings implements Bootable {
 	}
 
 	/**
-	 * Registers the setting, its section and its fields.
+	 * Registers the setting, its sections and their fields.
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Adds the publish gate and email notifications sections.
 	 *
 	 * @return void
 	 */
@@ -212,6 +232,36 @@ final class Settings implements Bootable {
 			self::MENU_SLUG,
 			self::SECTION
 		);
+
+		add_settings_section(
+			self::SECTION_GATE,
+			__( 'Publish gate', 'sapphireit-editorial-workflow' ),
+			array( $this, 'render_gate_section' ),
+			self::MENU_SLUG
+		);
+
+		add_settings_field(
+			'sit_cwm_publish_gate_modes',
+			__( 'Require approval to publish', 'sapphireit-editorial-workflow' ),
+			array( $this, 'render_publish_gate_field' ),
+			self::MENU_SLUG,
+			self::SECTION_GATE
+		);
+
+		add_settings_section(
+			self::SECTION_NOTIFICATIONS,
+			__( 'Email notifications', 'sapphireit-editorial-workflow' ),
+			array( $this, 'render_notifications_section' ),
+			self::MENU_SLUG
+		);
+
+		add_settings_field(
+			'sit_cwm_notification_events',
+			__( 'Send email when', 'sapphireit-editorial-workflow' ),
+			array( $this, 'render_notifications_field' ),
+			self::MENU_SLUG,
+			self::SECTION_NOTIFICATIONS
+		);
 	}
 
 	/**
@@ -224,11 +274,14 @@ final class Settings implements Bootable {
 	 *
 	 * Also runs for programmatic `update_option()` calls while the setting is
 	 * registered, so it must accept an already clean settings array unchanged.
+	 * Gate modes are kept per selectable post type and known mode; unchecked
+	 * notification boxes submit nothing, so a missing event is off.
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Sanitizes `publish_gate` and `notifications`.
 	 *
 	 * @param mixed $input Submitted value.
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>}
 	 */
 	public function sanitize( $input ): array {
 		$current = $this->settings->all();
@@ -250,6 +303,8 @@ final class Settings implements Bootable {
 		$clean['delete_data_on_uninstall'] = isset( $input['delete_data_on_uninstall'] )
 			&& is_scalar( $input['delete_data_on_uninstall'] )
 			&& rest_sanitize_boolean( $input['delete_data_on_uninstall'] );
+		$clean['publish_gate']             = $this->sanitize_gate_modes( $input['publish_gate'] ?? array(), $this->settings->gate_modes() );
+		$clean['notifications']            = $this->sanitize_notifications( $input['notifications'] ?? array() );
 
 		return $clean;
 	}
@@ -331,7 +386,7 @@ final class Settings implements Bootable {
 
 		printf(
 			'<p class="description">%s</p>',
-			esc_html__( 'Turning a content type off stops the workflow for it. Its workflow statuses, reviewers, due dates and activity history are kept, and come back if you turn it on again.', 'sapphireit-editorial-workflow' )
+			esc_html__( 'Turning a content type off stops the workflow for it. Its workflow statuses, reviewers, due dates, publish gate mode and activity history are kept, and come back if you turn it on again.', 'sapphireit-editorial-workflow' )
 		);
 	}
 
@@ -355,6 +410,116 @@ final class Settings implements Bootable {
 			esc_html__( 'Warning:', 'sapphireit-editorial-workflow' ),
 			esc_html__( 'this permanently removes the activity history, workflow comments, statuses, reviewers, due dates and the plugin’s capabilities. It cannot be undone. Deactivating the plugin never deletes data.', 'sapphireit-editorial-workflow' )
 		);
+	}
+
+	/**
+	 * Prints the publish gate section introduction.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function render_gate_section(): void {
+		printf(
+			'<p>%s</p>',
+			esc_html__( 'Decide whether content has to be approved in the workflow before it can be published. Off changes nothing. Log only lets people publish but records every publish that skipped approval. Enforce blocks publishing until the content is approved; administrators can still publish, and that is recorded.', 'sapphireit-editorial-workflow' )
+		);
+
+		printf(
+			'<p class="description">%s</p>',
+			esc_html__( 'Every publish and unpublish of workflow content is recorded in its activity history in all three modes. Changes written straight to the database by other code are not covered.', 'sapphireit-editorial-workflow' )
+		);
+	}
+
+	/**
+	 * Prints one gate mode select per enabled post type.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function render_publish_gate_field(): void {
+		$modes   = $this->settings->gate_modes();
+		$labels  = array(
+			PublishGate::MODE_OFF      => __( 'Off', 'sapphireit-editorial-workflow' ),
+			PublishGate::MODE_LOG_ONLY => __( 'Log only', 'sapphireit-editorial-workflow' ),
+			PublishGate::MODE_ENFORCE  => __( 'Enforce', 'sapphireit-editorial-workflow' ),
+		);
+		$printed = false;
+
+		foreach ( $this->settings->enabled_post_types() as $post_type ) {
+			$object = get_post_type_object( $post_type );
+
+			if ( null === $object ) {
+				continue;
+			}
+
+			$id      = 'sit-cwm-gate-' . $post_type;
+			$current = $modes[ $post_type ] ?? PublishGate::MODE_OFF;
+
+			printf(
+				'<p><label for="%1$s">%2$s</label> <select id="%1$s" name="%3$s">',
+				esc_attr( $id ),
+				esc_html( $object->labels->name ),
+				esc_attr( SettingsStore::OPTION . '[publish_gate][' . $post_type . ']' )
+			);
+
+			foreach ( $labels as $mode => $label ) {
+				printf(
+					'<option value="%1$s"%2$s>%3$s</option>',
+					esc_attr( $mode ),
+					selected( $current, $mode, false ),
+					esc_html( $label )
+				);
+			}
+
+			echo '</select></p>';
+
+			$printed = true;
+		}
+
+		if ( ! $printed ) {
+			printf( '<p>%s</p>', esc_html__( 'Enable a content type above first.', 'sapphireit-editorial-workflow' ) );
+		}
+	}
+
+	/**
+	 * Prints the email notifications section introduction.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function render_notifications_section(): void {
+		printf(
+			'<p>%s</p>',
+			esc_html__( 'Send an email when these workflow events happen. Nobody is emailed about their own actions, and comment text is only included for people allowed to read the activity history.', 'sapphireit-editorial-workflow' )
+		);
+	}
+
+	/**
+	 * Prints one checkbox per notification event.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function render_notifications_field(): void {
+		printf(
+			'<fieldset><legend class="screen-reader-text">%s</legend>',
+			esc_html__( 'Send email when', 'sapphireit-editorial-workflow' )
+		);
+
+		foreach ( NotificationEvents::labels() as $event => $label ) {
+			printf(
+				'<label><input type="checkbox" name="%1$s" value="1" %2$s /> %3$s</label><br />',
+				esc_attr( SettingsStore::OPTION . '[notifications][' . $event . ']' ),
+				checked( $this->settings->is_notification_enabled( $event ), true, false ),
+				esc_html( $label )
+			);
+		}
+
+		echo '</fieldset>';
 	}
 
 	/**
@@ -384,6 +549,7 @@ final class Settings implements Bootable {
 	 * Help tab markup: the status flow and who can do what by default (D5).
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Explains the publish gate and email notifications.
 	 *
 	 * @return string Escaped HTML.
 	 */
@@ -405,6 +571,8 @@ final class Settings implements Bootable {
 
 		$html .= '</ul>';
 		$html .= '<p>' . esc_html__( 'Every action also requires permission to edit that piece of content. See WORKFLOW.md in the plugin folder for the full reference.', 'sapphireit-editorial-workflow' ) . '</p>';
+		$html .= '<p>' . esc_html__( 'Publish gate: Off changes nothing, Log only records every publish that skipped approval, and Enforce blocks publishing until the content is approved. Administrators can still publish, and that is recorded.', 'sapphireit-editorial-workflow' ) . '</p>';
+		$html .= '<p>' . esc_html__( 'Email notifications: each event can be switched on separately. Nobody is emailed about their own actions, and comment text is only included for people allowed to read the activity history.', 'sapphireit-editorial-workflow' ) . '</p>';
 
 		return $html;
 	}
@@ -462,6 +630,81 @@ final class Settings implements Bootable {
 		}
 
 		return array_values( $types );
+	}
+
+	/**
+	 * Keeps the submitted publish gate entries for selectable post types and
+	 * known modes. Anything but a map keeps the stored modes.
+	 *
+	 * The form only has a select for enabled types, so a selectable type that
+	 * is not enabled keeps its stored mode unless the input carries one. The
+	 * mode stays inert while the type is disabled (E1) and applies again once
+	 * it is re-enabled, like the rest of its workflow data.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param mixed                 $value   Submitted value.
+	 * @param array<string, string> $current Stored modes, kept when the value is not a map.
+	 * @return array<string, string> Post type => mode.
+	 */
+	private function sanitize_gate_modes( $value, array $current ): array {
+		if ( ! is_array( $value ) ) {
+			$this->add_error( 'sit_cwm_invalid_publish_gate', __( 'The publish gate settings were not changed because the submitted value was invalid.', 'sapphireit-editorial-workflow' ) );
+
+			return $current;
+		}
+
+		$available = $this->settings->selectable_post_types();
+		$modes     = array();
+		$rejected  = false;
+
+		foreach ( $value as $post_type => $mode ) {
+			$slug = is_string( $post_type ) ? sanitize_key( $post_type ) : '';
+
+			if ( '' !== $slug && isset( $available[ $slug ] ) && in_array( $mode, PublishGate::MODES, true ) ) {
+				$modes[ $slug ] = $mode;
+			} else {
+				$rejected = true;
+			}
+		}
+
+		$shown = $this->settings->enabled_post_types();
+
+		foreach ( $current as $post_type => $mode ) {
+			if ( ! isset( $modes[ $post_type ] ) && isset( $available[ $post_type ] ) && ! in_array( $post_type, $shown, true ) ) {
+				$modes[ $post_type ] = $mode;
+			}
+		}
+
+		if ( $rejected ) {
+			$this->add_error( 'sit_cwm_unknown_publish_gate', __( 'Publish gate settings for unknown content types or modes were ignored.', 'sapphireit-editorial-workflow' ) );
+		}
+
+		return $modes;
+	}
+
+	/**
+	 * Turns the submitted checkboxes into a toggle for every known event.
+	 * Unchecked boxes submit nothing, so a missing or non-map value is off;
+	 * unknown events are ignored.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param mixed $value Submitted value.
+	 * @return array<string, bool> Every event => enabled.
+	 */
+	private function sanitize_notifications( $value ): array {
+		$toggles = array_fill_keys( NotificationEvents::all(), false );
+
+		if ( ! is_array( $value ) ) {
+			return $toggles;
+		}
+
+		foreach ( array_keys( $toggles ) as $event ) {
+			$toggles[ $event ] = isset( $value[ $event ] ) && is_scalar( $value[ $event ] ) && rest_sanitize_boolean( $value[ $event ] );
+		}
+
+		return $toggles;
 	}
 
 	/**

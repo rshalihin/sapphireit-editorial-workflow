@@ -7,9 +7,9 @@ explicitly asks.
 
 ## Pro scope
 
-Email notifications, Slack integration, editorial calendar, multiple
-workflows, role-configurable workflows, checklist gating, a workflow rules
-engine and advanced audit logs.
+Per-user notification preferences and digests, Slack integration, editorial
+calendar, multiple workflows, role-configurable workflows, checklist gating, a
+workflow rules engine and advanced audit logs.
 
 ## Plans
 

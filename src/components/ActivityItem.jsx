@@ -88,9 +88,11 @@ export function actorName( entry ) {
 /**
  * Translated sentence template for an entry.
  *
- * Placeholders are filled with `<actor />`, `<from />`, `<to />` and
- * `<label />` tags, which `createInterpolateElement` swaps for elements, so
- * names and labels never become part of the string being parsed.
+ * Placeholders are filled with `<actor />`, `<from />`, `<to />`,
+ * `<wfstatus />` and `<label />` tags, which `createInterpolateElement` swaps
+ * for elements, so names and labels never become part of the string being
+ * parsed. An entry missing a label its sentence needs gets the generic
+ * "actor: action label" sentence.
  *
  * @param {Object} entry Activity entry.
  * @return {string} Template.
@@ -99,6 +101,7 @@ function sentenceTemplate( entry ) {
 	const actor = '<actor />';
 	const from = '<from />';
 	const to = '<to />';
+	const wfstatus = '<wfstatus />';
 
 	switch ( entry.action ) {
 		case 'status_changed':
@@ -186,14 +189,96 @@ function sentenceTemplate( entry ) {
 				actor
 			);
 
-		default:
+		case 'post_published':
+			if ( ! entry.workflow_status_label ) {
+				break;
+			}
+
+			if ( entry.user_id === 0 && entry.old_value === 'future' ) {
+				return sprintf(
+					/* translators: 1: user name, usually "System", 2: workflow status, e.g. "Approved" */
+					__(
+						'%1$s published this on schedule while it was at %2$s',
+						'sapphireit-editorial-workflow'
+					),
+					actor,
+					wfstatus
+				);
+			}
+
 			return sprintf(
-				/* translators: 1: user name, 2: activity label, e.g. "Status changed" */
-				__( '%1$s: %2$s', 'sapphireit-editorial-workflow' ),
+				/* translators: 1: user name, 2: workflow status, e.g. "Review" */
+				__(
+					'%1$s published this while it was at %2$s',
+					'sapphireit-editorial-workflow'
+				),
 				actor,
-				'<label />'
+				wfstatus
+			);
+
+		case 'post_unpublished':
+			if ( ! entry.new_label ) {
+				break;
+			}
+
+			return sprintf(
+				/* translators: 1: user name, 2: new post status, e.g. "Draft" */
+				__(
+					'%1$s unpublished this (now %2$s)',
+					'sapphireit-editorial-workflow'
+				),
+				actor,
+				to
+			);
+
+		case 'publish_gate_refused':
+			if ( ! entry.workflow_status_label ) {
+				break;
+			}
+
+			return sprintf(
+				/* translators: 1: user name, 2: workflow status, e.g. "Writing" */
+				__(
+					'Publishing by %1$s was blocked: it was at %2$s, not approved',
+					'sapphireit-editorial-workflow'
+				),
+				actor,
+				wfstatus
+			);
+
+		case 'publish_gate_bypassed':
+			if ( entry.gate_reason === 'error' ) {
+				return sprintf(
+					/* translators: %s: user name */
+					__(
+						'%s published this without the approval check (internal error)',
+						'sapphireit-editorial-workflow'
+					),
+					actor
+				);
+			}
+
+			if ( ! entry.workflow_status_label ) {
+				break;
+			}
+
+			return sprintf(
+				/* translators: 1: user name, 2: workflow status, e.g. "Draft" */
+				__(
+					'%1$s published this without approval (it was at %2$s)',
+					'sapphireit-editorial-workflow'
+				),
+				actor,
+				wfstatus
 			);
 	}
+
+	return sprintf(
+		/* translators: 1: user name, 2: activity label, e.g. "Status changed" */
+		__( '%1$s: %2$s', 'sapphireit-editorial-workflow' ),
+		actor,
+		'<label />'
+	);
 }
 
 /**
@@ -240,6 +325,7 @@ export default function ActivityItem( { entry } ) {
 		),
 		from: <strong>{ entry.old_label || '' }</strong>,
 		to: <strong>{ entry.new_label || '' }</strong>,
+		wfstatus: <strong>{ decodeText( entry.workflow_status_label ) }</strong>,
 		label: <span>{ entry.action_label || entry.action || '' }</span>,
 	} );
 	const message = toPlainText( entry.message );

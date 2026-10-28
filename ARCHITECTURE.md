@@ -12,6 +12,9 @@ the code.
 - [The dependency graph](#the-dependency-graph)
 - [The `transition()` pipeline](#the-transition-pipeline)
 - [Structure vs. authorization](#structure-vs-authorization)
+- [Publishing](#publishing) *(publish gate and publication log)*
+- [Notifications](#notifications)
+- [Hooks added in 1.1](#hooks-added-in-11)
 - [Data model](#data-model)
 - [Known trade-offs](#known-trade-offs)
 - [Authorization](#authorization-sit_cwmworkflowpermissionmanager) *(detail)*
@@ -132,6 +135,11 @@ because a plugin that silently publishes content would be worse than one that
 does not. Turning `approved` into a scheduled publish is a Pro feature — it can
 be built entirely on the `sit_cwm_status_changed` hook, without touching core.
 
+The [publish gate](#publishing) (1.1) keeps this rule. It reads the workflow
+status to decide whether WordPress may publish, but it never writes either
+field into the other: a refused publish leaves the post a draft, and a publish
+never moves the workflow.
+
 ---
 
 ## Class-by-class
@@ -155,7 +163,7 @@ be built entirely on the `sit_cwm_status_changed` hook, without touching core.
 | `StatusManager` | The authoritative status registry. Nothing else hard-codes a slug. Filterable (`sit_cwm_statuses`) with the result validated, so a broken extension cannot corrupt core. Also the shared status sanitizer. |
 | `TransitionManager` | Pure graph structure: `is_valid( $from, $to )`, `targets_for()`, `describe()`. No permissions, no database, no post state. |
 | `PermissionManager` | Every authorization question in the plugin. The only class that answers "may this user…". Uses `user_can( $user_id, … )` throughout so it works for arbitrary users and inside bulk loops. |
-| `Capabilities` | The six capability constants and the **only** place role names appear. `add_caps()`/`remove_caps()` run from activation and uninstall only. |
+| `Capabilities` | The seven capability constants and the **only** place role names appear. `add_caps()`/`remove_caps()` run from activation and uninstall only. `maybe_upgrade()` (on `plugins_loaded`, 20) applies only the grants of capability revisions newer than the stored `sit_cwm_caps_revision`, so 1.0 sites get the bypass capability without reactivating and caps a site owner removed are never restored. |
 | `WorkflowManager` | The orchestrator, and the only writer. Combines the three above, persists through `PostRepository`, logs through `ActivityLogger`, fires the `sit_cwm_*` actions, and produces the REST-shaped read model (`get_workflow()`). |
 | `BulkProcessor` | Loops up to 100 posts, calling the *same* `WorkflowManager` method a single request would. No bulk SQL, no hoisted permission check. |
 
@@ -163,7 +171,7 @@ be built entirely on the `sit_cwm_status_changed` hook, without touching core.
 
 | Class | Responsibility |
 |---|---|
-| `PostMeta` | `register_post_meta()` for the three keys, with `type`, `sanitize_callback`, `auth_callback`, `show_in_rest` and `context: [ 'edit' ]`. Also locks `_sit_cwm_status` against direct meta writes via `map_meta_cap`, so the state machine cannot be bypassed through core's meta endpoint. |
+| `PostMeta` | `register_post_meta()` for the plugin's keys, with `type`, `sanitize_callback`, `auth_callback`, `show_in_rest` and `context: [ 'edit' ]`. Also locks `_sit_cwm_status` and `_sit_cwm_publish_bypass_by` (`LOCKED_META_KEYS`) against direct meta writes via `map_meta_cap`, so neither the state machine nor the gate can be bypassed through core's meta endpoint. |
 | `PostRepository` | All meta reads and writes, the due-date sanitizer, `is_managed()`, and the dashboard's `WP_Query`. The only place that knows the meta keys are strings. |
 
 ### `includes/Activity/`
@@ -319,6 +327,207 @@ who is not logged in.
 
 ---
 
+## Publishing
+
+`includes/Publishing/` adds the publish gate and the publication log (1.1). It
+sits **beside** the workflow engine and never changes it: no class in
+`Workflow/` knows the gate exists, and publishing never writes
+`_sit_cwm_status`. The editorial rules for the gate (modes, the rule, the
+carve-out for live content, the uncovered paths) are in
+[WORKFLOW.md](WORKFLOW.md#publishing-and-the-publish-gate). This section is the
+mechanism.
+
+```
+            ┌─────────────── PublishGate ───────────────┐
+            │ pure: mode + rule + bypass → GateDecision │
+            └──▲──────────────▲──────────────────▲──────┘
+               │ asks         │ asks             │ asks
+       ┌───────┴─────┐ ┌──────┴──────┐  ┌────────┴────────┐
+       │ RestLayer   │ │ SaveLayer   │  │ ScheduleLayer   │
+       │ (Layer A)   │ │ (Layer B)   │  │ (C + backstop)  │
+       └───────┬─────┘ └──────┬──────┘  └────────┬────────┘
+               └──── GateLedger (per request) ───┘
+                              │
+                        GateRecorder ──► ActivityLogger, RefusalNotices
+```
+
+- `PublishGate` writes nothing and hooks nothing. It resolves the post type's
+  mode, checks the stored workflow status against `approved`/`published`, and
+  asks `PermissionManager::can_bypass_publish_gate()`. It computes on every call;
+  there is deliberately no per-request cache that is not keyed by post id.
+- The **layers** decide whether a write goes ahead. `GateRecorder` only records
+  what they decided.
+- `GateLedger` stops two layers judging (or recording) the same write twice: a
+  `wp/v2` update passes Layer A and then Layer B inside `wp_insert_post()`.
+
+### Enforcement layers
+
+| Layer | Class | Hook (priority) | Covers |
+|---|---|---|---|
+| A-link | `Layers\RestLayer` | `rest_prepare_{post_type}` (10) | Removes `wp:action-publish` when the gate would refuse, so the block editor shows **Submit for Review** with no JavaScript from the plugin |
+| A-rest | `Layers\RestLayer` | `rest_pre_insert_{post_type}` (10) | `wp/v2` create/update into `publish`/`future` → `WP_Error` `sit_cwm_publish_gated`, HTTP 403 |
+| A-cap | `Layers\RestLayer` | `map_meta_cap` (10) | Any code that checks `current_user_can( 'publish_post', $id )` |
+| B | `Layers\SaveLayer` | `wp_insert_post_data` (10) | Classic editor, Quick Edit, Bulk Edit, `wp_insert_post()` / `wp_update_post()` from anywhere, including WP-CLI `wp post create\|update` |
+| C | `Layers\ScheduleLayer` | `publish_future_post` (5) | The scheduled-publish cron, **before** core's `check_and_publish_future_post()` (10), so a refused post never goes live |
+| Backstop | `Layers\ScheduleLayer` | `transition_post_status` (20) | Anything else that makes a post `publish` without passing B or C, e.g. `wp_publish_post()` on a draft. It reverts after the fact |
+
+> **Why not just filter the `publish_post` meta capability?** That was the
+> original plan, and it would block almost nothing. Verified against WordPress
+> 7.1.3 core: `WP_REST_Posts_Controller::handle_status_param()` and
+> `get_available_actions()` (which builds the `wp:action-publish` link the block
+> editor reads) check the **post-type primitive**
+> `$post_type->cap->publish_posts`, with no post id. So does
+> `_wp_translate_postdata()`, which the classic editor, Quick Edit and Bulk Edit
+> use. With no post id, `map_meta_cap` for `publish_post` never runs on those
+> paths. A-cap is therefore only the layer for *third-party* code that asks the
+> meta capability. The block editor, REST and classic paths are covered by
+> A-link, A-rest and B, and the layer never touches the post-type primitive.
+
+A layer judges a write only when the post type is workflow-enabled with a mode
+other than `off`, the write moves the post **into** `publish` (from anything
+else) or `future` (from anything but `publish`/`future`), and it is not an
+autosave or revision. This is what keeps a live post in re-review live.
+
+### On refusal
+
+| Layer | On refusal |
+|---|---|
+| A-link | Link removed. Not recorded: this is display, not an attempt. |
+| A-rest | `WP_Error( 'sit_cwm_publish_gated', …, array( 'status' => 403 ) )`; refusal recorded if the post already exists. |
+| A-cap | `do_not_allow` appended. Not recorded. |
+| B | `post_status` set to the stored status if that is `draft` or `pending`, else `draft`; refusal recorded; admin notice queued for the actor. |
+| C | `wp_update_post( array( 'ID' => $id, 'post_status' => 'draft' ) )` while the ledger is marked as reverting; refusal recorded as user `0`; admin notice queued for the post author. |
+| Backstop | Revert to `draft` while reverting; refusal recorded; admin notice queued for the actor, or the author when the actor is `0`. |
+
+- **Bypass recording.** A bypass is recorded when the post actually goes live,
+  never when it is only scheduled. A bypass-holder who schedules a failing post
+  in `enforce` leaves their id in `_sit_cwm_publish_bypass_by`; Layer C honours
+  it at go-live only if that user still holds `sit_cwm_bypass_publish_gate`.
+  The marker is deleted whenever the post leaves `future`.
+- **New posts.** A post being inserted has no id while `wp_insert_post_data`
+  runs. Layer B holds its decision in the ledger, and
+  `GateRecorder::release_pending()` records it on the post's first
+  `transition_post_status`, under the id it ended up with.
+- **Who is judged.** The current user everywhere except Layer C, which judges
+  user `0` (no bypass) unless the scheduled-bypass marker applies. WP-CLI
+  without `--user` and cron imports are user `0` too, so `enforce` refuses them.
+- **Fail open.** Every layer callback runs inside `try { … } catch ( Throwable
+  $e )`. On an exception the layer returns its input unchanged, so the publish
+  proceeds, and calls `GateRecorder::failed_open()`. That writes a best-effort
+  `publish_gate_bypassed` row with reason `error` (no `gate_mode`: resolving it
+  may be what failed), fires `sit_cwm_publish_gate_failed`, and calls
+  `error_log()` under `WP_DEBUG`. The recorder's own work is wrapped as well, so
+  a failing recorder never blocks a publish.
+- **Notices.** `RefusalNotices` keeps a per-user transient of refused post ids
+  and prints them on that user's next admin screen. The block editor shows the
+  REST error itself, so A-rest queues none.
+
+### Publication logging
+
+`PublicationLogger` records, for workflow-enabled post types and **in every gate
+mode including `off`**, `post_published` (into `publish` from anything else)
+and `post_unpublished` (out of `publish`, including to the trash), with the
+workflow status at that moment.
+
+Several callbacks share `transition_post_status`, and their order is part of
+the contract:
+
+| Priority | Callback | Why |
+|---|---|---|
+| 5 | `GateRecorder::release_pending` | Records a held new-post decision before the publication row |
+| 10 | `PublicationLogger::handle_transition` | |
+| 20 | `ScheduleLayer::backstop` | Its revert nests a `publish → draft` transition, so it must run after the logger. The log then reads published → refused → unpublished, in that order |
+| 30 | `ScheduleLayer::forget_schedule_bypass` | |
+
+### Gate state for the UI
+
+`PublishGate::describe( $post_id, $user_id )` gives the workflow REST response
+its `publish_gate` object (`mode`, `outcome`). `outcome` is `not_applicable`
+when the mode is `off` or the post is already `publish`/`future`. The sidebar's
+`PublishGateNotice` renders one sentence from it. It is a display hint: every
+layer re-decides on the actual write.
+
+---
+
+## Notifications
+
+`includes/Notifications/` is a self-contained listener on the existing
+`sit_cwm_status_changed`, `sit_cwm_reviewer_assigned` and
+`sit_cwm_comment_added` actions (priority 20). Nothing in the workflow engine
+calls it, and nothing it does can fail a workflow action: every handler
+swallows its own errors.
+
+| Class | Responsibility |
+|---|---|
+| `NotificationEvents` | The five event keys and their settings labels. Each key is also the toggle key under `notifications` in `sit_cwm_settings`. |
+| `RecipientResolver` | Who gets mail for an event on a post. Applies every recipient safety rule; sends nothing. |
+| `MessageBuilder` | Plain-text subject and body, built inside `switch_to_user_locale()` so each mail is in its recipient's language. |
+| `Deduplicator` | One mail per recipient per event within a 120-second window. |
+| `Notifier` | Checks the event is enabled, resolves recipients, claims the dedup slot, builds and sends with `wp_mail()`. |
+
+### Events
+
+Every event is **off** on fresh installs and on upgrade, until a site owner
+turns it on.
+
+| Event key | Trigger | Recipients (before filtering) |
+|---|---|---|
+| `reviewer_assigned` | `sit_cwm_reviewer_assigned` with a reviewer id above `0` | the new reviewer |
+| `review_requested` | `sit_cwm_status_changed` into `review` | the assigned reviewer; **nobody** when none is assigned |
+| `changes_requested` | `sit_cwm_status_changed` into `needs_changes` | the post author |
+| `approved` | `sit_cwm_status_changed` into `approved` | the post author |
+| `comment_added` | `sit_cwm_comment_added` | the post author and the assigned reviewer |
+
+### Recipient and content rules
+
+Recipients are filtered in this order:
+
+1. `sit_cwm_notification_recipients`;
+2. cast to positive ints and de-duplicated;
+3. the actor is removed;
+4. users that do not exist, or whose `user_email` is empty or invalid, are
+   removed;
+5. users failing `PermissionManager::can_read_post( $post_id, $recipient )` are
+   removed.
+
+So the filter can add people, but never someone who may not see the post. The
+cleanup that runs when a user is deleted fires `sit_cwm_reviewer_assigned` with
+reviewer `0`, which resolves to nobody.
+
+- A comment body appears in a mail only when
+  `PermissionManager::can_view_activity( $post_id, $recipient )` is true.
+  Otherwise the mail says a comment was added and links to the post.
+- Dedup claims a transient `sit_cwm_mail_` . `md5( "$event|$post_id|$recipient_id|$fingerprint" )`
+  for 120 seconds. The fingerprint is the target status for status events, the
+  reviewer id for `reviewer_assigned`, and `md5( $message )` for comments.
+  Transients are not atomic, so two requests racing within milliseconds can both
+  send; the window targets double saves, not parallel writers.
+- Mail is sent synchronously; there is no queue. A bulk action sends one mail
+  per affected post per recipient. Digests and per-user preferences are Pro.
+
+---
+
+## Hooks added in 1.1
+
+The full 1.0 list is in the [README](README.md#extensibility). Every new 1.1
+class is `@internal`; these hooks are the public surface.
+
+| Kind | Name | Args |
+|---|---|---|
+| filter | `sit_cwm_publish_gate_mode` | `string $mode, string $post_type, int $post_id` (`0` when not about one post). A value outside `PublishGate::MODES` resolves to `off` |
+| filter | `sit_cwm_publish_gate_passes` | `bool $passes, int $post_id, string $workflow_status, string $mode`; return `bool\|WP_Error`. Only `true` passes; a `WP_Error` is treated as `false` and its message is not shown yet |
+| action | `sit_cwm_publish_gate_refused` | `int $post_id, GateDecision $decision, int $user_id, string $layer` |
+| action | `sit_cwm_publish_gate_bypassed` | `int $post_id, GateDecision $decision, int $user_id, string $layer` (reason `log_only` or `capability`) |
+| action | `sit_cwm_publish_gate_failed` | `string $layer, Throwable $error, int $post_id` |
+| filter | `sit_cwm_notification_recipients` | `int[] $user_ids, string $event, int $post_id, int $actor_id` |
+| filter | `sit_cwm_notification_message` | `array{subject: string, body: string} $message, string $event, int $post_id, int $recipient_id` |
+| action | `sit_cwm_notification_sent` | `string $event, int $post_id, int $recipient_id, bool $sent` |
+
+`$layer` is one of `rest`, `save`, `schedule`, `backstop`. Publication rows fire
+the existing `sit_cwm_activity_logged`; there is no separate publication action.
+
+---
+
 ## Data model
 
 ### Post meta (decision D6)
@@ -328,8 +537,9 @@ who is not logged in.
 | `_sit_cwm_status` | string | `draft` | `StatusManager::sanitize()` — `sanitize_key` plus an allow-list against the registry |
 | `_sit_cwm_reviewer_id` | integer | `0` | `absint`, existing user, must hold `sit_cwm_review_content`. Negative IDs are rejected, not flipped |
 | `_sit_cwm_due_date` | string | `''` | Round-trip `Y-m-d` parse; `''` clears |
+| `_sit_cwm_publish_bypass_by` | integer | — | `absint`. User id that scheduled a failing post under the bypass capability (1.1). `show_in_rest => false`, `auth_callback` always false, locked like `_sit_cwm_status` |
 
-All three are registered with `register_post_meta()`, `single => true`,
+The first three are registered with `register_post_meta()`, `single => true`,
 `show_in_rest => true` with `context: [ 'edit' ]` — so a reviewer ID or due date
 never leaks into the public `view` context of a published post — and an
 `auth_callback` that delegates to `PermissionManager`.
@@ -349,7 +559,7 @@ that the status can only change by going through the state machine.
 | `id` | `bigint(20) unsigned` | `AUTO_INCREMENT`, primary key |
 | `post_id` | `bigint(20) unsigned` | |
 | `user_id` | `bigint(20) unsigned` | `0` = system |
-| `action` | `varchar(50)` | Closed set: `status_changed`, `reviewer_assigned`, `reviewer_cleared`, `due_date_set`, `due_date_cleared`, `comment_added` |
+| `action` | `varchar(50)` | Closed set: `status_changed`, `reviewer_assigned`, `reviewer_cleared`, `due_date_set`, `due_date_cleared`, `comment_added`, and since 1.1 `post_published`, `post_unpublished`, `publish_gate_refused`, `publish_gate_bypassed` (`ActivityLogger::PUBLICATION_ACTIONS`; no schema change) |
 | `old_value` | `varchar(191)` NULL | Status slug or user ID, as text |
 | `new_value` | `varchar(191)` NULL | |
 | `message` | `text` NULL | Comment body, `wp_kses_post()` |
@@ -377,14 +587,15 @@ compared on `plugins_loaded`, so an upgrade runs without reactivation.
 
 | Option | Autoloaded | Contents |
 |---|---|---|
-| `sit_cwm_settings` | yes | `{ post_types: [ 'post', 'page' ] }` — small on purpose |
-| `sit_cwm_db_version` | no | Schema version |
+| `sit_cwm_settings` | yes | `{ post_types, delete_data_on_uninstall, publish_gate: { post_type: mode }, notifications: { event: bool } }` — small on purpose. Missing keys are filled from `Settings::defaults()`, so 1.0 sites need no migration |
+| `sit_cwm_db_version` | no | Schema version (still `1.0.0`: 1.1 changes no schema) |
+| `sit_cwm_caps_revision` | no | Capability revision applied (`2` since 1.1) |
 
 ### Uninstall
 
 `uninstall.php` (guarded by `WP_UNINSTALL_PLUGIN`) drops the activity table,
-deletes both options, removes all `_sit_cwm_*` post meta with a prepared `LIKE`
-delete, and strips the six capabilities from **every** role — not just the four
+deletes the options, removes all `_sit_cwm_*` post meta with a prepared `LIKE`
+delete, and strips the plugin's capabilities from **every** role — not just the four
 in `role_map()`, so grants a site owner added to custom roles are cleaned up
 too.
 
@@ -491,6 +702,21 @@ minimum WordPress version: `11.3.0` is pinned exactly and works on 6.8+
 *Pro follow-up:* none needed — newer DataViews become usable as the minimum
 supported version rises.
 
+### 8. The publish gate only sees writes that pass WordPress hooks
+
+A direct `$wpdb` update of `wp_posts.post_status`, or code that removes the
+plugin's hooks, is invisible to every layer and to the publication log. Paths
+that skip `wp_insert_post_data` (such as `wp_publish_post()`) are caught by the
+backstop *after* the post reached `publish`, so other plugins' hooks on that
+transition may already have run. The full list is in
+[WORKFLOW.md](WORKFLOW.md#what-the-gate-does-not-cover).
+
+*Why accepted:* a plugin cannot intercept SQL it does not issue, and hooking
+earlier than WordPress offers would mean patching core.
+
+*Pro follow-up:* none possible in PHP; a database trigger is outside what a
+WordPress plugin should install.
+
 ---
 
 # Reference detail
@@ -548,6 +774,7 @@ All require an existing user, a managed post and `edit_post` on it, plus:
 | `can_assign_reviewer` | `sit_cwm_assign_reviewer` |
 | `can_set_due_date` | `sit_cwm_assign_reviewer` |
 | `can_manage` (no post) | `sit_cwm_manage_workflows` |
+| `can_bypass_publish_gate` (no post) | `sit_cwm_bypass_publish_gate` (1.1). Asked only by `PublishGate`; multisite super admins pass implicitly |
 
 Role grants live only in `Capabilities::role_map()` and are applied at
 activation (`Capabilities::add_caps()`, idempotent) and removed on uninstall

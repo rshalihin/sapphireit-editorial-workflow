@@ -62,6 +62,15 @@ final class PostRepository implements Bootable {
 	const META_DUE_DATE = '_sit_cwm_due_date';
 
 	/**
+	 * User id that scheduled a post failing the publish gate under the bypass
+	 * capability (E8). Written only by `GateRecorder`.
+	 *
+	 * @since 1.1.0
+	 * @var string
+	 */
+	const META_PUBLISH_BYPASS = '_sit_cwm_publish_bypass_by';
+
+	/**
 	 * Posts cleared per query when a deleted user was a reviewer.
 	 *
 	 * @since 1.0.0

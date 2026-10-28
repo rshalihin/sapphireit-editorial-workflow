@@ -9,6 +9,8 @@
 namespace Sit_Cwm\REST;
 
 use Sit_Cwm\Content\PostRepository;
+use Sit_Cwm\Publishing\GateDecision;
+use Sit_Cwm\Publishing\PublishGate;
 use Sit_Cwm\Workflow\PermissionManager;
 use Sit_Cwm\Workflow\StatusManager;
 use Sit_Cwm\Workflow\TransitionManager;
@@ -35,7 +37,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  * write itself is not transactional: if a later part still fails (e.g. a
  * concurrent edit between check and write), earlier parts stay applied.
  *
+ * Every workflow response also relays the publish gate state for the current
+ * user (E10). It is a display hint only: the gate layers re-decide on save.
+ *
  * @since 1.0.0
+ * @since 1.1.0 Responses carry `publish_gate`.
  */
 class WorkflowController extends AbstractController {
 
@@ -72,28 +78,40 @@ class WorkflowController extends AbstractController {
 	private $transitions;
 
 	/**
+	 * Publish gate, asked for the editor hint.
+	 *
+	 * @since 1.1.0
+	 * @var PublishGate
+	 */
+	private $gate;
+
+	/**
 	 * Constructor. Does not touch WordPress.
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Added `$gate`.
 	 *
 	 * @param WorkflowManager   $workflow    Workflow orchestrator.
 	 * @param PermissionManager $permissions Authorization.
 	 * @param StatusManager     $statuses    Status registry.
 	 * @param TransitionManager $transitions Transition map.
 	 * @param PostRepository    $posts       Workflow meta persistence.
+	 * @param PublishGate       $gate        Publish gate.
 	 */
 	public function __construct(
 		WorkflowManager $workflow,
 		PermissionManager $permissions,
 		StatusManager $statuses,
 		TransitionManager $transitions,
-		PostRepository $posts
+		PostRepository $posts,
+		PublishGate $gate
 	) {
 		parent::__construct( $permissions, $posts );
 
 		$this->workflow    = $workflow;
 		$this->statuses    = $statuses;
 		$this->transitions = $transitions;
+		$this->gate        = $gate;
 	}
 
 	/**
@@ -394,6 +412,7 @@ class WorkflowController extends AbstractController {
 	 * Workflow state schema (D9).
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Added `publish_gate` (E10).
 	 *
 	 * @return array
 	 */
@@ -484,6 +503,22 @@ class WorkflowController extends AbstractController {
 						'can_view_activity'   => array( 'type' => 'boolean' ),
 					),
 				),
+				'publish_gate'          => array(
+					'description' => __( 'Publish gate state for the current user. Display hint only; publishing is re-checked on save.', 'sapphireit-editorial-workflow' ),
+					'type'        => 'object',
+					'readonly'    => true,
+					'context'     => array( 'view', 'edit' ),
+					'properties'  => array(
+						'mode'    => array(
+							'type' => 'string',
+							'enum' => PublishGate::MODES,
+						),
+						'outcome' => array(
+							'type' => 'string',
+							'enum' => GateDecision::OUTCOMES,
+						),
+					),
+				),
 			),
 		);
 
@@ -559,7 +594,10 @@ class WorkflowController extends AbstractController {
 	/**
 	 * Wraps the fresh workflow state in a response.
 	 *
+	 * The controller only relays the gate state; PublishGate decides it.
+	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Adds `publish_gate`.
 	 *
 	 * @param int $post_id Post id.
 	 * @return WP_REST_Response|WP_Error 404 when the workflow is no longer accessible.
@@ -574,6 +612,8 @@ class WorkflowController extends AbstractController {
 				array( 'status' => 404 )
 			);
 		}
+
+		$state['publish_gate'] = $this->gate->describe( $post_id, get_current_user_id() );
 
 		return rest_ensure_response( $state );
 	}

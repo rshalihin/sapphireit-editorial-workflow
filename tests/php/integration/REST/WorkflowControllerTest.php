@@ -402,6 +402,83 @@ final class WorkflowControllerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The workflow payload reports the gate state for the current user (E10).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_workflow_response_reports_gate_state() {
+		( new Settings() )->update( array( 'publish_gate' => array( 'post' => 'enforce' ) ) );
+
+		$author = $this->make_user( 'author' );
+		$post   = $this->make_post( $author );
+
+		wp_set_current_user( $author );
+
+		$response = $this->get( $post );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame(
+			array(
+				'mode'    => 'enforce',
+				'outcome' => 'refused',
+			),
+			$response->get_data()['publish_gate']
+		);
+	}
+
+	/**
+	 * The transition response carries the gate state after the move.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_gate_state_updates_in_the_transition_response() {
+		( new Settings() )->update( array( 'publish_gate' => array( 'post' => 'enforce' ) ) );
+
+		$editor = $this->make_user( 'editor' );
+		$post   = $this->make_post( $this->make_user( 'author' ), 'review' );
+
+		wp_set_current_user( $editor );
+
+		$response = $this->post(
+			$post,
+			array(
+				'status' => 'approved',
+				'from'   => 'review',
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'enforce', $response->get_data()['publish_gate']['mode'] );
+		$this->assertSame( 'allowed', $response->get_data()['publish_gate']['outcome'] );
+	}
+
+	/**
+	 * With default settings the gate is off and not applicable.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_gate_state_is_not_applicable_when_off() {
+		$author = $this->make_user( 'author' );
+		$post   = $this->make_post( $author );
+
+		wp_set_current_user( $author );
+
+		$this->assertSame(
+			array(
+				'mode'    => 'off',
+				'outcome' => 'not_applicable',
+			),
+			$this->get( $post )->get_data()['publish_gate']
+		);
+	}
+
+	/**
 	 * `/statuses` is for content editors: 403 for subscribers, metadata for authors.
 	 *
 	 * @return void

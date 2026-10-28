@@ -1,10 +1,13 @@
 # SapphireIT Editorial Workflow
 
-An editorial approval workflow for WordPress. Posts, pages and custom post
-types get a **workflow status**, an assigned **reviewer**, a **due date**,
-threaded **workflow comments** and a complete **activity history** — managed
-from a Gutenberg sidebar, a classic editor meta box and an admin dashboard, and
-enforced entirely in PHP.
+An editorial approval workflow for WordPress, with an enforceable publish gate
+and a complete audit trail. AI can draft it. A human approves it. You can prove
+who approved what, and when.
+
+Posts, pages and custom post types get a **workflow status**, an assigned
+**reviewer**, a **due date**, threaded **workflow comments** and a complete
+**activity history**, managed from a Gutenberg sidebar, a classic editor meta
+box and an admin dashboard, and enforced entirely in PHP.
 
 ![The editor sidebar](docs/screenshots/sidebar.png)
 
@@ -26,6 +29,20 @@ back for the server to re-derive from scratch. See
 
 ## Features
 
+- **Publish gate, per content type.** *Off*, *Log only* or *Enforce*. In
+  *Enforce*, content cannot be published or scheduled until its workflow status
+  is Approved, across the block editor, the classic editor, Quick Edit, Bulk
+  Edit, `wp/v2` REST, WP-CLI and scheduled publishing. Administrators can still
+  publish, and that is recorded. Every type starts at *Off*. See
+  [WORKFLOW.md](WORKFLOW.md#publishing-and-the-publish-gate), including what
+  the gate does **not** cover.
+- **Publication audit trail.** Every publish and unpublish of managed content is
+  logged with the actor, the time and the workflow status at that moment, in
+  every gate mode including *Off*.
+- **Opt-in email notifications** for five events: reviewer assigned, submitted
+  for review, changes requested, approved, workflow comment added. Off until a
+  site owner turns them on; never sent to the actor or to anyone who cannot
+  read the post.
 - **Six-status editorial workflow** — Draft → Writing → Review → Needs Changes
   → Approved → Published, with a fixed transition graph and explicit rollback
   paths. See [WORKFLOW.md](WORKFLOW.md).
@@ -36,8 +53,8 @@ back for the server to re-derive from scratch. See
 - **Optimistic concurrency.** A status change must state the status the client
   believed was current; if someone else moved the post meanwhile the request
   fails with `409` instead of silently overwriting.
-- **Six dedicated capabilities** (`sit_cwm_*`), granted to roles at activation.
-  No role names are hard-coded anywhere else in the plugin.
+- **Seven dedicated capabilities** (`sit_cwm_*`), granted to roles at
+  activation. No role names are hard-coded anywhere else in the plugin.
 - **Reviewer assignment and due dates**, with an *Overdue only* filter computed
   in the site timezone.
 - **Workflow comments** stored alongside the audit trail, not in `wp_comments`.
@@ -54,15 +71,20 @@ back for the server to re-derive from scratch. See
 - **A real REST API.** Everything the UI does is a documented, authenticated
   endpoint — see [REST-API.md](REST-API.md) for `curl` examples.
 
-### What v1.0 deliberately does *not* do
+### What it deliberately does *not* do
 
 Being honest about this is part of the design:
 
-- **No email.** Assigning a reviewer does not notify anyone.
 - **No automatic publishing.** Reaching the `published` workflow status does
   **not** publish the post — that stays a deliberate editor action. Workflow
   status and WordPress post status are separate fields on purpose
   ([why](ARCHITECTURE.md#why-workflow-status-is-not-wordpress-post-status)).
+  The publish gate only ever *prevents* publishing; it never publishes.
+- **No AI detection.** It records who approved content, not who or what wrote
+  it.
+- **No guard against direct database writes.** Code that updates
+  `wp_posts.post_status` through `$wpdb` is not seen by the publish gate
+  ([uncovered paths](WORKFLOW.md#what-the-gate-does-not-cover)).
 - **No Slack, no calendar, no rules engine, no multiple workflows.** Those are
   named in the [roadmap](#roadmap), not shipped.
 
@@ -104,7 +126,7 @@ older PHP it shows an admin notice instead of fataling.
 1. Download the `sapphireit-editorial-workflow.zip` release package.
 2. **Plugins → Add New → Upload Plugin**, choose the zip, install, activate.
 
-Activation creates the `wp_sit_cwm_activity` table and grants the six
+Activation creates the `wp_sit_cwm_activity` table and grants the workflow
 capabilities to the administrator, editor, author and contributor roles.
 
 ### From a clone
@@ -133,6 +155,9 @@ for when `vendor/` is absent.
 5. The reviewer either **Approves** it or sends it back with **Needs Changes**,
    leaving a workflow comment explaining why.
 6. **Editorial Workflow → Dashboard** shows everything in flight.
+7. Optional: under **Settings → Publish gate**, set a content type to *Enforce*
+   so it cannot be published until it is Approved, and tick the events you want
+   under **Email notifications**.
 
 ### The six statuses, and who can reach each one
 
@@ -152,16 +177,18 @@ on that specific post, and a post type the workflow is enabled for.
 
 | Role | Capabilities granted at activation |
 |---|---|
-| Administrator | all six |
+| Administrator | all seven |
 | Editor | `change_workflow`, `assign_reviewer`, `review_content`, `approve_content`, `view_activity` |
 | Author | `change_workflow`, `view_activity` |
 | Contributor | `change_workflow`, `view_activity` |
 | Subscriber | none |
 
-The other two capabilities are `sit_cwm_assign_reviewer` (set or clear the
-reviewer and due date) and `sit_cwm_manage_workflows` (settings page, bulk
-actions). Grants are ordinary role capabilities — any capability-management
-plugin can change them.
+The other three capabilities are `sit_cwm_assign_reviewer` (set or clear the
+reviewer and due date), `sit_cwm_manage_workflows` (settings page, bulk
+actions) and `sit_cwm_bypass_publish_gate` (publish unapproved content while the
+gate is set to *Enforce*; administrators only, and every use is recorded).
+Grants are ordinary role capabilities — any capability-management plugin can
+change them.
 
 ---
 
@@ -174,6 +201,8 @@ includes/
               PermissionManager, Capabilities, BulkProcessor
   Content/    PostMeta, PostRepository
   Activity/   ActivityLogger, ActivityEntry
+  Publishing/ PublishGate, the three gate layers, PublicationLogger
+  Notifications/ Notifier, RecipientResolver, MessageBuilder
   REST/       Workflow / Activity / Posts / Batch / User controllers
   Editor/     SidebarAssets, ClassicMetaBox
 admin/        Dashboard, Settings
@@ -212,6 +241,10 @@ touching a core file. Every one is prefixed `sit_cwm_`.
 | `sit_cwm_comment_added` | `( int $post_id, int $activity_id, string $message, int $user_id )` | After a workflow comment is stored. |
 | `sit_cwm_activity_logged` | `( int $activity_id, ActivityEntry $entry )` | After any activity row is written. |
 | `sit_cwm_db_upgraded` | `( string $from_version, string $to_version )` | After the schema is migrated. |
+| `sit_cwm_publish_gate_refused` | `( int $post_id, GateDecision $decision, int $user_id, string $layer )` | After the publish gate refuses a publish and the refusal is recorded. |
+| `sit_cwm_publish_gate_bypassed` | `( int $post_id, GateDecision $decision, int $user_id, string $layer )` | After unapproved content goes live in *Log only*, or under the bypass capability in *Enforce*. |
+| `sit_cwm_publish_gate_failed` | `( string $layer, Throwable $error, int $post_id )` | A gate layer threw; the publish went ahead (the gate fails open). |
+| `sit_cwm_notification_sent` | `( string $event, int $post_id, int $recipient_id, bool $sent )` | After each `wp_mail()` call; `$sent` is its return value. |
 
 ### Filters
 
@@ -228,6 +261,10 @@ touching a core file. Every one is prefixed `sit_cwm_`.
 | `sit_cwm_activity_actions` | `( string[] $actions )` | Loggable action slugs. |
 | `sit_cwm_activity_action_labels` | `( array $labels )` | Human-readable labels for those slugs. |
 | `sit_cwm_assignable_reviewers` | `( array $query, int $post_id, int $user_id )` | `get_users()` arguments behind `GET /users`. `fields` and `count_total` are re-forced afterwards. |
+| `sit_cwm_publish_gate_mode` | `( string $mode, string $post_type, int $post_id )` | A post type's gate mode. `$post_id` is `0` when the question is not about one post. A value outside `off`/`log_only`/`enforce` means `off`. |
+| `sit_cwm_publish_gate_passes` | `( bool $passes, int $post_id, string $workflow_status, string $mode )` | Whether a publish attempt passes the gate. Only boolean `true` passes; `false` and a `WP_Error` both refuse. |
+| `sit_cwm_notification_recipients` | `( int[] $user_ids, string $event, int $post_id, int $actor_id )` | Who gets mail for an event. The actor, users without a valid email and users who cannot read the post are removed *after* this filter. |
+| `sit_cwm_notification_message` | `( array $message, string $event, int $post_id, int $recipient_id )` | The `subject` and plain-text `body` of one mail, already in the recipient's language. |
 
 `sit_cwm_can_transition` cannot grant a logged-out user, a missing post or a
 post whose type has no workflow — those are hard gates checked before it runs.
@@ -298,7 +335,7 @@ are deliberately **not** in Free core — but the hooks above are the surface th
 attach to.
 
 - Multiple workflows, and per-role workflow configuration
-- Email notifications and Slack integration
+- Slack integration
 - Editorial calendar
 - Checklist gating before approval
 - A workflow rules engine (if/then automation)

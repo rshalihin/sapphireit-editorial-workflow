@@ -82,15 +82,15 @@ final class Activator {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>}
 	 */
 	public static function default_settings(): array {
 		return ( new Settings() )->defaults();
 	}
 
 	/**
-	 * Installs the activity table, records the schema version, seeds settings
-	 * and grants role capabilities for the current site.
+	 * Installs the activity table, records the schema version, seeds settings,
+	 * grants role capabilities and records their revision for the current site.
 	 *
 	 * @since 1.0.0
 	 *
@@ -100,6 +100,7 @@ final class Activator {
 		( new Database() )->install();
 		( new Settings() )->seed();
 		Capabilities::add_caps();
+		Capabilities::mark_current();
 
 		flush_rewrite_rules();
 	}

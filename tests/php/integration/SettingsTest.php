@@ -9,6 +9,7 @@
 namespace Sit_Cwm\Tests\Integration;
 
 use Sit_Cwm\Core\Settings;
+use Sit_Cwm\Notifications\NotificationEvents;
 use WP_UnitTestCase;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -52,6 +53,8 @@ final class SettingsTest extends WP_UnitTestCase {
 		$expected = array(
 			'post_types'               => array( 'post', 'page' ),
 			'delete_data_on_uninstall' => false,
+			'publish_gate'             => array(),
+			'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
 		);
 
 		$this->assertSame( $expected, $this->settings->defaults() );
@@ -87,6 +90,8 @@ final class SettingsTest extends WP_UnitTestCase {
 			array(
 				'post_types'               => array( 'post', 'page' ),
 				'delete_data_on_uninstall' => true,
+				'publish_gate'             => array(),
+				'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
 			),
 			get_option( Settings::OPTION )
 		);
@@ -158,5 +163,156 @@ final class SettingsTest extends WP_UnitTestCase {
 
 		$this->assertSame( array( 'post', 'page', 'book' ), $this->settings->enabled_post_types() );
 		$this->assertTrue( $this->settings->is_post_type_enabled( 'book' ) );
+	}
+
+	/**
+	 * Fresh defaults leave every gate off and every email event off (E1, E12).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_defaults_include_gate_and_notification_keys_all_off() {
+		$defaults = ( new Settings() )->defaults();
+		$this->assertSame( array(), $defaults['publish_gate'] );
+		$this->assertSame( array_fill_keys( NotificationEvents::all(), false ), $defaults['notifications'] );
+	}
+
+	/**
+	 * An option written by 1.0.0 reads as every gate off and every event off.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_upgrade_from_1_0_option_reads_every_gate_off_and_every_event_off() {
+		update_option(
+			Settings::OPTION,
+			array(
+				'post_types'               => array( 'post', 'page' ),
+				'delete_data_on_uninstall' => false,
+			)
+		);
+		$settings = new Settings();
+		$this->assertSame( array(), $settings->gate_modes() );
+		foreach ( NotificationEvents::all() as $event ) {
+			$this->assertFalse( $settings->is_notification_enabled( $event ) );
+		}
+	}
+
+	/**
+	 * Valid modes for selectable post types are stored.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_update_stores_valid_gate_modes() {
+		$settings = new Settings();
+		$this->assertTrue(
+			$settings->update(
+				array(
+					'publish_gate' => array(
+						'post' => 'enforce',
+						'page' => 'log_only',
+					),
+				)
+			)
+		);
+		$this->assertSame(
+			array(
+				'post' => 'enforce',
+				'page' => 'log_only',
+			),
+			$settings->gate_modes()
+		);
+	}
+
+	/**
+	 * An unknown mode, an unselectable type or a scalar map rejects the update.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_update_rejects_unknown_mode_or_unselectable_type_and_saves_nothing() {
+		$settings = new Settings();
+		$this->assertFalse( $settings->update( array( 'publish_gate' => array( 'post' => 'block' ) ) ) );
+		$this->assertFalse( $settings->update( array( 'publish_gate' => array( 'nonexistent_cpt' => 'enforce' ) ) ) );
+		$this->assertFalse( $settings->update( array( 'publish_gate' => 'enforce' ) ) );
+		$this->assertSame( array(), $settings->gate_modes() );
+	}
+
+	/**
+	 * The submitted gate map replaces the stored one; omitted types read as off.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_update_replaces_the_whole_gate_map() {
+		$settings = new Settings();
+		$settings->update(
+			array(
+				'publish_gate' => array(
+					'post' => 'enforce',
+					'page' => 'log_only',
+				),
+			)
+		);
+		$this->assertTrue( $settings->update( array( 'publish_gate' => array( 'page' => 'enforce' ) ) ) );
+		$this->assertSame( array( 'page' => 'enforce' ), $settings->gate_modes() ); // 'post' is gone, so it reads as off.
+		$this->assertTrue( $settings->update( array( 'publish_gate' => array() ) ) );
+		$this->assertSame( array(), $settings->gate_modes() );
+	}
+
+	/**
+	 * Stored entries with an unknown mode or a non-string key are ignored.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_gate_modes_drops_tampered_stored_entries() {
+		update_option(
+			Settings::OPTION,
+			array(
+				'publish_gate' => array(
+					'post' => 'enforce',
+					'page' => 'nonsense',
+					7      => 'enforce',
+				),
+			)
+		);
+		$this->assertSame( array( 'post' => 'enforce' ), ( new Settings() )->gate_modes() );
+	}
+
+	/**
+	 * Known events can be toggled; an unknown event rejects the update.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_update_stores_notification_toggles_and_rejects_unknown_events() {
+		$settings = new Settings();
+		$this->assertTrue( $settings->update( array( 'notifications' => array( 'approved' => true ) ) ) );
+		$this->assertTrue( $settings->is_notification_enabled( 'approved' ) );
+		$this->assertFalse( $settings->is_notification_enabled( 'comment_added' ) );
+		$this->assertFalse( $settings->update( array( 'notifications' => array( 'slack' => true ) ) ) );
+		$this->assertFalse( $settings->is_notification_enabled( 'slack' ) );
+	}
+
+	/**
+	 * Every event has a label, in `all()` order.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @covers \Sit_Cwm\Notifications\NotificationEvents::labels
+	 *
+	 * @return void
+	 */
+	public function test_notification_labels_cover_every_event() {
+		$this->assertSame( NotificationEvents::all(), array_keys( NotificationEvents::labels() ) );
 	}
 }

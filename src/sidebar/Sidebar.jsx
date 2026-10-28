@@ -18,6 +18,7 @@ import { seen } from '@wordpress/icons';
  * Internal dependencies
  */
 import WorkflowPanel, { Unavailable } from '../components/WorkflowPanel';
+import useRefreshEditorPost from '../hooks/useRefreshEditorPost';
 import { isEnabledPostType } from '../utils/format';
 
 /**
@@ -48,6 +49,9 @@ export default function Sidebar() {
 			postType: editor.getCurrentPostType(),
 		};
 	}, [] );
+	// The classic editor's Publish button is rendered by PHP, so only the
+	// block editor refreshes the post after a status change.
+	const refreshEditorPost = useRefreshEditorPost();
 
 	const title = __( 'Editorial Workflow', 'sapphireit-editorial-workflow' );
 
@@ -58,7 +62,11 @@ export default function Sidebar() {
 			</PluginSidebarMoreMenuItem>
 			<PluginSidebar name={ SIDEBAR_NAME } title={ title } icon={ seen }>
 				{ postId && isEnabledPostType( postType ) ? (
-					<WorkflowPanel key={ postId } postId={ postId } />
+					<WorkflowPanel
+						key={ postId }
+						postId={ postId }
+						onStatusChanged={ refreshEditorPost }
+					/>
 				) : (
 					<Unavailable />
 				) }
