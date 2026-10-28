@@ -1,7 +1,7 @@
 # Dependencies
 /vendor/
 /node_modules/
-/.claude/
+# /.claude/
 
 # Tooling caches / local config
 .phpunit.result.cache
