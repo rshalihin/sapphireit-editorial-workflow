@@ -9,7 +9,9 @@
 namespace Sit_Cwm\Core;
 
 use Sit_Cwm\Activity\ActivityLogger;
+use Sit_Cwm\Admin\AdminFooter;
 use Sit_Cwm\Admin\Dashboard;
+use Sit_Cwm\Admin\PluginActionLinks;
 use Sit_Cwm\Admin\Settings as SettingsPage;
 use Sit_Cwm\Content\PostMeta;
 use Sit_Cwm\Content\PostRepository;
@@ -89,6 +91,8 @@ final class Plugin {
 		'admin' => array(
 			'admin.dashboard',
 			'admin.settings',
+			'admin.footer',
+			'admin.action_links',
 			'editor.sidebar',
 			'editor.classic',
 		),
@@ -486,6 +490,20 @@ final class Plugin {
 			'admin.settings',
 			static function ( Container $c ) {
 				return new SettingsPage( $c->get( 'settings' ), $c->get( 'permission_manager' ) );
+			}
+		);
+
+		$this->container->set(
+			'admin.footer',
+			static function ( Container $c ) {
+				return new AdminFooter( $c->get( 'admin.dashboard' ), $c->get( 'admin.settings' ) );
+			}
+		);
+
+		$this->container->set(
+			'admin.action_links',
+			static function ( Container $c ) {
+				return new PluginActionLinks( $c->get( 'permission_manager' ) );
 			}
 		);
 
