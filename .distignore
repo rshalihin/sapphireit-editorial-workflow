@@ -51,6 +51,10 @@ phpcs.xml
 .wp-env.json
 .wp-env.override.json
 
+# Local environment secrets
+.env
+.env.*
+
 # Composer: the plugin has no runtime dependencies, and ships a fallback
 # autoloader, so vendor/ (dev-only packages) is excluded along with the
 # manifests.

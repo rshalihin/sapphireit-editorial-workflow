@@ -1,5 +1,7 @@
 /**
- * Captures the documentation screenshots in docs/screenshots/ (step 23).
+ * Captures the documentation and WordPress.org screenshots in docs/screenshots/
+ * as `screenshot-1.png` … `screenshot-5.png`, one per caption in `readme.txt`'s
+ * Screenshots section, in that order.
  *
  * Skipped unless CWM_CAPTURE is set, so it never runs in the CI end-to-end job:
  * it is a generator, not a test, and it asserts only enough to be sure it is
@@ -9,7 +11,8 @@
  * points it at a local WordPress and sets the flag.
  *
  * Like the other specs it is destructive — it deletes every post before and
- * after — so point it at a scratch site.
+ * after — so point it at a scratch site. It needs the test-only mu-plugin
+ * (`setSettings()`, `rawPublish()`) and the Classic Editor plugin installed.
  */
 
 /**
@@ -25,9 +28,49 @@ import { expect, test } from '@wordpress/e2e-test-utils-playwright';
 /**
  * Internal dependencies
  */
-import { openWorkflowSidebar } from './utils';
+import {
+	allNotifications,
+	loginAs,
+	openWorkflowSidebar,
+	rawPublish,
+	setSettings,
+} from './utils';
 
 const OUT = path.join( __dirname, '../../docs/screenshots' );
+
+/**
+ * The seeded reviewer, who is also the user the sidebar shot logs in as.
+ *
+ * @type {{username: string, password: string}}
+ */
+const REVIEWER = { username: 'dana', password: 'cwm-Screenshot-pass-1!' };
+
+/**
+ * Path of a numbered shot, named the way the WordPress.org listing wants it:
+ * `screenshot-N.png` matches caption N in `readme.txt`'s Screenshots section.
+ *
+ * @param {number} n Caption number.
+ * @return {string} File path.
+ */
+const shot = ( n ) => path.join( OUT, `screenshot-${ n }.png` );
+
+/**
+ * Waits until everything the workflow panel fetches has landed, so a shot
+ * never shows loading skeletons or a spinning reviewer field.
+ *
+ * @param {Object} container Panel or meta box locator.
+ * @return {Promise<void>}
+ */
+async function settled( container ) {
+	const timeline = container.locator( '.sit-cwm-activity' );
+
+	await expect( timeline ).toBeVisible();
+	await expect( timeline ).toContainText( 'changed status from' );
+	await expect( timeline ).toHaveAttribute( 'aria-busy', 'false' );
+	await expect(
+		container.locator( '.sit-cwm-reviewer .components-spinner' )
+	).toHaveCount( 0 );
+}
 
 /**
  * Posts to seed, with the workflow state each ends up in.
@@ -110,10 +153,10 @@ test.describe( 'Documentation screenshots', () => {
 				method: 'POST',
 				path: '/wp/v2/users',
 				data: {
-					username: 'dana',
+					username: REVIEWER.username,
 					name: 'Dana Okafor',
 					email: 'dana@example.org',
-					password: 'cwm-Screenshot-pass-1!',
+					password: REVIEWER.password,
 					roles: [ 'editor' ],
 				},
 			} )
@@ -171,30 +214,57 @@ test.describe( 'Documentation screenshots', () => {
 				} );
 			}
 		}
+
+		// The timeline shot's story, on the post at Review: published while
+		// the gate was off, taken back to draft, then a publish the gate
+		// blocked once it was set to Enforce.
+		const story = ids[ 'Q3 launch announcement' ];
+
+		await setSettings( requestUtils, { publish_gate: {} } );
+		await requestUtils.rest( {
+			method: 'POST',
+			path: `/wp/v2/posts/${ story }`,
+			data: { status: 'publish' },
+		} );
+		await requestUtils.rest( {
+			method: 'POST',
+			path: `/wp/v2/posts/${ story }`,
+			data: { status: 'draft' },
+		} );
+		await setSettings( requestUtils, {
+			publish_gate: { post: 'enforce' },
+			notifications: {
+				review_requested: true,
+				changes_requested: true,
+				approved: true,
+			},
+		} );
+		await rawPublish( requestUtils, story );
 	} );
 
 	test.afterAll( async ( { requestUtils } ) => {
+		await setSettings( requestUtils, {
+			publish_gate: {},
+			notifications: allNotifications( false ),
+		} );
 		await requestUtils.deleteAllPosts();
 	} );
 
-	test( 'sidebar and timeline', async ( { page } ) => {
+	test( '1: sidebar with the locked notice', async ( { page } ) => {
+		// Dana, an editor, holds no bypass, so she sees the locked notice an
+		// administrator would not.
+		await loginAs( page, REVIEWER.username, REVIEWER.password );
+
 		const panel = await openWorkflowSidebar(
 			page,
 			ids[ 'Q3 launch announcement' ]
 		);
 
 		await expect( panel ).toContainText( 'Review' );
-
-		const timeline = panel.locator( '.sit-cwm-activity' );
-
-		// Everything the sidebar fetches must have landed before either shot,
-		// or the images show loading skeletons and a spinning reviewer field.
-		await expect( timeline ).toBeVisible();
-		await expect( timeline ).toContainText( 'changed status from' );
-		await expect( timeline ).toHaveAttribute( 'aria-busy', 'false' );
-		await expect(
-			panel.locator( '.sit-cwm-reviewer .components-spinner' )
-		).toHaveCount( 0 );
+		await expect( panel.locator( '.sit-cwm-gate-notice' ) ).toContainText(
+			'Publishing is locked until this content is approved.'
+		);
+		await settled( panel );
 
 		// The sidebar alone, not the whole editor: the panel is the subject.
 		// Clipping the page rather than screenshotting the element keeps the
@@ -204,7 +274,7 @@ test.describe( 'Documentation screenshots', () => {
 		const viewport = page.viewportSize();
 
 		await page.screenshot( {
-			path: path.join( OUT, 'sidebar.png' ),
+			path: shot( 1 ),
 			clip: {
 				x: box.x,
 				y: box.y,
@@ -212,44 +282,45 @@ test.describe( 'Documentation screenshots', () => {
 				height: Math.min( box.height, viewport.height - box.y ),
 			},
 		} );
+	} );
+
+	test( '2: timeline with a publication at Review and a blocked publish', async ( {
+		page,
+	} ) => {
+		const panel = await openWorkflowSidebar(
+			page,
+			ids[ 'Q3 launch announcement' ]
+		);
+		const timeline = panel.locator( '.sit-cwm-activity' );
+
+		await settled( panel );
+		await expect( timeline ).toContainText(
+			'published this while it was at Review'
+		);
+		await expect( timeline ).toContainText( 'was blocked' );
 
 		await timeline.scrollIntoViewIfNeeded();
-		await timeline.screenshot( {
-			path: path.join( OUT, 'timeline.png' ),
-		} );
+		await timeline.screenshot( { path: shot( 2 ) } );
 	} );
 
-	test( 'classic editor box', async ( { admin, page, requestUtils } ) => {
-		// Needs the Classic Editor plugin installed on the target site. It is
-		// active only for this shot, so the block editor shots stay as they are.
-		await requestUtils.activatePlugin( 'classic-editor' );
+	test( '3: settings with the publish gate and notifications', async ( {
+		admin,
+		page,
+	} ) => {
+		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-settings' );
 
-		try {
-			await admin.visitAdminPage(
-				'post.php',
-				`post=${ ids[ 'Q3 launch announcement' ] }&action=edit`
-			);
+		await expect(
+			page.getByRole( 'heading', { name: 'Publish gate' } )
+		).toBeVisible();
+		await expect(
+			page.getByRole( 'heading', { name: 'Email notifications' } )
+		).toBeVisible();
 
-			const box = page.locator( '#sit-cwm-workflow' );
-			const timeline = box.locator( '.sit-cwm-activity' );
-
-			// The same settled state as the sidebar shot: no skeletons, no spinner.
-			await expect( box ).toContainText( 'Review' );
-			await expect( timeline ).toContainText( 'changed status from' );
-			await expect( timeline ).toHaveAttribute( 'aria-busy', 'false' );
-			await expect(
-				box.locator( '.sit-cwm-reviewer .components-spinner' )
-			).toHaveCount( 0 );
-
-			await box.screenshot( {
-				path: path.join( OUT, 'classic-editor.png' ),
-			} );
-		} finally {
-			await requestUtils.deactivatePlugin( 'classic-editor' );
-		}
+		// Both new sections sit below the fold at 900 px.
+		await page.screenshot( { path: shot( 3 ), fullPage: true } );
 	} );
 
-	test( 'dashboard and bulk actions', async ( { admin, page } ) => {
+	test( '4: dashboard', async ( { admin, page } ) => {
 		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-dashboard' );
 
 		const rows = page.locator( '.dataviews-view-table tbody tr' );
@@ -263,52 +334,29 @@ test.describe( 'Documentation screenshots', () => {
 			).toBeVisible();
 		}
 
-		await page.screenshot( {
-			path: path.join( OUT, 'dashboard.png' ),
-		} );
-
-		// Selecting rows reveals the bulk action bar.
-		await page
-			.getByRole( 'checkbox', { name: 'Q3 launch announcement' } )
-			.check();
-		await page
-			.getByRole( 'checkbox', { name: 'Migrating to block themes' } )
-			.check();
-
-		const changeStatus = page.getByRole( 'button', {
-			name: 'Change status',
-		} );
-
-		await expect( changeStatus ).toBeVisible();
-		await changeStatus.click();
-
-		const dialog = page.getByRole( 'dialog', {
-			name: 'Change workflow status',
-		} );
-
-		await expect( dialog ).toBeVisible();
-		await dialog
-			.getByRole( 'combobox', { name: 'New status' } )
-			.selectOption( 'approved' );
-
-		await page.screenshot( {
-			path: path.join( OUT, 'bulk-actions.png' ),
-		} );
-
-		await page.keyboard.press( 'Escape' );
+		await page.screenshot( { path: shot( 4 ) } );
 	} );
 
-	test( 'settings', async ( { admin, page } ) => {
-		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-settings' );
+	test( '5: classic editor box', async ( { admin, page, requestUtils } ) => {
+		// Needs the Classic Editor plugin installed on the target site. It is
+		// active only for this shot, so the block editor shots stay as they are.
+		await requestUtils.activatePlugin( 'classic-editor' );
 
-		await expect(
-			page.getByRole( 'heading', { name: 'Editorial Workflow Settings' } )
-		).toBeVisible();
+		try {
+			await admin.visitAdminPage(
+				'post.php',
+				`post=${ ids[ 'Customer story: Northwind' ] }&action=edit`
+			);
 
-		await page.screenshot( {
-			path: path.join( OUT, 'settings.png' ),
-		} );
+			const box = page.locator( '#sit-cwm-workflow' );
 
-		await page.keyboard.press( 'Escape' );
+			// The same settled state as the sidebar shot: no skeletons, no spinner.
+			await expect( box ).toContainText( 'Approved' );
+			await settled( box );
+
+			await box.screenshot( { path: shot( 5 ) } );
+		} finally {
+			await requestUtils.deactivatePlugin( 'classic-editor' );
+		}
 	} );
 } );

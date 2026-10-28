@@ -49,9 +49,9 @@ final class Settings {
 	 * upgrading from 1.0.0 changes no behaviour (E1, E12).
 	 *
 	 * @since 1.0.0
-	 * @since 1.1.0 Added `publish_gate` and `notifications`.
+	 * @since 1.1.0 Added `publish_gate`, `notifications` and `prevent_self_approval`.
 	 *
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool}
 	 */
 	public function defaults(): array {
 		return array(
@@ -59,6 +59,7 @@ final class Settings {
 			'delete_data_on_uninstall' => false,
 			'publish_gate'             => array(),
 			'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
+			'prevent_self_approval'    => false,
 		);
 	}
 
@@ -67,7 +68,7 @@ final class Settings {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool}
 	 */
 	public function all(): array {
 		$defaults = $this->defaults();
@@ -108,7 +109,7 @@ final class Settings {
 	 * toggles, so omitted events keep their value.
 	 *
 	 * @since 1.0.0
-	 * @since 1.1.0 Accepts `publish_gate` and `notifications`.
+	 * @since 1.1.0 Accepts `publish_gate`, `notifications` and `prevent_self_approval`.
 	 *
 	 * @param mixed $partial Partial settings, e.g. `[ 'post_types' => [ 'post' ] ]`.
 	 * @return bool True when the settings are valid and stored.
@@ -132,6 +133,10 @@ final class Settings {
 
 		if ( array_key_exists( 'delete_data_on_uninstall', $partial ) ) {
 			$settings['delete_data_on_uninstall'] = rest_sanitize_boolean( $partial['delete_data_on_uninstall'] );
+		}
+
+		if ( array_key_exists( 'prevent_self_approval', $partial ) ) {
+			$settings['prevent_self_approval'] = rest_sanitize_boolean( $partial['prevent_self_approval'] );
 		}
 
 		if ( array_key_exists( 'publish_gate', $partial ) ) {
@@ -210,6 +215,20 @@ final class Settings {
 		$toggles = $this->notification_toggles();
 
 		return in_array( $event, NotificationEvents::all(), true ) && ! empty( $toggles[ $event ] );
+	}
+
+	/**
+	 * Whether people are prevented from approving content they authored (E16).
+	 *
+	 * Raw stored value. The `sit_cwm_prevent_self_approval` filter is applied
+	 * per post by `PermissionManager`, not here.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return bool
+	 */
+	public function prevents_self_approval(): bool {
+		return true === (bool) $this->get( 'prevent_self_approval', false );
 	}
 
 	/**

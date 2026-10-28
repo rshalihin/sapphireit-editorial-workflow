@@ -102,7 +102,8 @@ curl -sS -u "$CWM_AUTH" "$CWM_SITE/wp-json/sit-cwm/v1/posts/125/workflow" | jq
   "publish_gate": {
     "mode": "enforce",
     "outcome": "refused"
-  }
+  },
+  "self_approval_blocked": false
 }
 ```
 
@@ -125,6 +126,14 @@ if **the current user** published this post now.
 Like `capabilities`, it is a display hint for the editor's notice. The gate
 re-decides on the actual write. It appears on `GET` and `POST
 /posts/{post_id}/workflow` only, not on `GET /posts` rows or batch `items`.
+
+### `self_approval_blocked` (since 1.1)
+
+`true` only when the self-approval rule is the reason the current user is not
+offered `approved`: `approved` is a legal next step, the user holds
+`sit_cwm_approve_content`, they are the post's author, and
+[self-approval is prevented](WORKFLOW.md#self-approval). Otherwise `false`. A
+display hint, like `capabilities`; same routes as `publish_gate`.
 
 ---
 
@@ -570,7 +579,7 @@ display name and nicename — never logins or email addresses.
 |---|---|---|
 | `search` | string | ≤ 100 characters |
 | `per_page` | integer | 1–100, default `20` |
-| `post_id` | integer | ≥ 1; scopes the list to users who can review that post |
+| `post_id` | integer | ≥ 1; scopes the list to users who can review that post. Since 1.1, leaves out the post's author while self-approval is prevented |
 
 ### Example
 
@@ -607,11 +616,12 @@ Errors are standard WordPress `WP_Error` JSON:
 |---|---|---|
 | `rest_forbidden` | **401** | Not logged in. |
 | `sit_cwm_forbidden` | **403** | Logged in, post visible, but not allowed to do this. |
+| `sit_cwm_self_approval` | **403** | Since 1.1. Moving your own post to `approved` while self-approval is prevented. From `POST /posts/{post_id}/workflow` and per item from the batch route. |
 | `sit_cwm_not_managed` | **404** | The post is missing, has no workflow, **or** is not readable by you. Deliberately indistinguishable — see below. |
 | `sit_cwm_invalid_post` | **404** | Per-batch-item equivalent of the above. |
 | `sit_cwm_invalid_status` | **400** | `status` is not a registered slug. |
 | `sit_cwm_invalid_transition` | **400** | That edge is not in the transition graph from the post's current status. |
-| `sit_cwm_invalid_user` | **400** | The reviewer does not exist, or does not hold `sit_cwm_review_content`. |
+| `sit_cwm_invalid_user` | **400** | The reviewer does not exist, does not hold `sit_cwm_review_content`, or is the post's author while self-approval is prevented. |
 | `sit_cwm_invalid_date` | **400** | The due date is not a real `YYYY-MM-DD` date. |
 | `sit_cwm_invalid_batch` | **400** | Fewer than 1 or more than 100 IDs, unknown action, or a mismatched payload. |
 | `sit_cwm_empty_comment` | **400** | The comment has no visible text after sanitizing. |

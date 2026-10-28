@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-28T09:57:29+00:00\n"
+"POT-Creation-Date: 2026-10-28T10:10:38+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: sapphireit-editorial-workflow\n"
@@ -44,12 +44,12 @@ msgid "Dashboard"
 msgstr ""
 
 #: admin/Dashboard.php:183
-#: admin/Settings.php:321
+#: admin/Settings.php:332
 msgid "Sorry, you are not allowed to access this page."
 msgstr ""
 
 #: admin/Settings.php:153
-#: admin/Settings.php:325
+#: admin/Settings.php:336
 msgid "Editorial Workflow Settings"
 msgstr ""
 
@@ -62,12 +62,12 @@ msgid "SapphireIT Editorial Workflow settings."
 msgstr ""
 
 #: admin/Settings.php:215
-#: admin/Settings.php:542
+#: admin/Settings.php:574
 msgid "Workflow"
 msgstr ""
 
 #: admin/Settings.php:222
-#: admin/Settings.php:363
+#: admin/Settings.php:374
 msgid "Enabled content types"
 msgstr ""
 
@@ -84,119 +84,135 @@ msgid "Require approval to publish"
 msgstr ""
 
 #: admin/Settings.php:253
+msgid "Self-approval"
+msgstr ""
+
+#: admin/Settings.php:261
 msgid "Email notifications"
 msgstr ""
 
-#: admin/Settings.php:260
-#: admin/Settings.php:510
+#: admin/Settings.php:268
+#: admin/Settings.php:542
 msgid "Send email when"
 msgstr ""
 
-#: admin/Settings.php:295
+#: admin/Settings.php:303
 msgid "The settings were not saved because the submitted data was invalid."
 msgstr ""
 
-#: admin/Settings.php:347
+#: admin/Settings.php:358
 msgid "Choose which content goes through the editorial workflow."
 msgstr ""
 
-#: admin/Settings.php:389
+#: admin/Settings.php:400
 msgid "Turning a content type off stops the workflow for it. Its workflow statuses, reviewers, due dates, publish gate mode and activity history are kept, and come back if you turn it on again."
 msgstr ""
 
-#: admin/Settings.php:405
+#: admin/Settings.php:416
 msgid "Delete all workflow data when the plugin is deleted"
 msgstr ""
 
-#: admin/Settings.php:410
+#: admin/Settings.php:421
 msgid "Warning:"
 msgstr ""
 
-#: admin/Settings.php:411
+#: admin/Settings.php:422
 msgid "this permanently removes the activity history, workflow comments, statuses, reviewers, due dates and the plugin’s capabilities. It cannot be undone. Deactivating the plugin never deletes data."
 msgstr ""
 
-#: admin/Settings.php:425
+#: admin/Settings.php:436
 msgid "Decide whether content has to be approved in the workflow before it can be published. Off changes nothing. Log only lets people publish but records every publish that skipped approval. Enforce blocks publishing until the content is approved; administrators can still publish, and that is recorded."
 msgstr ""
 
-#: admin/Settings.php:430
+#: admin/Settings.php:441
 msgid "Every publish and unpublish of workflow content is recorded in its activity history in all three modes. Changes written straight to the database by other code are not covered."
 msgstr ""
 
-#: admin/Settings.php:444
+#: admin/Settings.php:455
 msgid "Off"
 msgstr ""
 
-#: admin/Settings.php:445
+#: admin/Settings.php:456
 msgid "Log only"
 msgstr ""
 
-#: admin/Settings.php:446
+#: admin/Settings.php:457
 msgid "Enforce"
 msgstr ""
 
-#: admin/Settings.php:482
+#: admin/Settings.php:493
 msgid "Enable a content type above first."
 msgstr ""
 
-#: admin/Settings.php:496
+#: admin/Settings.php:509
+msgid "Prevent people from approving their own content"
+msgstr ""
+
+#: admin/Settings.php:514
+msgid "When this is on, nobody can move content they wrote to Approved, administrators included. Someone else with approval rights has to approve it. “Wrote” means the author set on the post."
+msgstr ""
+
+#: admin/Settings.php:528
 msgid "Send an email when these workflow events happen. Nobody is emailed about their own actions, and comment text is only included for people allowed to read the activity history."
 msgstr ""
 
-#: admin/Settings.php:558
+#: admin/Settings.php:590
 msgid "Draft, Writing and Review: users who can change the workflow (by default administrators, editors, authors and contributors)."
 msgstr ""
 
-#: admin/Settings.php:559
+#: admin/Settings.php:591
 msgid "Needs Changes: users who can review content (by default administrators and editors)."
 msgstr ""
 
-#: admin/Settings.php:560
+#: admin/Settings.php:592
 msgid "Approved: users who can approve content (by default administrators and editors)."
 msgstr ""
 
-#: admin/Settings.php:561
+#: admin/Settings.php:593
 msgid "Published: users who can approve content and can also publish that post."
 msgstr ""
 
-#: admin/Settings.php:562
+#: admin/Settings.php:594
 msgid "Reviewers and due dates: users who can assign reviewers (by default administrators and editors)."
 msgstr ""
 
-#: admin/Settings.php:565
+#: admin/Settings.php:597
 msgid "Draft → Writing → Review → Approved → Published. A reviewer can send content in Review back to Needs Changes, which returns to Writing. Published content starts a new cycle in Writing."
 msgstr ""
 
-#: admin/Settings.php:573
+#: admin/Settings.php:605
 msgid "Every action also requires permission to edit that piece of content. See WORKFLOW.md in the plugin folder for the full reference."
 msgstr ""
 
-#: admin/Settings.php:574
+#: admin/Settings.php:606
 msgid "Publish gate: Off changes nothing, Log only records every publish that skipped approval, and Enforce blocks publishing until the content is approved. Administrators can still publish, and that is recorded."
 msgstr ""
 
-#: admin/Settings.php:575
+#: admin/Settings.php:607
+msgid "Self-approval: when prevented, nobody can move content they wrote to Approved, administrators included, and the author is not offered as its reviewer. Someone else with approval rights has to approve it."
+msgstr ""
+
+#: admin/Settings.php:608
 msgid "Email notifications: each event can be switched on separately. Nobody is emailed about their own actions, and comment text is only included for people allowed to read the activity history."
 msgstr ""
 
-#: admin/Settings.php:593
+#: admin/Settings.php:626
 msgid "(not supported: kept because it is already enabled; once turned off it will not be offered again)"
 msgstr ""
 
-#: admin/Settings.php:609
+#: admin/Settings.php:642
 msgid "The enabled content types were not changed because the submitted value was invalid."
 msgstr ""
 
-#: admin/Settings.php:629
+#: admin/Settings.php:662
 msgid "Content types that do not exist were ignored."
 msgstr ""
 
-#: admin/Settings.php:652
+#: admin/Settings.php:685
 msgid "The publish gate settings were not changed because the submitted value was invalid."
 msgstr ""
 
-#: admin/Settings.php:680
+#: admin/Settings.php:713
 msgid "Publish gate settings for unknown content types or modes were ignored."
 msgstr ""
 
@@ -364,13 +380,13 @@ msgstr ""
 
 #: includes/REST/AbstractController.php:212
 #: includes/REST/BatchController.php:216
-#: includes/Workflow/WorkflowManager.php:430
+#: includes/Workflow/WorkflowManager.php:442
 msgid "The due date must be a valid date in YYYY-MM-DD format."
 msgstr ""
 
 #: includes/REST/AbstractController.php:249
-#: includes/REST/WorkflowController.php:611
-#: includes/Workflow/WorkflowManager.php:584
+#: includes/REST/WorkflowController.php:617
+#: includes/Workflow/WorkflowManager.php:625
 msgid "No workflow was found for this content."
 msgstr ""
 
@@ -379,7 +395,7 @@ msgid "You must be logged in to access workflows."
 msgstr ""
 
 #: includes/REST/AbstractController.php:312
-#: includes/Workflow/WorkflowManager.php:637
+#: includes/Workflow/WorkflowManager.php:678
 msgid "You are not allowed to perform this workflow action."
 msgstr ""
 
@@ -398,12 +414,12 @@ msgid "The comment cannot be longer than %d characters."
 msgstr ""
 
 #: includes/REST/ActivityController.php:214
-#: includes/Workflow/WorkflowManager.php:489
+#: includes/Workflow/WorkflowManager.php:501
 msgid "The comment cannot be empty."
 msgstr ""
 
 #: includes/REST/ActivityController.php:343
-#: includes/Workflow/WorkflowManager.php:652
+#: includes/Workflow/WorkflowManager.php:693
 msgid "The workflow could not be saved. Please try again."
 msgstr ""
 
@@ -648,15 +664,15 @@ msgstr ""
 msgid "Limit to users who can review this post."
 msgstr ""
 
-#: includes/REST/UserController.php:272
+#: includes/REST/UserController.php:282
 msgid "User ID."
 msgstr ""
 
-#: includes/REST/UserController.php:277
+#: includes/REST/UserController.php:287
 msgid "Display name."
 msgstr ""
 
-#: includes/REST/UserController.php:282
+#: includes/REST/UserController.php:292
 msgid "Avatar URL."
 msgstr ""
 
@@ -695,15 +711,19 @@ msgstr ""
 msgid "Publish gate state for the current user. Display hint only; publishing is re-checked on save."
 msgstr ""
 
-#: includes/REST/WorkflowController.php:542
+#: includes/REST/WorkflowController.php:523
+msgid "Whether the current user is not offered Approve only because they authored this post and self-approval is prevented. Display hint only."
+msgstr ""
+
+#: includes/REST/WorkflowController.php:548
 msgid "Status of managed content that has none stored yet."
 msgstr ""
 
-#: includes/REST/WorkflowController.php:547
+#: includes/REST/WorkflowController.php:553
 msgid "Registered workflow statuses, in display order."
 msgstr ""
 
-#: includes/REST/WorkflowController.php:563
+#: includes/REST/WorkflowController.php:569
 msgid "Transition map: source status slug to the moves the workflow allows from it, whoever the user is."
 msgstr ""
 
@@ -775,24 +795,32 @@ msgstr ""
 msgid "Published; the workflow cycle is complete."
 msgstr ""
 
-#: includes/Workflow/WorkflowManager.php:370
+#: includes/Workflow/WorkflowManager.php:373
 msgid "The selected reviewer does not exist."
 msgstr ""
 
-#: includes/Workflow/WorkflowManager.php:378
+#: includes/Workflow/WorkflowManager.php:381
 msgid "The selected user is not allowed to review content."
 msgstr ""
 
-#: includes/Workflow/WorkflowManager.php:538
+#: includes/Workflow/WorkflowManager.php:396
+msgid "The author can't review their own content while self-approval is prevented."
+msgstr ""
+
+#: includes/Workflow/WorkflowManager.php:552
 msgid "The workflow status was changed by someone else. Reload and try again."
 msgstr ""
 
-#: includes/Workflow/WorkflowManager.php:546
+#: includes/Workflow/WorkflowManager.php:560
 msgid "The requested workflow status does not exist."
 msgstr ""
 
-#: includes/Workflow/WorkflowManager.php:554
+#: includes/Workflow/WorkflowManager.php:568
 msgid "This workflow transition is not allowed."
+msgstr ""
+
+#: includes/Workflow/WorkflowManager.php:577
+msgid "You can't approve content you wrote. Another reviewer has to approve it."
 msgstr ""
 
 #. translators: 1: Required PHP version, 2: Current PHP version.
@@ -1326,13 +1354,13 @@ msgstr ""
 
 #: assets/build/classic.js:28
 #: assets/build/sidebar.js:28
-#: src/components/WorkflowPanel.jsx:290
+#: src/components/WorkflowPanel.jsx:299
 msgid "Comment"
 msgstr ""
 
 #: assets/build/classic.js:28
 #: assets/build/sidebar.js:28
-#: src/components/WorkflowPanel.jsx:301
+#: src/components/WorkflowPanel.jsx:310
 msgid "Activity"
 msgstr ""
 
@@ -1747,4 +1775,8 @@ msgstr ""
 #: assets/build/dashboard.js:187
 #: src/dashboard/WorkflowDataViews.jsx:327
 msgid "Search content"
+msgstr ""
+
+#: src/components/WorkflowPanel.jsx:290
+msgid "You can't approve your own content. Another reviewer has to approve it."
 msgstr ""

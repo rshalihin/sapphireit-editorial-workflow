@@ -303,6 +303,17 @@ proven end to end by these specs in `tests/e2e/`:
 | `notifications.spec.js` | One mail per event to the right recipient; turning an event off stops it |
 | `settings-gate.spec.js` | The Publish gate and Email notifications sections of the settings screen |
 | `cli-matrix.spec.js` | WP-CLI: refused without `--user`, bypassed and recorded with `--user=admin`, `post create --post_status=publish` saved as a draft and recorded |
+| `self-approval.spec.js` | "Prevent people from approving their own content": no Approve for the author, another editor can approve, the author is not offered as reviewer, REST refuses with `sit_cwm_self_approval` |
+
+These specs, `a11y.spec.js` and `screenshots.spec.js` need the test-only
+mu-plugin `tests/e2e/fixtures/sit-cwm-e2e-helpers.php`. It captures every
+`wp_mail()` call instead of sending it and adds routes under `sit-cwm-e2e/v1`
+(captured mails, settings, a cron go-live, a raw `wp_publish_post()`, raw
+activity rows), each limited to `manage_options`. wp-env maps it into
+`wp-content/mu-plugins/` (`.wp-env.json`), and `php bin/setup-e2e-site.php`
+links it into a local site. It lives under `tests/`, so the release zip never
+contains it. Classic Editor must be installed (not active) on a local site, as
+for `classic-editor.spec.js`.
 
 They run with the rest of the suite (`npm run test:e2e`, or
 `npm run test:e2e:local` without Docker), except `cli-matrix.spec.js`. That
@@ -361,6 +372,8 @@ Measured 2026-09-27 (Xdebug 3.5.3, PHP 8.3, WordPress 6.9 test library):
 | `WorkflowManager` status-change path: `can_transition`, `check_transition`, `transition`, `validate_transition`, `check_post`, `resolve_user_id` | 100 % of branches | **100 %** (1/1, 4/4, 5/5, 11/11, 5/5, 3/3) |
 | `includes/Activity/` | 80 % lines | **92.3 %** (204/221; re-measured 2026-09-28 after the `get_for_posts()` fix) |
 | `includes/Content/` | 80 % lines | **95.3 %** (342/359) |
+| `includes/Publishing/` | 90 % lines | added for 1.1; not measured yet |
+| `includes/Notifications/` | 90 % lines | added for 1.1; not measured yet |
 | `includes/REST/` | every route: happy path, unauthenticated, unauthorized, invalid input | **met**: 401 / 403 / 400 cases per controller in `tests/php/integration/REST/`; `/statuses` takes no input. `SchemaContractTest` checks every route's response against its `OPTIONS` schema |
 | JS hooks | loading / success / error each | **met**: `useWorkflow`, `useActivity`, `usePosts`, `useBulkAction`, `useUsers`, `useReviewerOptions` |
 | JS components | render + one interaction each | **met** in Jest for the sidebar controls, dialogs, row and bulk modals. `Sidebar.jsx` and the dashboard shell (`App.jsx`, `WorkflowDataViews.jsx`) are rendered and driven by the Playwright specs instead |

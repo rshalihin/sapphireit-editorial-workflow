@@ -522,6 +522,7 @@ class is `@internal`; these hooks are the public surface.
 | filter | `sit_cwm_notification_recipients` | `int[] $user_ids, string $event, int $post_id, int $actor_id` |
 | filter | `sit_cwm_notification_message` | `array{subject: string, body: string} $message, string $event, int $post_id, int $recipient_id` |
 | action | `sit_cwm_notification_sent` | `string $event, int $post_id, int $recipient_id, bool $sent` |
+| filter | `sit_cwm_prevent_self_approval` | `bool $prevent, int $post_id`. Defaults to the "Prevent people from approving their own content" setting; only `true` prevents (E16) |
 
 `$layer` is one of `rest`, `save`, `schedule`, `backstop`. Publication rows fire
 the existing `sit_cwm_activity_logged`; there is no separate publication action.
@@ -775,6 +776,8 @@ All require an existing user, a managed post and `edit_post` on it, plus:
 | `can_set_due_date` | `sit_cwm_assign_reviewer` |
 | `can_manage` (no post) | `sit_cwm_manage_workflows` |
 | `can_bypass_publish_gate` (no post) | `sit_cwm_bypass_publish_gate` (1.1). Asked only by `PublishGate`; multisite super admins pass implicitly |
+| `is_self_approval_blocked` | — (1.1). True when the user is the post's `post_author` and `sit_cwm_prevent_self_approval` returns `true`. `can_change_status()` refuses `approved` when it is; `WorkflowManager` then returns `sit_cwm_self_approval` (403) |
+| `excluded_reviewers` | — (1.1). The post's author while self-approval is prevented, else `[]`. `UserController` excludes them from `GET /users?post_id=`; `assign_reviewer()` refuses them |
 
 Role grants live only in `Capabilities::role_map()` and are applied at
 activation (`Capabilities::add_caps()`, idempotent) and removed on uninstall

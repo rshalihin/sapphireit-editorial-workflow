@@ -171,6 +171,39 @@ final class UserControllerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * While self-approval is prevented, a post's author is left out of its
+	 * reviewer list but still listed without `post_id` (E16).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_author_is_not_offered_as_reviewer_of_own_post_when_prevented() {
+		( new Settings() )->update( array( 'prevent_self_approval' => true ) );
+
+		$editor = $this->make_user( 'editor' );
+		$other  = $this->make_user( 'editor' );
+		$post   = self::factory()->post->create( array( 'post_author' => $editor ) );
+
+		wp_set_current_user( $editor );
+
+		$scoped   = array_column(
+			$this->get_users(
+				array(
+					'per_page' => 100,
+					'post_id'  => $post,
+				)
+			)->get_data(),
+			'id'
+		);
+		$unscoped = array_column( $this->get_users( array( 'per_page' => 100 ) )->get_data(), 'id' );
+
+		$this->assertNotContains( $editor, $scoped );
+		$this->assertContains( $other, $scoped );
+		$this->assertContains( $editor, $unscoped );
+	}
+
+	/**
 	 * Search matches display names, never email addresses; `per_page` is capped.
 	 *
 	 * @return void

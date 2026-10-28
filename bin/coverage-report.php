@@ -32,11 +32,16 @@ require dirname( __DIR__ ) . '/vendor/autoload.php';
 
 /**
  * Line coverage minimums, by source directory.
+ *
+ * Publishing/ and Notifications/ (1.1) share Workflow/'s bar because they
+ * also decide who may do what: who may publish, and who is told.
  */
 const SIT_CWM_COVERAGE_LINE_MINIMUMS = array(
-	'includes/Workflow/' => 90,
-	'includes/Activity/' => 80,
-	'includes/Content/'  => 80,
+	'includes/Workflow/'      => 90,
+	'includes/Activity/'      => 80,
+	'includes/Content/'       => 80,
+	'includes/Publishing/'    => 90,
+	'includes/Notifications/' => 90,
 );
 
 /**

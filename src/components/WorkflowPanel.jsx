@@ -284,6 +284,15 @@ function WorkflowPanel( {
 					isSaving={ isSaving }
 					isDisabled={ isGone }
 				/>
+				{ /* The server sets this only when the rule is the reason Approve is missing. */ }
+				{ workflow.self_approval_blocked === true && (
+					<p className="sit-cwm-self-approval-note">
+						{ __(
+							"You can't approve your own content. Another reviewer has to approve it.",
+							'sapphireit-editorial-workflow'
+						) }
+					</p>
+				) }
 			</PanelBody>
 
 			{ capabilities.can_comment && (

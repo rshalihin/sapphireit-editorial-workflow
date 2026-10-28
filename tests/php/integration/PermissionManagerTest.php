@@ -633,6 +633,110 @@ final class PermissionManagerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * With self-approval prevented, the author cannot approve their own post,
+	 * another approver can, and only `approved` is restricted (E16).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_author_cannot_approve_own_post_when_prevented() {
+		( new Settings() )->update( array( 'prevent_self_approval' => true ) );
+
+		$editor   = $this->make_user( 'editor' );
+		$reviewer = $this->make_user( 'editor' );
+		$post     = $this->make_post( $editor );
+
+		$this->assertFalse( $this->permissions->can_change_status( $post, 'approved', $editor ) );
+		$this->assertTrue( $this->permissions->can_change_status( $post, 'approved', $reviewer ) );
+		$this->assertTrue( $this->permissions->can_change_status( $post, 'needs_changes', $editor ), 'Only approved is restricted.' );
+		$this->assertTrue( $this->permissions->is_self_approval_blocked( $post, $editor ) );
+		$this->assertFalse( $this->permissions->is_self_approval_blocked( $post, $reviewer ) );
+	}
+
+	/**
+	 * Administrators are bound by the rule too.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_rule_applies_to_administrators() {
+		( new Settings() )->update( array( 'prevent_self_approval' => true ) );
+
+		$admin = $this->make_user( 'administrator' );
+		$post  = $this->make_post( $admin );
+
+		$this->assertFalse( $this->permissions->can_change_status( $post, 'approved', $admin ) );
+	}
+
+	/**
+	 * With the setting off (the default), authors may approve their own post.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_author_can_approve_own_post_when_setting_off() {
+		$editor = $this->make_user( 'editor' );
+		$post   = $this->make_post( $editor );
+
+		$this->assertTrue( $this->permissions->can_change_status( $post, 'approved', $editor ) );
+		$this->assertFalse( $this->permissions->is_self_approval_blocked( $post, $editor ) );
+	}
+
+	/**
+	 * `sit_cwm_prevent_self_approval` receives the post id and can turn the
+	 * rule off per post; a non-boolean true does not prevent.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_prevent_filter_receives_post_id_and_can_turn_rule_off_per_post() {
+		( new Settings() )->update( array( 'prevent_self_approval' => true ) );
+
+		$editor = $this->make_user( 'editor' );
+		$post   = $this->make_post( $editor );
+		$seen   = null;
+
+		$filter = function ( $prevent, $id ) use ( &$seen ) {
+			$seen = $id;
+
+			return false;
+		};
+		add_filter( 'sit_cwm_prevent_self_approval', $filter, 10, 2 );
+
+		$this->assertTrue( $this->permissions->can_change_status( $post, 'approved', $editor ) );
+		$this->assertSame( $post, $seen );
+
+		remove_filter( 'sit_cwm_prevent_self_approval', $filter, 10 );
+		( new Settings() )->update( array( 'prevent_self_approval' => false ) );
+		add_filter( 'sit_cwm_prevent_self_approval', '__return_empty_string' );
+
+		$this->assertTrue( $this->permissions->can_change_status( $post, 'approved', $editor ), 'Only boolean true prevents.' );
+	}
+
+	/**
+	 * The author is the only excluded reviewer, and only while the rule is on.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_excluded_reviewers_is_the_author_only_when_prevented() {
+		$editor = $this->make_user( 'editor' );
+		$post   = $this->make_post( $editor );
+
+		$this->assertSame( array(), $this->permissions->excluded_reviewers( $post ) );
+
+		( new Settings() )->update( array( 'prevent_self_approval' => true ) );
+
+		$this->assertSame( array( $editor ), $this->permissions->excluded_reviewers( $post ) );
+		$this->assertSame( array(), $this->permissions->excluded_reviewers( 0 ) );
+	}
+
+	/**
 	 * Creates a user with a role.
 	 *
 	 * @param string $role Role slug.

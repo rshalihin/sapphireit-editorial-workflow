@@ -199,6 +199,20 @@ approve", say), the `sit_cwm_can_transition` filter has the final word on every
 decision. Choosing roles from this plugin's own settings is not part of the free
 plugin.
 
+= Can someone approve their own content? =
+
+Not when "Prevent people from approving their own content" is ticked under
+Settings → Publish gate. Then nobody can move content they wrote to Approved,
+administrators included, and the author is not offered as its reviewer.
+Someone else with approval rights has to approve it. With the gate set to
+Enforce, administrators can still publish unapproved content, and that is
+recorded.
+
+"Own" means the author set on the post. Someone who rewrote a post they are not
+the author of can still approve it.
+
+The setting is off until you turn it on.
+
 = Can I change the statuses or the order they go in? =
 
 The `sit_cwm_statuses` and `sit_cwm_transition_map` filters replace the status

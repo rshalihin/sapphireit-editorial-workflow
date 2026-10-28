@@ -201,6 +201,7 @@ final class SettingsPageTest extends TestCase {
 				'delete_data_on_uninstall' => true,
 				'publish_gate'             => array(),
 				'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
+				'prevent_self_approval'    => false,
 			),
 			$clean
 		);
@@ -239,6 +240,7 @@ final class SettingsPageTest extends TestCase {
 				'delete_data_on_uninstall' => false,
 				'publish_gate'             => array(),
 				'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
+				'prevent_self_approval'    => false,
 			),
 			$this->page->sanitize( null )
 		);
@@ -257,7 +259,7 @@ final class SettingsPageTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( array( 'post_types', 'delete_data_on_uninstall', 'publish_gate', 'notifications' ), array_keys( $clean ) );
+		$this->assertSame( array( 'post_types', 'delete_data_on_uninstall', 'publish_gate', 'notifications', 'prevent_self_approval' ), array_keys( $clean ) );
 	}
 
 	/**
@@ -304,6 +306,66 @@ final class SettingsPageTest extends TestCase {
 		$this->assertSame( 'sit_cwm_notifications', SettingsPage::SECTION_NOTIFICATIONS );
 		$this->assertArrayHasKey( 'sit_cwm_publish_gate_modes', $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION_GATE ] );
 		$this->assertArrayHasKey( 'sit_cwm_notification_events', $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION_NOTIFICATIONS ] );
+	}
+
+	/**
+	 * The self-approval checkbox sits in the Publish gate section, renders
+	 * unchecked by default and checked once stored (E16).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_self_approval_field_is_registered_and_renders_its_state() {
+		global $wp_settings_fields;
+
+		$this->page->register_settings();
+
+		$this->assertArrayHasKey( 'sit_cwm_self_approval', $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION_GATE ] );
+
+		ob_start();
+		$this->page->render_self_approval_field();
+		$html = ob_get_clean();
+
+		$this->assertMatchesRegularExpression( '/<label><input type="checkbox" name="sit_cwm_settings\[prevent_self_approval\]" value="1"\s*\/> Prevent people from approving their own content<\/label>/', $html );
+		$this->assertStringContainsString( 'administrators included', $html );
+		$this->assertStringNotContainsString( 'checked', $html );
+
+		$this->assertTrue( $this->store->update( array( 'prevent_self_approval' => true ) ) );
+
+		ob_start();
+		$this->page->render_self_approval_field();
+		$html = ob_get_clean();
+
+		$this->assertMatchesRegularExpression( '/name="sit_cwm_settings\[prevent_self_approval\]" value="1"\s+checked=/', $html );
+	}
+
+	/**
+	 * A missing self-approval box is off; a ticked one is on.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_self_approval_checkbox() {
+		$this->assertFalse( $this->page->sanitize( array( 'post_types' => array( 'post' ) ) )['prevent_self_approval'] );
+		$this->assertTrue(
+			$this->page->sanitize(
+				array(
+					'post_types'            => array( 'post' ),
+					'prevent_self_approval' => '1',
+				)
+			)['prevent_self_approval']
+		);
+		$this->assertFalse(
+			$this->page->sanitize(
+				array(
+					'post_types'            => array( 'post' ),
+					'prevent_self_approval' => array( '1' ),
+				)
+			)['prevent_self_approval'],
+			'A non-scalar value is off.'
+		);
 	}
 
 	/**

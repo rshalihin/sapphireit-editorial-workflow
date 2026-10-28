@@ -15,7 +15,11 @@ import { expect, test } from '@wordpress/e2e-test-utils-playwright';
 /**
  * Internal dependencies
  */
-import { axeViolations as violations, openWorkflowSidebar } from './utils';
+import {
+	axeViolations as violations,
+	openWorkflowSidebar,
+	setSettings,
+} from './utils';
 
 const TITLE = 'E2E a11y post';
 
@@ -46,6 +50,7 @@ test.describe( 'Accessibility', () => {
 	} );
 
 	test.afterAll( async ( { requestUtils } ) => {
+		await setSettings( requestUtils, { publish_gate: {} } );
 		await requestUtils.deleteAllPosts();
 	} );
 
@@ -86,5 +91,36 @@ test.describe( 'Accessibility', () => {
 		expect( await violations( page, '.components-modal__frame' ) ).toEqual(
 			[]
 		);
+	} );
+
+	test( 'settings screen with the publish gate and notifications sections', async ( {
+		admin,
+		page,
+	} ) => {
+		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-settings' );
+
+		await expect(
+			page.getByRole( 'heading', { name: 'Publish gate' } )
+		).toBeVisible();
+		await expect(
+			page.getByRole( 'heading', { name: 'Email notifications' } )
+		).toBeVisible();
+		expect( await violations( page, '.wrap form' ) ).toEqual( [] );
+	} );
+
+	test( 'editor sidebar with the gate notice', async ( {
+		page,
+		requestUtils,
+	} ) => {
+		await setSettings( requestUtils, {
+			publish_gate: { post: 'enforce' },
+		} );
+
+		// The administrator holds the bypass, so the notice is the bypass
+		// warning; it is the same component as the locked notice.
+		const panel = await openWorkflowSidebar( page, post.id );
+
+		await expect( panel.locator( '.sit-cwm-gate-notice' ) ).toBeVisible();
+		expect( await violations( page, '.sit-cwm-sidebar' ) ).toEqual( [] );
 	} );
 } );

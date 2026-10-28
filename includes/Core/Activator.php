@@ -82,7 +82,7 @@ final class Activator {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool}
 	 */
 	public static function default_settings(): array {
 		return ( new Settings() )->defaults();

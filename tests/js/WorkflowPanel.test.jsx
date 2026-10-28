@@ -17,6 +17,8 @@ jest.mock( '../../src/hooks/useWorkflow' );
 jest.mock( '../../src/components/Snackbars', () => () => null );
 
 const LOCKED = 'Publishing is locked until this content is approved.';
+const SELF_APPROVAL =
+	"You can't approve your own content. Another reviewer has to approve it.";
 
 /**
  * A writing-stage workflow the current user may submit for review.
@@ -104,6 +106,32 @@ describe( 'WorkflowPanel gate notice', () => {
 		const { container } = render( <WorkflowPanel postId={ 42 } /> );
 
 		expect( container.querySelector( '.sit-cwm-gate-notice' ) ).toBeNull();
+	} );
+} );
+
+describe( 'WorkflowPanel self-approval note', () => {
+	it( 'explains the missing Approve in the classic panel', () => {
+		mockWorkflow( makeWorkflow( { self_approval_blocked: true } ) );
+
+		render( <ClassicPanel postId={ 42 } postType="post" /> );
+
+		expect( screen.getByText( SELF_APPROVAL ) ).toBeTruthy();
+	} );
+
+	it( 'says nothing when the rule is not the reason', () => {
+		mockWorkflow( makeWorkflow( { self_approval_blocked: false } ) );
+
+		render( <WorkflowPanel postId={ 42 } /> );
+
+		expect( screen.queryByText( SELF_APPROVAL ) ).toBeNull();
+	} );
+
+	it( 'says nothing when an older server sends no flag', () => {
+		mockWorkflow( makeWorkflow() );
+
+		render( <WorkflowPanel postId={ 42 } /> );
+
+		expect( screen.queryByText( SELF_APPROVAL ) ).toBeNull();
 	} );
 } );
 

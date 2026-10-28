@@ -55,6 +55,7 @@ final class SettingsTest extends WP_UnitTestCase {
 			'delete_data_on_uninstall' => false,
 			'publish_gate'             => array(),
 			'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
+			'prevent_self_approval'    => false,
 		);
 
 		$this->assertSame( $expected, $this->settings->defaults() );
@@ -92,6 +93,7 @@ final class SettingsTest extends WP_UnitTestCase {
 				'delete_data_on_uninstall' => true,
 				'publish_gate'             => array(),
 				'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
+				'prevent_self_approval'    => false,
 			),
 			get_option( Settings::OPTION )
 		);
@@ -314,5 +316,39 @@ final class SettingsTest extends WP_UnitTestCase {
 	 */
 	public function test_notification_labels_cover_every_event() {
 		$this->assertSame( NotificationEvents::all(), array_keys( NotificationEvents::labels() ) );
+	}
+
+	/**
+	 * Self-approval prevention is off on fresh installs and after upgrading
+	 * from a 1.0.0 option that has no such key (E16).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_prevent_self_approval_defaults_off_and_upgrades_off() {
+		$this->assertFalse( ( new Settings() )->defaults()['prevent_self_approval'] );
+
+		update_option( Settings::OPTION, array( 'post_types' => array( 'post' ) ) ); // 1.0.0 option.
+
+		$this->assertFalse( ( new Settings() )->prevents_self_approval() );
+	}
+
+	/**
+	 * `update()` stores the self-approval toggle as a boolean.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_update_stores_prevent_self_approval_as_bool() {
+		$settings = new Settings();
+
+		$this->assertTrue( $settings->update( array( 'prevent_self_approval' => '1' ) ) );
+		$this->assertTrue( $settings->prevents_self_approval() );
+		$this->assertTrue( $settings->get( 'prevent_self_approval' ) );
+
+		$this->assertTrue( $settings->update( array( 'prevent_self_approval' => 'false' ) ) );
+		$this->assertFalse( $settings->prevents_self_approval() );
 	}
 }

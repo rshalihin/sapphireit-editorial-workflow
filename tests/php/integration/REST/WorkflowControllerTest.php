@@ -479,6 +479,40 @@ final class WorkflowControllerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A self-approval over REST is a 403 `sit_cwm_self_approval`, and the
+	 * payload explains why Approve is missing (E16).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_rest_self_approval_is_refused_with_its_own_error() {
+		( new Settings() )->update( array( 'prevent_self_approval' => true ) );
+
+		$editor = $this->make_user( 'editor' );
+		$post   = $this->make_post( $editor, 'review' );
+
+		wp_set_current_user( $editor );
+
+		$this->assertTrue( $this->get( $post )->get_data()['self_approval_blocked'] );
+
+		$response = $this->post(
+			$post,
+			array(
+				'status' => 'approved',
+				'from'   => 'review',
+			)
+		);
+
+		$this->assert_error_response( $response, 'sit_cwm_self_approval', 403 );
+		$this->assertSame( 'review', $this->posts->get_status( $post ) );
+
+		( new Settings() )->update( array( 'prevent_self_approval' => false ) );
+
+		$this->assertFalse( $this->get( $post )->get_data()['self_approval_blocked'] );
+	}
+
+	/**
 	 * `/statuses` is for content editors: 403 for subscribers, metadata for authors.
 	 *
 	 * @return void

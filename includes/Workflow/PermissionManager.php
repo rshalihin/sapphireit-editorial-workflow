@@ -413,13 +413,15 @@ final class PermissionManager {
 	 *
 	 * Checks, cheapest first: the user exists; the post exists and its type is
 	 * workflow-enabled; `edit_post` on this post; the capability mapped to the
-	 * target status; and for `published`, `publish_post` on this post. The
-	 * first two gates are final. The capability outcome then passes through
+	 * target status; for `published`, `publish_post` on this post; and for
+	 * `approved`, that self-approval is not blocked (E16). The first two
+	 * gates are final. The outcome of the rest then passes through
 	 * `sit_cwm_can_transition`.
 	 *
 	 * Does not check whether the move is a legal edge from the current status.
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Refuses `approved` to the post's author when self-approval is prevented.
 	 *
 	 * @param int      $post_id Post id.
 	 * @param string   $to      Target status slug.
@@ -441,7 +443,8 @@ final class PermissionManager {
 
 		$allowed = user_can( $user, 'edit_post', $post->ID )
 			&& user_can( $user, $this->capability_for_status( $to ) )
-			&& ( 'published' !== $to || user_can( $user, 'publish_post', $post->ID ) );
+			&& ( 'published' !== $to || user_can( $user, 'publish_post', $post->ID ) )
+			&& ! ( 'approved' === $to && $this->is_self_approval_blocked( $post->ID, $user->ID ) );
 
 		/**
 		 * Filters whether a user may move a post to a workflow status.
@@ -464,6 +467,73 @@ final class PermissionManager {
 		$filtered = apply_filters( 'sit_cwm_can_transition', $allowed, $post->ID, $this->current_status( $post->ID ), $to, $user->ID );
 
 		return true === $filtered;
+	}
+
+	/**
+	 * Whether a user is refused `approved` on a post because they authored it
+	 * and self-approval is prevented (E16).
+	 *
+	 * "Authored" means the post's `post_author`. Applies to administrators too.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param int      $post_id Post id.
+	 * @param int|null $user_id User id; null for the current user.
+	 * @return bool False when the user or the managed post is missing.
+	 */
+	public function is_self_approval_blocked( int $post_id, ?int $user_id = null ): bool {
+		$user = $this->resolve_user( $user_id );
+
+		if ( null === $user ) {
+			return false;
+		}
+
+		$post = $this->resolve_post( $post_id );
+
+		if ( null === $post ) {
+			return false;
+		}
+
+		/**
+		 * Filters whether people are prevented from approving content they
+		 * authored, for one post.
+		 *
+		 * Defaults to the "Prevent people from approving their own content"
+		 * setting. Only boolean true prevents.
+		 *
+		 * @since 1.1.0
+		 *
+		 * @param bool $prevent Whether self-approval is prevented.
+		 * @param int  $post_id Post id.
+		 */
+		$prevent = apply_filters( 'sit_cwm_prevent_self_approval', $this->settings->prevents_self_approval(), $post->ID );
+
+		return true === $prevent && (int) $post->post_author === $user->ID;
+	}
+
+	/**
+	 * Users who must not be offered or assigned as a post's reviewer: its
+	 * author while self-approval is prevented (E16).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param int $post_id Post id.
+	 * @return int[] User ids; empty for a missing or unmanaged post.
+	 */
+	public function excluded_reviewers( int $post_id ): array {
+		$post = $this->resolve_post( $post_id );
+
+		if ( null === $post ) {
+			return array();
+		}
+
+		$author_id = (int) $post->post_author;
+
+		if ( $author_id <= 0 || ! $this->is_self_approval_blocked( $post->ID, $author_id ) ) {
+			return array();
+		}
+
+		return array( $author_id );
 	}
 
 	/**

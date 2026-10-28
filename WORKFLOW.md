@@ -99,7 +99,9 @@ Reaching a status requires **all** of:
 | `approved` | `sit_cwm_approve_content` | |
 | `published` | `sit_cwm_approve_content` | WordPress `publish_post` on the post |
 
-5. A `true` return from the `sit_cwm_can_transition` filter, which runs last and
+5. For `approved` only, while self-approval is prevented: the user is not the
+   post's author (see [Self-approval](#self-approval)).
+6. A `true` return from the `sit_cwm_can_transition` filter, which runs last and
    has the final say over steps 3–5. It cannot override steps 1–2.
 
 Note that the capability is keyed to the **target**, not to the edge. Moving
@@ -139,6 +141,39 @@ one at a time.
 Only a user who holds `sit_cwm_review_content`. Assigning anyone else fails with
 `sit_cwm_invalid_user` (400), single or bulk. With the default grants that means
 editors and administrators.
+
+While self-approval is prevented, the post's author is also left out of its
+reviewer list and cannot be assigned (`sit_cwm_invalid_user`, 400).
+
+### Self-approval
+
+*Since 1.1.* Off by default, on fresh installs and upgrades alike. When
+**Prevent people from approving their own content** is ticked (Settings →
+Publish gate), nobody can move a post to `approved` if they are its
+`post_author`.
+
+- **Every route.** The rule lives in `PermissionManager::can_change_status()`,
+  before `sit_cwm_can_transition`, so it covers the sidebar, the classic meta
+  box, the dashboard bulk action, `sit-cwm/v1` REST and the batch route. A
+  refusal is `sit_cwm_self_approval` (403) instead of the generic
+  `sit_cwm_forbidden`, and Approve is not offered. The panel then says *You
+  can't approve your own content. Another reviewer has to approve it.*
+- **Only `approved`.** The author can still send their own post to Review,
+  Needs Changes and so on, as their capabilities allow.
+- **Administrators are bound too.** With the gate set to Enforce they can still
+  publish unapproved content through `sit_cwm_bypass_publish_gate`, and that is
+  recorded as a publish without approval, so a one-person site is never stuck.
+- **"Author" means `post_author`.** Someone who rewrote a post they are not the
+  author of is not caught.
+- **Reviewer list.** The author is left out of the assignable reviewers for
+  their own post and cannot be assigned. An assignment made before the setting
+  was turned on is kept; that reviewer just cannot approve.
+- **Filter.** `sit_cwm_prevent_self_approval( bool $prevent, int $post_id )`
+  varies the rule per post. Only boolean `true` prevents.
+
+Choosing which roles may approve is not a setting of the free plugin.
+`sit_cwm_approve_content` is a normal WordPress capability, so a role-editor
+plugin can grant or remove it.
 
 ---
 

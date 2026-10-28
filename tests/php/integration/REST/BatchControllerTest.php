@@ -10,6 +10,7 @@ namespace Sit_Cwm\Tests\Integration\REST;
 
 use Sit_Cwm\Core\Container;
 use Sit_Cwm\Core\Plugin;
+use Sit_Cwm\Core\Settings;
 use Sit_Cwm\REST\BatchController;
 use Sit_Cwm\Tests\TestCase;
 use Sit_Cwm\Tests\Traits\CreatesWorkflowPosts;
@@ -105,6 +106,33 @@ final class BatchControllerTest extends TestCase {
 		$this->assert_status( $illegal, 'writing' );
 		$this->assertSame( 'writing', get_metadata_raw( 'post', $illegal, '_sit_cwm_status', true ) );
 		$this->assert_activity_count( $illegal, 0 );
+	}
+
+	/**
+	 * A bulk approve skips the actor's own posts with `sit_cwm_self_approval`
+	 * while the rule is on, and approves the rest (E16).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_bulk_approve_skips_own_posts() {
+		( new Settings() )->update( array( 'prevent_self_approval' => true ) );
+
+		$editor = self::fixture_user( 'editor' );
+		$own    = $this->create_managed_post( $this->post_args( $editor, 'review' ) );
+		$theirs = $this->create_managed_post( $this->post_args( self::fixture_user( 'author' ), 'review' ) );
+
+		wp_set_current_user( $editor );
+
+		$data = $this->batch( array( $own, $theirs ), 'change_status', array( 'status' => 'approved' ) )->get_data();
+
+		$this->assertSame( array( $theirs ), $data['succeeded'] );
+		$this->assertSame( array( $own ), array_column( $data['failed'], 'post_id' ) );
+		$this->assertSame( 'sit_cwm_self_approval', $data['failed'][0]['code'] );
+		$this->assertSame( 403, $data['failed'][0]['status'] );
+		$this->assert_status( $own, 'review' );
+		$this->assert_status( $theirs, 'approved' );
 	}
 
 	/**

@@ -188,6 +188,21 @@ final class SchemaContractTest extends TestCase {
 	}
 
 	/**
+	 * The workflow schema declares the read-only self-approval hint (E16).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_workflow_schema_declares_self_approval_blocked() {
+		$schema = $this->schema( $this->route( 'workflow' ) );
+
+		$this->assertArrayHasKey( 'self_approval_blocked', $schema['properties'] );
+		$this->assertSame( 'boolean', $schema['properties']['self_approval_blocked']['type'] );
+		$this->assertTrue( $schema['properties']['self_approval_blocked']['readonly'] );
+	}
+
+	/**
 	 * The status registry route matches its schema.
 	 *
 	 * @return void

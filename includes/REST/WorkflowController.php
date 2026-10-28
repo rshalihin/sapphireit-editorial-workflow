@@ -519,6 +519,12 @@ class WorkflowController extends AbstractController {
 						),
 					),
 				),
+				'self_approval_blocked' => array(
+					'description' => __( 'Whether the current user is not offered Approve only because they authored this post and self-approval is prevented. Display hint only.', 'sapphireit-editorial-workflow' ),
+					'type'        => 'boolean',
+					'readonly'    => true,
+					'context'     => array( 'view', 'edit' ),
+				),
 			),
 		);
 

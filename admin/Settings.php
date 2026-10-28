@@ -248,6 +248,14 @@ final class Settings implements Bootable {
 			self::SECTION_GATE
 		);
 
+		add_settings_field(
+			'sit_cwm_self_approval',
+			__( 'Self-approval', 'sapphireit-editorial-workflow' ),
+			array( $this, 'render_self_approval_field' ),
+			self::MENU_SLUG,
+			self::SECTION_GATE
+		);
+
 		add_settings_section(
 			self::SECTION_NOTIFICATIONS,
 			__( 'Email notifications', 'sapphireit-editorial-workflow' ),
@@ -278,10 +286,10 @@ final class Settings implements Bootable {
 	 * notification boxes submit nothing, so a missing event is off.
 	 *
 	 * @since 1.0.0
-	 * @since 1.1.0 Sanitizes `publish_gate` and `notifications`.
+	 * @since 1.1.0 Sanitizes `publish_gate`, `notifications` and `prevent_self_approval`.
 	 *
 	 * @param mixed $input Submitted value.
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool}
 	 */
 	public function sanitize( $input ): array {
 		$current = $this->settings->all();
@@ -305,6 +313,9 @@ final class Settings implements Bootable {
 			&& rest_sanitize_boolean( $input['delete_data_on_uninstall'] );
 		$clean['publish_gate']             = $this->sanitize_gate_modes( $input['publish_gate'] ?? array(), $this->settings->gate_modes() );
 		$clean['notifications']            = $this->sanitize_notifications( $input['notifications'] ?? array() );
+		$clean['prevent_self_approval']    = ! empty( $input['prevent_self_approval'] )
+			&& is_scalar( $input['prevent_self_approval'] )
+			&& rest_sanitize_boolean( $input['prevent_self_approval'] );
 
 		return $clean;
 	}
@@ -484,6 +495,27 @@ final class Settings implements Bootable {
 	}
 
 	/**
+	 * Prints the "prevent self-approval" checkbox (E16).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function render_self_approval_field(): void {
+		printf(
+			'<label><input type="checkbox" name="%1$s" value="1" %2$s /> %3$s</label>',
+			esc_attr( SettingsStore::OPTION . '[prevent_self_approval]' ),
+			checked( $this->settings->prevents_self_approval(), true, false ),
+			esc_html__( 'Prevent people from approving their own content', 'sapphireit-editorial-workflow' )
+		);
+
+		printf(
+			'<p class="description">%s</p>',
+			esc_html__( 'When this is on, nobody can move content they wrote to Approved, administrators included. Someone else with approval rights has to approve it. “Wrote” means the author set on the post.', 'sapphireit-editorial-workflow' )
+		);
+	}
+
+	/**
 	 * Prints the email notifications section introduction.
 	 *
 	 * @since 1.1.0
@@ -549,7 +581,7 @@ final class Settings implements Bootable {
 	 * Help tab markup: the status flow and who can do what by default (D5).
 	 *
 	 * @since 1.0.0
-	 * @since 1.1.0 Explains the publish gate and email notifications.
+	 * @since 1.1.0 Explains the publish gate, self-approval and email notifications.
 	 *
 	 * @return string Escaped HTML.
 	 */
@@ -572,6 +604,7 @@ final class Settings implements Bootable {
 		$html .= '</ul>';
 		$html .= '<p>' . esc_html__( 'Every action also requires permission to edit that piece of content. See WORKFLOW.md in the plugin folder for the full reference.', 'sapphireit-editorial-workflow' ) . '</p>';
 		$html .= '<p>' . esc_html__( 'Publish gate: Off changes nothing, Log only records every publish that skipped approval, and Enforce blocks publishing until the content is approved. Administrators can still publish, and that is recorded.', 'sapphireit-editorial-workflow' ) . '</p>';
+		$html .= '<p>' . esc_html__( 'Self-approval: when prevented, nobody can move content they wrote to Approved, administrators included, and the author is not offered as its reviewer. Someone else with approval rights has to approve it.', 'sapphireit-editorial-workflow' ) . '</p>';
 		$html .= '<p>' . esc_html__( 'Email notifications: each event can be switched on separately. Nobody is emailed about their own actions, and comment text is only included for people allowed to read the activity history.', 'sapphireit-editorial-workflow' ) . '</p>';
 
 		return $html;

@@ -150,7 +150,11 @@ class UserController extends AbstractController {
 	/**
 	 * Assignable reviewers, ordered by display name.
 	 *
+	 * For a post, leaves out the users `PermissionManager::excluded_reviewers()`
+	 * names (its author while self-approval is prevented).
+	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Leaves out excluded reviewers.
 	 *
 	 * @param WP_REST_Request $request Request.
 	 * @return WP_REST_Response
@@ -169,6 +173,12 @@ class UserController extends AbstractController {
 		if ( '' !== $search ) {
 			$query['search']         = '*' . $search . '*';
 			$query['search_columns'] = array( 'display_name', 'user_nicename' );
+		}
+
+		$excluded = $post_id > 0 ? $this->permissions->excluded_reviewers( $post_id ) : array();
+
+		if ( array() !== $excluded ) {
+			$query['exclude'] = $excluded;
 		}
 
 		/**

@@ -268,3 +268,222 @@ export async function axeViolations( page, selector ) {
 		targets: nodes.map( ( node ) => node.target.join( ' ' ) ),
 	} ) );
 }
+
+/**
+ * Namespace of the test-only routes in `tests/e2e/fixtures/sit-cwm-e2e-helpers.php`.
+ *
+ * @type {string}
+ */
+const E2E_NAMESPACE = '/sit-cwm-e2e/v1';
+
+/**
+ * Merges a partial settings array through the plugin's own settings model.
+ *
+ * `publish_gate` replaces the stored map (omitted types are off);
+ * `notifications` is merged over the stored toggles.
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @param {Object} partial      Partial settings, e.g. `{ publish_gate: { post: 'enforce' } }`.
+ * @return {Promise<Object>} The settings after the update.
+ */
+export function setSettings( requestUtils, partial ) {
+	return requestUtils.rest( {
+		method: 'POST',
+		path: `${ E2E_NAMESPACE }/settings`,
+		data: partial,
+	} );
+}
+
+/**
+ * Every notification event, for `setSettings( { notifications } )`.
+ *
+ * @param {boolean} enabled Whether to turn them on.
+ * @return {Object<string, boolean>} Event => enabled.
+ */
+export function allNotifications( enabled ) {
+	return Object.fromEntries(
+		[
+			'reviewer_assigned',
+			'review_requested',
+			'changes_requested',
+			'approved',
+			'comment_added',
+		].map( ( event ) => [ event, enabled ] )
+	);
+}
+
+/**
+ * Mails captured since the last `clearMails()`, oldest first.
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @return {Promise<Array<{to: string[], subject: string, body: string}>>} Mails.
+ */
+export function getMails( requestUtils ) {
+	return requestUtils.rest( { path: `${ E2E_NAMESPACE }/mails` } );
+}
+
+/**
+ * Forgets every captured mail and the notification de-duplication state.
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @return {Promise<void>}
+ */
+export async function clearMails( requestUtils ) {
+	await requestUtils.rest( {
+		method: 'DELETE',
+		path: `${ E2E_NAMESPACE }/mails`,
+	} );
+}
+
+/**
+ * Makes a scheduled post due and runs what cron runs at go-live.
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @param {number} id           Post id.
+ * @return {Promise<{status: string}>} The post status afterwards.
+ */
+export function goLive( requestUtils, id ) {
+	return requestUtils.rest( {
+		method: 'POST',
+		path: `${ E2E_NAMESPACE }/go-live/${ id }`,
+	} );
+}
+
+/**
+ * Publishes a post with `wp_publish_post()`, the path only the backstop sees.
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @param {number} id           Post id.
+ * @return {Promise<{status: string}>} The post status afterwards.
+ */
+export function rawPublish( requestUtils, id ) {
+	return requestUtils.rest( {
+		method: 'POST',
+		path: `${ E2E_NAMESPACE }/raw-publish/${ id }`,
+	} );
+}
+
+/**
+ * A post's activity items from the public route, oldest first.
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @param {number} id           Post id.
+ * @return {Promise<Object[]>} Activity items.
+ */
+export async function getActivity( requestUtils, id ) {
+	const items = await requestUtils.rest( {
+		path: `/sit-cwm/v1/posts/${ id }/activity`,
+		params: { per_page: 100 },
+	} );
+
+	return items.reverse();
+}
+
+/**
+ * A post's activity `action` slugs, oldest first.
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @param {number} id           Post id.
+ * @return {Promise<string[]>} Action slugs.
+ */
+export async function getActivityActions( requestUtils, id ) {
+	return ( await getActivity( requestUtils, id ) ).map(
+		( entry ) => entry.action
+	);
+}
+
+/**
+ * A post's raw activity rows with their stored context (e.g. `layer`),
+ * oldest first. Test-only route; the public one does not expose context.
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @param {number} id           Post id.
+ * @return {Promise<Array<{action: string, user_id: number, context: Object}>>} Rows.
+ */
+export function getRawActivity( requestUtils, id ) {
+	return requestUtils.rest( { path: `${ E2E_NAMESPACE }/activity/${ id }` } );
+}
+
+/**
+ * Moves a post's workflow status as the administrator, through the plugin's
+ * own route (never by writing meta).
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @param {number} id           Post id.
+ * @param {string} from         Status the caller expects is current.
+ * @param {string} to           Target status.
+ * @return {Promise<Object>} The workflow afterwards.
+ */
+export function setWorkflowStatus( requestUtils, id, from, to ) {
+	return requestUtils.rest( {
+		method: 'POST',
+		path: `/sit-cwm/v1/posts/${ id }/workflow`,
+		data: { status: to, from },
+	} );
+}
+
+/**
+ * Walks a post along the workflow as the administrator, e.g.
+ * `[ 'writing', 'review', 'approved' ]` from Draft.
+ *
+ * @param {Object}   requestUtils Request utils fixture.
+ * @param {number}   id           Post id.
+ * @param {string[]} path         Statuses to move through, in order.
+ * @param {string}   [from]       Starting status; default `draft`.
+ * @return {Promise<void>}
+ */
+export async function walkWorkflow( requestUtils, id, path, from = 'draft' ) {
+	let current = from;
+
+	for ( const to of path ) {
+		await setWorkflowStatus( requestUtils, id, current, to );
+		current = to;
+	}
+}
+
+/**
+ * The native post status, read fresh over REST.
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @param {number} id           Post id.
+ * @param {string} [type]       REST base; default `posts`.
+ * @return {Promise<string>} Post status.
+ */
+export async function postStatus( requestUtils, id, type = 'posts' ) {
+	const post = await requestUtils.rest( {
+		path: `/wp/v2/${ type }/${ id }`,
+		params: { context: 'edit' },
+	} );
+
+	return post.status;
+}
+
+/**
+ * Calls the REST API as the user logged in to the browser and returns the
+ * status code with the body instead of throwing.
+ *
+ * Uses the browser context's cookies with a nonce from core's `rest-nonce`
+ * AJAX action, so it works from any page once `loginAs()` has run.
+ *
+ * @param {Object} page             Playwright page.
+ * @param {Object} options          Request.
+ * @param {string} options.path     REST path, e.g. `/sit-cwm/v1/posts/1/workflow`.
+ * @param {string} [options.method] HTTP method; default `GET`.
+ * @param {Object} [options.data]   JSON body.
+ * @return {Promise<{status: number, body: Object}>} Response.
+ */
+export async function apiAsBrowserUser( page, { path, method = 'GET', data } ) {
+	const nonce = await page.request.get(
+		'/wp-admin/admin-ajax.php?action=rest-nonce'
+	);
+	const response = await page.request.fetch(
+		`/index.php?rest_route=${ encodeURIComponent( path ) }`,
+		{
+			method,
+			data,
+			headers: { 'X-WP-Nonce': await nonce.text() },
+		}
+	);
+
+	return { status: response.status(), body: await response.json() };
+}

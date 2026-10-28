@@ -5,8 +5,10 @@
  * Docker.
  *
  * It loads the target site through `wp-load.php` and then: activates this
- * plugin, switches plain permalinks to post-name permalinks, and makes sure the
- * administrator account the specs log in as exists with a known password.
+ * plugin, installs the test-only helper mu-plugin
+ * (`tests/e2e/fixtures/sit-cwm-e2e-helpers.php`), switches plain permalinks to
+ * post-name permalinks, and makes sure the administrator account the specs log
+ * in as exists with a known password.
  *
  * With --install it first provisions that site: it downloads a WordPress core
  * checkout, creates its database, writes `wp-config.php` and installs
@@ -207,6 +209,33 @@ if ( is_plugin_active( $sit_cwm_plugin ) ) {
 	}
 
 	sit_cwm_say( 'Activated ' . $sit_cwm_plugin . '.' );
+}
+
+// 2b. The test-only mu-plugin (mail capture and the sit-cwm-e2e/v1 routes),
+// the same file wp-env maps in. Linked so edits are picked up; copied where
+// symlinks are not allowed, so rerun this script after changing it.
+$sit_cwm_fixture = $sit_cwm_root . '/tests/e2e/fixtures/sit-cwm-e2e-helpers.php';
+$sit_cwm_mu_file = WPMU_PLUGIN_DIR . '/sit-cwm-e2e-helpers.php';
+
+if ( ! is_dir( WPMU_PLUGIN_DIR ) && ! mkdir( WPMU_PLUGIN_DIR, 0755, true ) ) {
+	sit_cwm_fail( 'Cannot create ' . WPMU_PLUGIN_DIR . '.' );
+}
+
+if ( is_link( $sit_cwm_mu_file ) && realpath( $sit_cwm_mu_file ) === realpath( $sit_cwm_fixture ) ) {
+	sit_cwm_say( 'E2E helper mu-plugin already linked.' );
+} else {
+	if ( file_exists( $sit_cwm_mu_file ) || is_link( $sit_cwm_mu_file ) ) {
+		unlink( $sit_cwm_mu_file );
+	}
+
+	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Unprivileged Windows shells cannot symlink; copied below.
+	if ( @symlink( $sit_cwm_fixture, $sit_cwm_mu_file ) ) {
+		sit_cwm_say( 'Linked the E2E helper mu-plugin into ' . WPMU_PLUGIN_DIR . '.' );
+	} elseif ( copy( $sit_cwm_fixture, $sit_cwm_mu_file ) ) {
+		sit_cwm_say( 'Copied the E2E helper mu-plugin into ' . WPMU_PLUGIN_DIR . '.' );
+	} else {
+		sit_cwm_fail( 'Cannot install the E2E helper mu-plugin into ' . WPMU_PLUGIN_DIR . '.' );
+	}
 }
 
 // 3. Pretty permalinks, so /wp-json/ routes resolve the way the specs expect.

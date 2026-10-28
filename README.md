@@ -9,7 +9,7 @@ Posts, pages and custom post types get a **workflow status**, an assigned
 **activity history**, managed from a Gutenberg sidebar, a classic editor meta
 box and an admin dashboard, and enforced entirely in PHP.
 
-![The editor sidebar](docs/screenshots/sidebar.png)
+![The editor sidebar with the publish gate locked](docs/screenshots/screenshot-1.png)
 
 ```
 React Gutenberg UI  ──►  REST API  ──►  PHP Workflow Engine
@@ -94,12 +94,12 @@ Being honest about this is part of the design:
 
 | | |
 |---|---|
-| ![Editor sidebar](docs/screenshots/sidebar.png) | ![Admin dashboard](docs/screenshots/dashboard.png) |
-| **Editor sidebar** — status, reviewer, due date and the transitions this user may actually perform. | **Dashboard** — every managed post, filtered and sorted server-side. |
-| ![Activity timeline](docs/screenshots/timeline.png) | ![Bulk actions](docs/screenshots/bulk-actions.png) |
-| **Activity timeline** — who changed what, when, grouped by day. | **Bulk actions** — change status, assign a reviewer or set a due date across a selection. |
-| ![Settings](docs/screenshots/settings.png) | |
-| **Settings** — which post types get a workflow, and what happens on uninstall. | |
+| ![Editor sidebar](docs/screenshots/screenshot-1.png) | ![Activity timeline](docs/screenshots/screenshot-2.png) |
+| **Editor sidebar** — the content is not approved, so the publish gate locks publishing. | **Activity timeline** — content published while it was at Review, and a publish the gate blocked. |
+| ![Settings](docs/screenshots/screenshot-3.png) | ![Admin dashboard](docs/screenshots/screenshot-4.png) |
+| **Settings** — the Publish gate and Email notifications sections. | **Dashboard** — every managed post, filtered and sorted server-side. |
+| ![Classic editor](docs/screenshots/screenshot-5.png) | |
+| **Classic editor** — the same workflow box in the classic editor. | |
 
 See [docs/screenshots/README.md](docs/screenshots/README.md) for how these are
 captured.

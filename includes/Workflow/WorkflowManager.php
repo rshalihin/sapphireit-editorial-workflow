@@ -159,6 +159,7 @@ final class WorkflowManager {
 			'due_date'              => $state['due_date'],
 			'available_transitions' => $transitions,
 			'capabilities'          => $this->get_capability_hints( $post_id, $transitions, $user_id ),
+			'self_approval_blocked' => $this->self_approval_hint( $post_id, $state['status'], $user_id ),
 		);
 	}
 
@@ -342,10 +343,12 @@ final class WorkflowManager {
 	 *
 	 * Authorization runs before the reviewer id is checked, so users without
 	 * the capability cannot probe which user ids exist. The reviewer must be
-	 * an existing user holding `sit_cwm_review_content`. Assigning the current
+	 * an existing user holding `sit_cwm_review_content`, and not the post's
+	 * author while self-approval is prevented (E16). Assigning the current
 	 * reviewer again is a no-op that logs nothing.
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Refuses the post's author while self-approval is prevented.
 	 *
 	 * @param int      $post_id     Post id.
 	 * @param int      $reviewer_id Reviewer user id; `0` clears.
@@ -384,6 +387,15 @@ final class WorkflowManager {
 
 		if ( $previous === $reviewer_id ) {
 			return true;
+		}
+
+		// After the no-op check, so an existing self-assignment is left alone.
+		if ( 0 !== $reviewer_id && in_array( $reviewer_id, $this->permissions->excluded_reviewers( $post_id ), true ) ) {
+			return new WP_Error(
+				'sit_cwm_invalid_user',
+				__( 'The author can\'t review their own content while self-approval is prevented.', 'sapphireit-editorial-workflow' ),
+				array( 'status' => 400 )
+			);
 		}
 
 		if ( ! $this->posts->set_reviewer_id( $post_id, $reviewer_id ) ) {
@@ -515,9 +527,11 @@ final class WorkflowManager {
 	/**
 	 * Shared transition checks, in the documented order: post gate (404),
 	 * stale `$from` (409), unknown target (400), illegal edge (400),
-	 * authorization (403).
+	 * authorization (403; `sit_cwm_self_approval` when that rule is the only
+	 * reason, see `self_approval_hint()`).
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Returns `sit_cwm_self_approval` for a blocked self-approval.
 	 *
 	 * @param int    $post_id Post id.
 	 * @param string $from    Status the caller saw as current.
@@ -557,10 +571,37 @@ final class WorkflowManager {
 		}
 
 		if ( ! $this->permissions->can_change_status( $post_id, $to, $user_id ) ) {
+			if ( 'approved' === $to && $this->self_approval_hint( $post_id, $from, $user_id ) ) {
+				return new WP_Error(
+					'sit_cwm_self_approval',
+					__( 'You can\'t approve content you wrote. Another reviewer has to approve it.', 'sapphireit-editorial-workflow' ),
+					array( 'status' => 403 )
+				);
+			}
+
 			return $this->forbidden();
 		}
 
 		return null;
+	}
+
+	/**
+	 * Whether the self-approval rule is the reason a user is not offered
+	 * Approve on a post (E16): approved is a legal next step, the user holds
+	 * the approve capability, and the rule blocks them.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param int    $post_id Post id.
+	 * @param string $status  Current workflow status.
+	 * @param int    $user_id Resolved acting user id.
+	 * @return bool
+	 */
+	private function self_approval_hint( int $post_id, string $status, int $user_id ): bool {
+		return $user_id > 0
+			&& $this->transitions->is_valid( $status, 'approved' )
+			&& user_can( $user_id, $this->permissions->capability_for_status( 'approved' ) )
+			&& $this->permissions->is_self_approval_blocked( $post_id, $user_id );
 	}
 
 	/**

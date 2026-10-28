@@ -526,7 +526,7 @@ final class WorkflowManagerTest extends WP_UnitTestCase {
 		$state = $this->workflow->get_workflow( $post );
 
 		$this->assertSame(
-			array( 'post_id', 'post_title', 'post_type', 'post_status', 'edit_link', 'status', 'status_label', 'status_is_unknown', 'reviewer', 'due_date', 'available_transitions', 'capabilities' ),
+			array( 'post_id', 'post_title', 'post_type', 'post_status', 'edit_link', 'status', 'status_label', 'status_is_unknown', 'reviewer', 'due_date', 'available_transitions', 'capabilities', 'self_approval_blocked' ),
 			array_keys( $state )
 		);
 		$this->assertSame( $post, $state['post_id'] );
@@ -600,6 +600,107 @@ final class WorkflowManagerTest extends WP_UnitTestCase {
 		$plugin->boot();
 
 		$this->assertInstanceOf( WorkflowManager::class, $plugin->container()->get( 'workflow_manager' ) );
+	}
+
+	/**
+	 * A refused self-approval returns its own 403 and changes nothing (E16).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_self_approval_returns_its_own_error() {
+		( new Settings() )->update( array( 'prevent_self_approval' => true ) );
+
+		$editor = $this->make_user( 'editor' );
+		$post   = $this->make_post( $editor, 'review' );
+
+		$result = $this->workflow->transition( $post, 'review', 'approved', $editor );
+
+		$this->assert_error( $result, 'sit_cwm_self_approval', 403 );
+		$this->assertSame( 'review', $this->posts->get_status( $post ) );
+		$this->assertSame( array(), $this->fired );
+
+		// A user lacking the approve capability still gets the generic error.
+		$author = $this->make_user( 'author' );
+		$own    = $this->make_post( $author, 'review' );
+
+		$this->assert_error( $this->workflow->transition( $own, 'review', 'approved', $author ), 'sit_cwm_forbidden', 403 );
+	}
+
+	/**
+	 * While the rule is on, the author cannot be assigned as reviewer of their
+	 * own post; someone else still can.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_author_cannot_be_assigned_as_reviewer_of_own_post_when_prevented() {
+		( new Settings() )->update( array( 'prevent_self_approval' => true ) );
+
+		$admin  = $this->make_user( 'administrator' );
+		$editor = $this->make_user( 'editor' );
+		$other  = $this->make_user( 'editor' );
+		$post   = $this->make_post( $editor );
+
+		$result = $this->workflow->assign_reviewer( $post, $editor, $admin );
+
+		$this->assert_error( $result, 'sit_cwm_invalid_user', 400 );
+		$this->assertSame( 'The author can\'t review their own content while self-approval is prevented.', $result->get_error_message() );
+		$this->assertSame( 0, $this->posts->get_reviewer_id( $post ) );
+		$this->assertTrue( $this->workflow->assign_reviewer( $post, $other, $admin ) );
+	}
+
+	/**
+	 * Turning the rule on keeps an existing self-assignment; that reviewer
+	 * just cannot approve.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_existing_self_assignment_is_kept_when_setting_turns_on() {
+		$admin  = $this->make_user( 'administrator' );
+		$editor = $this->make_user( 'editor' );
+		$post   = $this->make_post( $editor, 'review' );
+
+		$this->assertTrue( $this->workflow->assign_reviewer( $post, $editor, $admin ) );
+
+		( new Settings() )->update( array( 'prevent_self_approval' => true ) );
+
+		$this->assertSame( $editor, $this->posts->get_reviewer_id( $post ) );
+		$this->assertTrue( $this->workflow->assign_reviewer( $post, $editor, $admin ), 'Re-assigning the same reviewer stays a no-op.' );
+		$this->assertFalse( $this->workflow->can_transition( $post, 'review', 'approved', $editor ) );
+	}
+
+	/**
+	 * `self_approval_blocked` is true only when the rule is the reason
+	 * Approve is not offered.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return void
+	 */
+	public function test_self_approval_blocked_hint_only_when_rule_is_the_reason() {
+		( new Settings() )->update( array( 'prevent_self_approval' => true ) );
+
+		$editor   = $this->make_user( 'editor' );
+		$reviewer = $this->make_user( 'editor' );
+		$author   = $this->make_user( 'author' );
+		$post     = $this->make_post( $editor, 'review' );
+		$draft    = $this->make_post( $editor );
+		$authored = $this->make_post( $author, 'review' );
+
+		$this->assertTrue( $this->workflow->get_workflow( $post, $editor )['self_approval_blocked'] );
+		$this->assertNotContains( 'approved', array_column( $this->workflow->get_workflow( $post, $editor )['available_transitions'], 'slug' ) );
+		$this->assertFalse( $this->workflow->get_workflow( $draft, $editor )['self_approval_blocked'], 'Approved is not a legal next step.' );
+		$this->assertFalse( $this->workflow->get_workflow( $authored, $author )['self_approval_blocked'], 'Lacks the approve capability anyway.' );
+		$this->assertFalse( $this->workflow->get_workflow( $post, $reviewer )['self_approval_blocked'], 'Not the author.' );
+
+		( new Settings() )->update( array( 'prevent_self_approval' => false ) );
+
+		$this->assertFalse( $this->workflow->get_workflow( $post, $editor )['self_approval_blocked'], 'Setting off.' );
 	}
 
 	/**
