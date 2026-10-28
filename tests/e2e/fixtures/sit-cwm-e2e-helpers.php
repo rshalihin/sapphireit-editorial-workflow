@@ -63,6 +63,39 @@ function sit_cwm_e2e_capture_mail( $short_circuit, $atts ) {
 add_filter( 'pre_wp_mail', 'sit_cwm_e2e_capture_mail', 10, 2 );
 
 /**
+ * Starts every user who has no saved editor preferences with the block
+ * editor's welcome guide dismissed.
+ *
+ * Core preloads the stored preferences into the editor. When there are none,
+ * the editor fetches them after it has loaded and replaces anything set in
+ * the page meanwhile, so a guide the specs dismissed opens again late, over
+ * the sidebar, for every user the specs create. A non-empty default here is
+ * preloaded instead, and the fetch never happens.
+ *
+ * @since 1.1.0
+ *
+ * @param mixed  $value    Default value.
+ * @param int    $user_id  User id.
+ * @param string $meta_key Meta key.
+ * @param bool   $single   Whether a single value was asked for.
+ * @return mixed
+ */
+function sit_cwm_e2e_default_preferences( $value, $user_id, $meta_key, $single ) {
+	global $wpdb;
+
+	if ( $wpdb->get_blog_prefix() . 'persisted_preferences' !== $meta_key ) {
+		return $value;
+	}
+
+	$preferences = array(
+		'core/edit-post' => array( 'welcomeGuide' => false ),
+	);
+
+	return $single ? $preferences : array( $preferences );
+}
+add_filter( 'default_user_metadata', 'sit_cwm_e2e_default_preferences', 20, 4 );
+
+/**
  * Whether the current user may use the fixture routes.
  *
  * @since 1.1.0

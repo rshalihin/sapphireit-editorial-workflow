@@ -2,6 +2,7 @@
 /vendor/
 /node_modules/
 # /.claude/
+/.commandcode/
 
 # Tooling caches / local config
 .phpunit.result.cache

@@ -206,7 +206,8 @@ test.describe( 'UI states', () => {
 		await page.unroute( isWorkflow );
 		await page.getByRole( 'button', { name: 'Retry' } ).click();
 		await expect( panel.locator( '.sit-cwm-status-text' ) ).toHaveText(
-			'Draft'
+			'Draft',
+			{ timeout: 20000 }
 		);
 
 		// Offline is reported differently from a server error.

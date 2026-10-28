@@ -92,7 +92,7 @@ Phases 04–05, 06 and 11–13 are independent of each other once 02/03 are done
 
 Tick a box only when that phase's acceptance criteria all pass.
 
-E2E status (2026-10-28): the whole suite passes on WordPress 7.1.3 against a local site (48 passed, 8 skipped by design; `cli-matrix.spec.js` 3 passed with `SIT_CWM_E2E_CLI`). Still open for 15: the run on WordPress 6.8, and `composer test:coverage` (needs Xdebug).
+E2E status (2026-10-28): the whole suite passes on WordPress 7.1.3 against a local site (48 passed, 8 skipped by design; `cli-matrix.spec.js` 3 passed with `SIT_CWM_E2E_CLI`). It also passes on WordPress 6.8 against a fresh local site (`cwm-e2e-68`, PHP 8.1): 48 passed, 8 skipped by design; `cli-matrix.spec.js` 3 passed with `SIT_CWM_E2E_CLI` (WP-CLI 2.9.0). The first 6.8 run failed 18 tests, none on a plugin assertion: 16 because the block editor's welcome guide reopened over the sidebar for users with no saved preferences (fixed in `tests/e2e/fixtures/sit-cwm-e2e-helpers.php`), 1 because a Retry assertion in `ui-states.spec.js` waited only 5 s on a cold server (now 20 s), and 1 login timeout on the cold site that did not recur. All 18 passed on the rerun. Still open for 15: a 6.8 run on PHP 7.4 (the CI `e2e` job covers it), and `composer test:coverage` (needs Xdebug).
 
 - [x] 02 Scope housekeeping + settings model
 - [x] 03 Bypass capability + capability upgrade
