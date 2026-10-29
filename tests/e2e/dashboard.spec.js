@@ -92,7 +92,12 @@ test.describe( 'Workflow dashboard', () => {
 
 		await page.getByRole( 'checkbox', { name: 'E2E dash Alpha' } ).check();
 		await page.getByRole( 'checkbox', { name: 'E2E dash Bravo' } ).check();
-		await page.getByRole( 'button', { name: 'Change status' } ).click();
+		// A selection shows the bulk bar above the table and in the footer; act
+		// on the top one.
+		await page
+			.locator( '.sit-cwm-bulk-actions-top' )
+			.getByRole( 'button', { name: 'Change status' } )
+			.click();
 
 		const dialog = page.getByRole( 'dialog', {
 			name: 'Change workflow status',

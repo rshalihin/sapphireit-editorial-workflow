@@ -93,7 +93,7 @@ export default function DueDateControl( {
 
 	const valueClass = `sit-cwm-due-date-value${
 		overdue ? ' is-overdue' : ''
-	}`;
+	}${ hasDate ? '' : ' is-empty' }`;
 
 	return (
 		<div className="sit-cwm-field sit-cwm-due-date">

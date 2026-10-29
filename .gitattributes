@@ -15,6 +15,8 @@
 /.gitignore export-ignore
 /.distignore export-ignore
 /.claude export-ignore
+/.commandcode export-ignore
+/.superpowers export-ignore
 /.editorconfig export-ignore
 /src export-ignore
 /package.json export-ignore

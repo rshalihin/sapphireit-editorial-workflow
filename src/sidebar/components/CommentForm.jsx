@@ -103,7 +103,7 @@ export default function CommentForm( {
 
 	return (
 		<div
-			className="sit-cwm-comment-form"
+			className="sit-cwm-comment-form sit-cwm-composer"
 			role="group"
 			aria-label={ __( 'Workflow comment', 'sapphireit-editorial-workflow' ) }
 		>

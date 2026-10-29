@@ -135,7 +135,7 @@ Documented in [WORKFLOW.md](WORKFLOW.md):
 - Choosing which roles may approve is not a setting. `sit_cwm_approve_content`
   is a normal capability that a role-editor plugin can grant or remove.
 
-## 1.0.0 - 2026-09-17
+## 1.0.0 - 2026-10-17
 
 First public release. Free v1.0 feature scope, complete.
 
@@ -207,6 +207,11 @@ depends on a handle 6.8 does not register.
   immediately through REST, independently of **Update**. The settings screen
   no longer marks these types as "dashboard only".
 - Workflow comments can be submitted with Ctrl/Cmd+Enter in both editors.
+- Workflow controls stay responsive while a save is in flight: the date picker
+  and confirmation dialogs open straight away, and a date, reviewer, comment or
+  transition chosen meanwhile is applied as soon as the earlier save finishes. A
+  queued transition is dropped if the server no longer offers it, and a queued
+  comment if its text was cleared.
 - Admin dashboard built on `@wordpress/dataviews`, with server-side search,
   filtering, sorting and pagination, row actions and bulk actions.
 - Activity timeline grouped by day.
@@ -228,6 +233,20 @@ depends on a handle 6.8 does not register.
   performance budgets. Neither ships in the release zip.
 - `assets/build/` committed, so the plugin runs from a clone or zip with no
   build step.
+
+### Changed
+
+- The workflow panel was redesigned. The current status is a full-width hero
+  with a decorative pipeline rail (one dot per status, in registry order), the
+  reviewer and due date share one quieter block, forward moves and send-backs
+  are separated by a "Send back" caption, and the comment composer reads as a
+  self-contained block.
+- The activity timeline gained a vertical rail with an action-coloured marker
+  per entry, and workflow comments render as a quoted block.
+- The dashboard shows the bulk-action toolbar above the table as well as in the
+  sticky footer, so acting on a selection never needs a scroll to the bottom.
+  The title column is width-capped and wraps to two lines, and an overdue due
+  date stacks its "(overdue)" marker under the date.
 
 ### Known limitations
 

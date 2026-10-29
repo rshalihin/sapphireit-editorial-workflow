@@ -2,10 +2,29 @@
 // into a separate style-sidebar.css chunk, while Sit_Cwm\Core\Assets loads
 // sidebar.css.
 
+// Design tokens for the workflow panel. Scoped to the panel root so both the
+// block-editor sidebar and the classic meta box (which imports this file)
+// inherit them. Spacing uses the WP admin 4/8/12/16/24 rhythm only.
+.sit-cwm-sidebar {
+	--sit-cwm-space-1: 4px;
+	--sit-cwm-space-2: 8px;
+	--sit-cwm-space-3: 12px;
+	--sit-cwm-space-4: 16px;
+	--sit-cwm-space-6: 24px;
+	--sit-cwm-radius: 2px;
+	--sit-cwm-radius-lg: 4px;
+	--sit-cwm-ink: #1e1e1e;
+	--sit-cwm-muted: #757575;
+	--sit-cwm-line: #dcdcde;
+	--sit-cwm-surface: #fff;
+	--sit-cwm-surface-muted: #f6f7f7;
+	--sit-cwm-accent: #3858e9;
+}
+
 .sit-cwm-sidebar-loading {
 	display: flex;
 	justify-content: center;
-	padding: 16px;
+	padding: var(--sit-cwm-space-4);
 }
 
 .sit-cwm-sidebar-notice {
@@ -15,9 +34,9 @@
 .sit-cwm-sidebar-refreshing {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	padding: 8px 16px;
-	color: #757575;
+	gap: var(--sit-cwm-space-2);
+	padding: var(--sit-cwm-space-2) var(--sit-cwm-space-4);
+	color: var(--sit-cwm-muted);
 	font-size: 12px;
 
 	.components-spinner {
@@ -25,40 +44,73 @@
 	}
 }
 
+// The status hero: the first thing the eye lands on, because the current
+// status is the point of the panel.
+.sit-cwm-hero {
+	padding: var(--sit-cwm-space-4);
+	border-bottom: 1px solid var(--sit-cwm-line);
+	background: var(--sit-cwm-surface);
+}
+
+// Panel headers (the collapsible "tabs") sit on the muted surface so the
+// controls inside them read as content. Scoped to the panel root so an
+// unscoped rule cannot leak onto core panel toggles elsewhere in the editor.
+.sit-cwm-sidebar .components-panel__body.is-opened .components-panel__body-title {
+	margin-bottom: var(--sit-cwm-space-4);
+}
+
+.sit-cwm-sidebar .components-panel__body .components-panel__body-title .components-panel__body-toggle {
+	background-color: var(--sit-cwm-surface-muted);
+	outline: none;
+}
+
 .sit-cwm-field + .sit-cwm-field {
-	margin-top: 16px;
+	margin-top: var(--sit-cwm-space-4);
 }
 
 .sit-cwm-field-label {
 	display: block;
-	margin-bottom: 8px;
+	margin-bottom: var(--sit-cwm-space-2);
+	color: var(--sit-cwm-muted);
 	font-size: 11px;
 	font-weight: 500;
 	line-height: 1.4;
 	text-transform: uppercase;
 }
 
+// @wordpress/interface zeroes the top margin of paragraphs inside the
+// complementary area. Scoped to the panel and one class deeper than core so it
+// wins on specificity rather than stylesheet order.
+.interface-complementary-area .sit-cwm-sidebar p:not(.components-base-control__help, .components-form-token-field__help) {
+	margin-top: var(--sit-cwm-space-1);
+}
+
 .sit-cwm-help {
-	margin: 8px 0 0;
-	color: #757575;
+	margin: var(--sit-cwm-space-2) 0 0;
+	color: var(--sit-cwm-muted);
 }
 
 .sit-cwm-error {
-	margin: 8px 0 0;
+	margin: var(--sit-cwm-space-2) 0 0;
 	color: #cc1818;
 }
 
+// The badge is the hero. Text stays `#1e1e1e` on `#fff` and the status colour
+// is used only on the swatch, the inline-start accent bar and the rail dots, so
+// the documented contrast pairs (DEVELOPMENT.md, "Status badge contrast") hold.
 .sit-cwm-status-badge {
-	display: inline-flex;
+	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: var(--sit-cwm-space-2);
+	width: 100%;
 	max-width: 100%;
-	padding: 2px 8px;
-	border: 1px solid #ddd;
-	border-radius: 2px;
-	background: #fff;
-	color: #1e1e1e;
-	font-weight: 500;
+	padding: var(--sit-cwm-space-2) var(--sit-cwm-space-3);
+	border: 1px solid var(--sit-cwm-line);
+	border-inline-start: 3px solid var(--sit-cwm-status-color, #757575);
+	border-radius: var(--sit-cwm-radius-lg);
+	background: var(--sit-cwm-surface);
+	color: var(--sit-cwm-ink);
+	font-weight: 600;
 	overflow-wrap: anywhere;
 }
 
@@ -66,10 +118,77 @@
 // (e.g. Review) visible against the white panel.
 .sit-cwm-status-swatch {
 	flex-shrink: 0;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.sit-cwm-status-text {
+	font-size: 14px;
+	line-height: 1.3;
+}
+
+// Decorative pipeline rail: one dot per registered status, in registry order.
+// No text, so it adds nothing to the accessible name of the panel.
+.sit-cwm-pipeline {
+	display: flex;
+	align-items: center;
+	margin-top: var(--sit-cwm-space-3);
+}
+
+.sit-cwm-pipeline__step {
+	display: flex;
+	flex: 1;
+	align-items: center;
+
+	&::after {
+		content: "";
+		flex: 1;
+		height: 2px;
+		margin-inline: 3px;
+		background: var(--sit-cwm-line);
+		border-radius: 1px;
+	}
+
+	&:last-child {
+		flex: 0 0 auto;
+
+		&::after {
+			display: none;
+		}
+	}
+}
+
+.sit-cwm-pipeline__dot {
+	flex-shrink: 0;
 	width: 10px;
 	height: 10px;
 	border-radius: 50%;
-	box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+	background: var(--sit-cwm-surface);
+	box-shadow: inset 0 0 0 2px var(--sit-cwm-line);
+}
+
+.sit-cwm-pipeline__step.is-done {
+
+	.sit-cwm-pipeline__dot {
+		background: var(--sit-cwm-step-color, #757575);
+		box-shadow: none;
+	}
+
+	&::after {
+		background: var(--sit-cwm-step-color, #757575);
+	}
+}
+
+.sit-cwm-pipeline__step.is-current .sit-cwm-pipeline__dot {
+	background: var(--sit-cwm-step-color, #757575);
+	box-shadow: 0 0 0 2px var(--sit-cwm-surface), 0 0 0 4px var(--sit-cwm-step-color, #757575);
+}
+
+// Details: reviewer and due date share one quiet block, below the hero.
+.sit-cwm-meta {
+	display: block;
 }
 
 .sit-cwm-avatar {
@@ -81,14 +200,15 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 8px;
+	gap: var(--sit-cwm-space-2);
 }
 
 .sit-cwm-due-date-value {
 	display: inline-flex;
 	align-items: center;
-	gap: 4px;
+	gap: var(--sit-cwm-space-1);
 	max-width: 100%;
+	border: 1px solid var(--sit-cwm-line);
 
 	&.components-button {
 		height: auto;
@@ -103,20 +223,25 @@
 	font-weight: 500;
 }
 
+.sit-cwm-due-date-value.is-empty {
+	border: none;
+}
+
 .sit-cwm-overdue-icon {
 	flex-shrink: 0;
 	fill: currentcolor;
 }
 
 .sit-cwm-due-date-picker {
-	padding: 8px;
+	padding: var(--sit-cwm-space-2);
 }
 
-// Long translated labels wrap instead of overflowing the narrow sidebar.
+// Workflow actions: forward moves read as a pair of primary buttons; send-backs
+// sit under their own caption as the secondary, destructive path.
 .sit-cwm-actions {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8px;
+	gap: var(--sit-cwm-space-2);
 
 	.components-button {
 		max-width: 100%;
@@ -126,12 +251,45 @@
 		text-align: start;
 		overflow-wrap: anywhere;
 	}
+
+	// Two primaries share a row; a lone one keeps its natural width.
+	.components-button.is-primary {
+		flex: 1 1 45%;
+	}
+
+	.components-button.is-secondary {
+		flex: 1 1 100%;
+	}
+}
+
+// Forces its own row inside the wrapping flex, so "Send back" separates the
+// rollback buttons from the advance buttons.
+.sit-cwm-actions__caption {
+	flex-basis: 100%;
+	margin: var(--sit-cwm-space-1) 0 0;
+	color: var(--sit-cwm-muted);
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1.4;
+	text-transform: uppercase;
+}
+
+// The comment composer as a quiet, self-contained block.
+.sit-cwm-composer {
+	padding: var(--sit-cwm-space-3);
+	border: 1px solid var(--sit-cwm-line);
+	border-radius: var(--sit-cwm-radius-lg);
+	background: var(--sit-cwm-surface-muted);
+
+	.components-base-control {
+		margin-bottom: 0;
+	}
 }
 
 .sit-cwm-comment-form .components-notice {
-	margin: 0 0 8px;
+	margin: 0 0 var(--sit-cwm-space-2);
 }
 
 .sit-cwm-comment-form__submit {
-	margin-top: 8px;
+	margin-top: var(--sit-cwm-space-2);
 }

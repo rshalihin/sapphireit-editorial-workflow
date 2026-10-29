@@ -55,6 +55,14 @@
 	margin: 0 0 12px;
 }
 
+// The top bulk actions (see WorkflowDataViews) mirror the selected rows' footer
+// bar. Muted surface and a rule beneath so it reads as a toolbar, not as a row.
+.sit-cwm-bulk-actions-top {
+	padding: 8px 24px;
+	border-bottom: 1px solid #dcdcde;
+	background: #f6f7f7;
+}
+
 .sit-cwm-dashboard-empty {
 	padding: 32px 16px;
 	text-align: center;
@@ -119,6 +127,42 @@
 	color: #757575;
 }
 
+// Title column: keep the column at a readable measure and let long titles wrap
+// onto a second line, like the native post list. DataViews leaves the primary
+// column unsized so it swallows all the leftover width; pin it to 300px instead
+// and let the remaining data columns share what is freed, so the table still
+// fills its container without one column ballooning. The `col` element
+// selectors raise specificity above DataViews' own `width: 1%` column rule.
+.sit-cwm-dashboard .dataviews-view-table col.dataviews-view-table__col-first-data {
+	width: 300px;
+}
+
+.sit-cwm-dashboard .dataviews-view-table col[class^="dataviews-view-table__col-"]:not(.dataviews-view-table__col-first-data):not(.dataviews-view-table__col-post_type) {
+	width: auto;
+}
+
+// Cap the text too: `col` has no max-width, and the clamp keeps every row the
+// same height.
+.sit-cwm-dashboard .dataviews-view-table__primary-column-content,
+.sit-cwm-dashboard .dataviews-title-field {
+	max-width: 300px;
+}
+
+.sit-cwm-dashboard .sit-cwm-title-text {
+	display: -webkit-box;
+	overflow: hidden;
+	overflow-wrap: anywhere;
+	white-space: normal;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
+// Type values are a word or two: drop DataViews' 15ch cell floor so the column
+// hugs its content instead of leaving a gap.
+.sit-cwm-dashboard .dataviews-view-table td:has(.sit-cwm-post-type) .dataviews-view-table__cell-content-wrapper {
+	min-width: 0;
+}
+
 .sit-cwm-due-date.is-overdue {
 	display: inline-flex;
 	align-items: center;
@@ -130,6 +174,20 @@
 		flex-shrink: 0;
 		fill: currentcolor;
 	}
+}
+
+// The overdue date and its marker stack, so the column hugs the date rather
+// than the whole "October 7, 2026 (overdue)" sentence.
+.sit-cwm-due-date.is-overdue:has(.sit-cwm-due-date-flag) {
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+}
+
+.sit-cwm-due-date-flag {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
 }
 
 .sit-cwm-last-activity {
@@ -221,6 +279,10 @@
 
 	.sit-cwm-dashboard-toolbar {
 		padding: 8px 12px 0;
+	}
+
+	.sit-cwm-bulk-actions-top {
+		padding: 8px 12px;
 	}
 
 	.sit-cwm-status-badge {

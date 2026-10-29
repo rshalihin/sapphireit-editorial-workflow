@@ -15,7 +15,7 @@
  */
 import { dateI18n, getSettings, humanTimeDiff } from '@wordpress/date';
 import { memo } from '@wordpress/element';
-import { __, sprintf } from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 import { caution, Icon } from '@wordpress/icons';
 
 /**
@@ -89,11 +89,14 @@ const TitleCell = memo( ( { item } ) => {
 	const title = displayTitle( item.title );
 
 	return isSafeUrl( item.edit_link ) ? (
-		<a className="sit-cwm-title-link" href={ item.edit_link }>
+		<a
+			className="sit-cwm-title-link sit-cwm-title-text"
+			href={ item.edit_link }
+		>
 			{ title }
 		</a>
 	) : (
-		<span>{ title }</span>
+		<span className="sit-cwm-title-text">{ title }</span>
 	);
 } );
 
@@ -150,14 +153,15 @@ const DueDateCell = memo( ( { item } ) => {
 		return <span>{ text }</span>;
 	}
 
+	// The date and the marker sit on separate lines so the column hugs the
+	// date rather than the whole sentence.
 	return (
 		<span className="sit-cwm-due-date is-overdue">
-			<Icon icon={ caution } size={ 16 } />
-			{ sprintf(
-				/* translators: %s: Due date. */
-				__( '%s (overdue)', 'sapphireit-editorial-workflow' ),
-				text
-			) }
+			<span className="sit-cwm-due-date-value">{ text }</span>
+			<span className="sit-cwm-due-date-flag">
+				<Icon icon={ caution } size={ 16 } />
+				{ __( '(overdue)', 'sapphireit-editorial-workflow' ) }
+			</span>
 		</span>
 	);
 } );
@@ -178,7 +182,11 @@ const PostTypeCell = memo( ( { item } ) => {
 		? postTypes.find( ( entry ) => entry && entry.slug === item.post_type )
 		: null;
 
-	return <span>{ type?.singularLabel || item.post_type }</span>;
+	return (
+		<span className="sit-cwm-post-type">
+			{ type?.singularLabel || item.post_type }
+		</span>
+	);
 } );
 
 const LastActivityCell = memo( ( { item } ) => {

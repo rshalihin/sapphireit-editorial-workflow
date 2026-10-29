@@ -248,33 +248,37 @@ function WorkflowPanel( {
 				</div>
 			) }
 
-			<PanelBody>
+			<div className="sit-cwm-hero">
 				<StatusControl
 					status={ workflow.status }
 					label={ workflow.status_label }
 				/>
+			</div>
 
+			<PanelBody>
 				<PublishGateNotice
 					gate={ workflow.publish_gate }
 					postStatus={ workflow.post_status }
 				/>
 
-				{ capabilities.can_assign_reviewer && (
-					<ReviewerControl
-						postId={ postId }
-						reviewer={ workflow.reviewer }
-						onChange={ assignReviewer }
-						isSaving={ isLocked }
-					/>
-				) }
+				<div className="sit-cwm-meta">
+					{ capabilities.can_assign_reviewer && (
+						<ReviewerControl
+							postId={ postId }
+							reviewer={ workflow.reviewer }
+							onChange={ assignReviewer }
+							isSaving={ isLocked }
+						/>
+					) }
 
-				<DueDateControl
-					value={ workflow.due_date }
-					onChange={ setDueDate }
-					canEdit={ !! capabilities.can_set_due_date }
-					isSaving={ isLocked }
-					isComplete={ !! definition?.is_final }
-				/>
+					<DueDateControl
+						value={ workflow.due_date }
+						onChange={ setDueDate }
+						canEdit={ !! capabilities.can_set_due_date }
+						isSaving={ isLocked }
+						isComplete={ !! definition?.is_final }
+					/>
+				</div>
 			</PanelBody>
 
 			<PanelBody title={ __( 'Workflow actions', 'sapphireit-editorial-workflow' ) }>

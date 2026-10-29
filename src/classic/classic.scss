@@ -17,7 +17,8 @@
 	}
 
 	.components-panel__body + .components-panel__body {
-		border-top: 1px solid #f0f0f0;
+		border-top: 1px solid #ccc;
+		margin-top: 0 !important;
 	}
 
 	// The side column is narrow; keep a long history from pushing the rest
@@ -25,6 +26,24 @@
 	.sit-cwm-activity {
 		max-height: 320px;
 		overflow-y: auto;
+	}
+
+	.components-panel__body:not(.is-opened) {
+		padding: 0;
+
+		.components-panel__body-title {
+			margin: 0 !important;
+			padding: 0 !important;
+		}
+	}
+
+	.components-panel__body.is-opened {
+		padding: 0 16px 16px 16px;
+
+		.components-panel__body-title {
+			margin: 0 -16px 16px -16px !important;
+			padding: 0 !important;
+		}
 	}
 }
 

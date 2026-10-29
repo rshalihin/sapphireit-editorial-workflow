@@ -335,7 +335,10 @@ export default function ActivityItem( { entry } ) {
 
 	return (
 		<li className="sit-cwm-activity-item" data-action={ entry.action }>
-			<Avatar entry={ entry } />
+			<span className="sit-cwm-activity-marker">
+				<Avatar entry={ entry } />
+				<span className="sit-cwm-activity-marker__dot" aria-hidden="true" />
+			</span>
 			<div className="sit-cwm-activity-body">
 				<p className="sit-cwm-activity-sentence">{ sentence }</p>
 				{ message && (
