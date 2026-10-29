@@ -287,6 +287,12 @@ test.describe( 'Documentation screenshots', () => {
 	test( '2: timeline with a publication at Review and a blocked publish', async ( {
 		page,
 	} ) => {
+		// The timeline is taller than 900 px. Scrolled into a short viewport it
+		// slides under the editor's sticky header and the first entry is cut, so
+		// give this shot room for the whole sidebar; the width, and so the crop,
+		// stays the same.
+		await page.setViewportSize( { width: 1440, height: 2400 } );
+
 		const panel = await openWorkflowSidebar(
 			page,
 			ids[ 'Q3 launch announcement' ]
