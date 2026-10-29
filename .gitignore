@@ -1,7 +1,7 @@
 # Dependencies
 /vendor/
 /node_modules/
-# /.claude/
+/.claude/
 /.commandcode/
 /.superpowers/
 
@@ -39,8 +39,7 @@ yarn-error.log*
 /dist/
 /release/
 
-# Agent/editor scratch state (the committed .claude/.plan/ stays tracked)
-/.claude/settings.local.json
+# Agent/editor scratch state
 .idea/
 .vscode/
 *.code-workspace
