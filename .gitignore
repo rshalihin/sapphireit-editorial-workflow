@@ -3,6 +3,7 @@
 /node_modules/
 # /.claude/
 /.commandcode/
+/.superpowers/
 
 # Tooling caches / local config
 .phpunit.result.cache

@@ -16,6 +16,8 @@
 
 # Agent / editor state
 .claude
+.commandcode
+.superpowers
 .editorconfig
 .idea
 .vscode

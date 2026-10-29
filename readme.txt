@@ -218,7 +218,7 @@ The setting is off until you turn it on.
 The `sit_cwm_statuses` and `sit_cwm_transition_map` filters replace the status
 registry and the transition graph. Both results are validated, so a mistake in
 your code cannot leave the plugin in a broken state. There is no settings screen
-for editing statuses or building multiple workflows in version 1.0.
+for editing statuses or building multiple workflows in the free plugin.
 
 = Does it work with custom post types? =
 
@@ -314,7 +314,8 @@ however your site already sends email.
 * Fix: clicks on the due date, reviewer, comment and workflow buttons are no
   longer lost while another workflow change is still saving.
 * Developer: new filters and actions for the publish gate, notifications and
-  self-approval. See ARCHITECTURE.md.
+  self-approval. See ARCHITECTURE.md in the public repository at
+  https://github.com/rshalihin/sapphireit-editorial-workflow.
 
 = 1.0.0 =
 * Initial release.

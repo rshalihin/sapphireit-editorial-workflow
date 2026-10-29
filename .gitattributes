@@ -9,11 +9,36 @@
 *.woff2 binary
 
 # Development only: kept out of `git archive` / `composer archive` release zips.
-/bin export-ignore
-/tests export-ignore
+# Keep in sync with .distignore, which does the same job for bin/build-zip.php.
+/.gitattributes export-ignore
 /.github export-ignore
+/.gitignore export-ignore
+/.distignore export-ignore
 /.claude export-ignore
-/.wp-env.json export-ignore
-/phpcs.xml.dist export-ignore
-/phpunit.xml.dist export-ignore
+/.editorconfig export-ignore
+/src export-ignore
+/package.json export-ignore
+/package-lock.json export-ignore
+/webpack.config.js export-ignore
+/eslint.config.js export-ignore
+/.prettierrc.js export-ignore
+/.stylelintignore export-ignore
+/tests export-ignore
+/bin export-ignore
+/jest.config.js export-ignore
 /playwright.config.js export-ignore
+/phpunit.xml.dist export-ignore
+/phpcs.xml.dist export-ignore
+/.wp-env.json export-ignore
+/composer.json export-ignore
+/composer.lock export-ignore
+/ARCHITECTURE.md export-ignore
+/CHANGELOG.md export-ignore
+/CLAUDE.md export-ignore
+/CONTRIBUTING.md export-ignore
+/DEVELOPMENT.md export-ignore
+/README.md export-ignore
+/REST-API.md export-ignore
+/WORKFLOW.md export-ignore
+/docs export-ignore
+.gitkeep export-ignore
