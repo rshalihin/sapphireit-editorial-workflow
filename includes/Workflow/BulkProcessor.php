@@ -106,7 +106,11 @@ final class BulkProcessor {
 	 * Each success logs its own activity entry and fires its own action, exactly
 	 * as a single request would; no aggregate event is fired.
 	 *
+	 * A `change_status` payload may carry `attested` (F10); only boolean true
+	 * counts, and it applies to every post in the batch.
+	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Forwards `attested` for `change_status`.
 	 *
 	 * @param int[]    $post_ids Post ids.
 	 * @param string   $action   One of the `ACTIONS` keys.
@@ -199,7 +203,13 @@ final class BulkProcessor {
 			case 'change_status':
 				$status = is_string( $payload['status'] ) ? $payload['status'] : '';
 				// The post gate inside transition() runs before the stored status is compared.
-				$outcome = $this->workflow->transition( $post_id, $this->workflow->get_status( $post_id ), $status, $user_id );
+				$outcome = $this->workflow->transition(
+					$post_id,
+					$this->workflow->get_status( $post_id ),
+					$status,
+					$user_id,
+					array( 'attested' => true === ( $payload['attested'] ?? null ) )
+				);
 				break;
 
 			case 'assign_reviewer':

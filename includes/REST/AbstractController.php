@@ -44,15 +44,17 @@ abstract class AbstractController extends WP_REST_Controller implements Bootable
 	 * `sit_cwm_invalid_` are 400.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added `sit_cwm_attestation_required` (422).
 	 * @var array<string, int>
 	 */
 	const ERROR_STATUS = array(
-		'sit_cwm_forbidden'       => 403,
-		'sit_cwm_invalid_post'    => 404,
-		'sit_cwm_not_managed'     => 404,
-		'sit_cwm_status_conflict' => 409,
-		'sit_cwm_empty_comment'   => 400,
-		'sit_cwm_update_failed'   => 500,
+		'sit_cwm_forbidden'            => 403,
+		'sit_cwm_invalid_post'         => 404,
+		'sit_cwm_not_managed'          => 404,
+		'sit_cwm_status_conflict'      => 409,
+		'sit_cwm_attestation_required' => 422,
+		'sit_cwm_empty_comment'        => 400,
+		'sit_cwm_update_failed'        => 500,
 	);
 
 	/**

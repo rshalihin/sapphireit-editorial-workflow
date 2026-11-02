@@ -14,6 +14,7 @@ use Sit_Cwm\Core\Container;
 use Sit_Cwm\Core\Database;
 use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
+use Sit_Cwm\Governance\Attestation;
 use Sit_Cwm\Tests\Traits\PerPostWorkflow;
 use Sit_Cwm\Tests\Traits\RestoresPluginInstance;
 use Sit_Cwm\Workflow\Capabilities;
@@ -114,7 +115,8 @@ final class WorkflowManagerTest extends WP_UnitTestCase {
 			new TransitionManager( $statuses ),
 			new PermissionManager( $this->posts, $settings ),
 			$this->posts,
-			$this->activity
+			$this->activity,
+			new Attestation( $settings )
 		);
 
 		$this->fired = array();
@@ -659,7 +661,7 @@ final class WorkflowManagerTest extends WP_UnitTestCase {
 		$state = $this->workflow->get_workflow( $post );
 
 		$this->assertSame(
-			array( 'post_id', 'post_title', 'post_type', 'post_status', 'edit_link', 'status', 'status_label', 'status_is_unknown', 'reviewer', 'due_date', 'ai_origin', 'available_transitions', 'blocked_transitions', 'capabilities', 'self_approval_blocked' ),
+			array( 'post_id', 'post_title', 'post_type', 'post_status', 'edit_link', 'status', 'status_label', 'status_is_unknown', 'reviewer', 'due_date', 'ai_origin', 'available_transitions', 'blocked_transitions', 'capabilities', 'self_approval_blocked', 'attestation' ),
 			array_keys( $state )
 		);
 		$this->assertSame( $post, $state['post_id'] );
@@ -948,6 +950,105 @@ final class WorkflowManagerTest extends WP_UnitTestCase {
 
 		$this->workflow->set_ai_origin( $post, 'ai_generated', $editor, 'post_api' );
 		$this->assertSame( array( 'via' => 'post_api' ), $this->activity->get_for_post( $post )[0]->get_context() );
+	}
+
+	/**
+	 * With attestation required, approving needs boolean `attested` true, and
+	 * the attested approval stores the statement in its activity row (F10).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_approval_requires_attestation_when_on() {
+		( new Settings() )->update( array( 'require_attestation' => true ) );
+
+		$editor = $this->make_user( 'editor' );
+		$post   = $this->make_post( $this->make_user( 'author' ), 'review' );
+
+		$this->assert_error( $this->workflow->transition( $post, 'review', 'approved', $editor ), 'sit_cwm_attestation_required', 422 );
+		$this->assert_error( $this->workflow->transition( $post, 'review', 'approved', $editor, array( 'attested' => 'true' ) ), 'sit_cwm_attestation_required', 422 );
+		$this->assertFalse( $this->workflow->can_transition( $post, 'review', 'approved', $editor ) );
+		$this->assertTrue( $this->workflow->can_transition( $post, 'review', 'approved', $editor, array( 'attested' => true ) ) );
+		$this->assertSame( 0, $this->activity->count_for_post( $post ) );
+
+		$this->assertTrue( $this->workflow->transition( $post, 'review', 'approved', $editor, array( 'attested' => true ) ) );
+
+		$context = $this->activity->get_for_post( $post )[0]->get_context();
+		$this->assertSame( '1', $context['attested'] );
+		$this->assertSame( 'I confirm I have reviewed this content and approve it for publication.', $context['attestation'] );
+	}
+
+	/**
+	 * Other targets need no attestation, and a user who may not approve gets
+	 * 403, not 422 (F10).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_other_targets_and_unauthorised_users_are_not_asked_to_attest() {
+		( new Settings() )->update( array( 'require_attestation' => true ) );
+
+		$author = $this->make_user( 'author' );
+		$post   = $this->make_post( $author, 'review' );
+
+		$this->assertTrue( $this->workflow->transition( $post, 'review', 'needs_changes', $this->make_user( 'editor' ) ) );
+		$this->assertSame( array(), $this->activity->get_for_post( $post )[0]->get_context() );
+
+		$this->posts->set_status( $post, 'review' );
+
+		$this->assert_error( $this->workflow->transition( $post, 'review', 'approved', $author ), 'sit_cwm_forbidden', 403 );
+	}
+
+	/**
+	 * An attestation given when none is required is still recorded (F10).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_voluntary_attestation_is_recorded_when_not_required() {
+		$post = $this->make_post( $this->make_user( 'author' ), 'review' );
+
+		$this->assertTrue( $this->workflow->transition( $post, 'review', 'approved', $this->make_user( 'editor' ), array( 'attested' => true ) ) );
+		$this->assertSame( '1', $this->activity->get_for_post( $post )[0]->get_context()['attested'] );
+	}
+
+	/**
+	 * The workflow payload carries the attestation hint (F10), and a manager
+	 * built without the service never asks for it.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_payload_exposes_attestation_hint() {
+		( new Settings() )->update( array( 'require_attestation' => true ) );
+
+		$editor = $this->make_user( 'editor' );
+		$post   = $this->make_post( $this->make_user( 'author' ), 'review' );
+
+		$this->assertSame(
+			array(
+				'required'  => true,
+				'statement' => 'I confirm I have reviewed this content and approve it for publication.',
+			),
+			$this->workflow->get_workflow( $post, $editor )['attestation']
+		);
+
+		$settings = new Settings();
+		$statuses = new StatusManager();
+		$bare     = new WorkflowManager( $statuses, new TransitionManager( $statuses ), new PermissionManager( $this->posts, $settings ), $this->posts, $this->activity );
+
+		$this->assertSame(
+			array(
+				'required'  => false,
+				'statement' => '',
+			),
+			$bare->get_workflow( $post, $editor )['attestation']
+		);
+		$this->assertTrue( $bare->transition( $post, 'review', 'approved', $editor ) );
 	}
 
 	/**

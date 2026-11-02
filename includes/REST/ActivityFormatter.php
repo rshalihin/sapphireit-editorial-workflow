@@ -107,10 +107,11 @@ final class ActivityFormatter {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Adds `workflow_status`, `workflow_status_label` and `gate_reason`.
+	 * @since 1.2.0 Adds `attested` and `attestation` (F10).
 	 *
 	 * @param ActivityEntry $entry Entry.
 	 * @param array         $users User id => summary, from UserSummaries::load().
-	 * @return array{id: int, action: string, action_label: string, old_value: string|null, old_label: string|null, new_value: string|null, new_label: string|null, message: string, created_at: string, created_at_human: string, user_id: int, user: array|null, workflow_status: string|null, workflow_status_label: string|null, gate_reason: string|null}
+	 * @return array{id: int, action: string, action_label: string, old_value: string|null, old_label: string|null, new_value: string|null, new_label: string|null, message: string, created_at: string, created_at_human: string, user_id: int, user: array|null, workflow_status: string|null, workflow_status_label: string|null, gate_reason: string|null, attested: bool|null, attestation: string|null}
 	 */
 	public function format( ActivityEntry $entry, array $users ): array {
 		$action          = $entry->get_action();
@@ -143,6 +144,9 @@ final class ActivityFormatter {
 			'workflow_status'       => $workflow_status,
 			'workflow_status_label' => null === $workflow_status ? null : $this->statuses->label( $workflow_status, $post_id ),
 			'gate_reason'           => $this->context_string( $entry, 'reason' ),
+			// An attested approval (F10); null for every other entry. The statement is plain text.
+			'attested'              => '1' === $this->context_string( $entry, 'attested' ) ? true : null,
+			'attestation'           => $this->context_string( $entry, 'attestation' ),
 		);
 	}
 

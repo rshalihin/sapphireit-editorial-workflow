@@ -99,6 +99,72 @@ final class BatchControllerTest extends TestCase {
 	}
 
 	/**
+	 * With attestation required, a batch approval without `attested` is
+	 * refused for every post, and with it every post is approved (F10).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_batch_approve_without_attestation_is_refused_per_post() {
+		( new Settings() )->update( array( 'require_attestation' => true ) );
+
+		$author = self::fixture_user( 'author' );
+		$a      = $this->create_managed_post( array( 'post_author' => $author ) );
+		$b      = $this->create_managed_post( array( 'post_author' => $author ) );
+
+		foreach ( array( $a, $b ) as $id ) {
+			update_post_meta( $id, PostRepository::META_STATUS, 'review' );
+		}
+
+		wp_set_current_user( self::fixture_user( 'editor' ) );
+
+		$without = $this->batch( array( $a, $b ), 'change_status', array( 'status' => 'approved' ) )->get_data();
+
+		$this->assertSame( array(), $without['succeeded'] );
+		$this->assertSame( array( 'sit_cwm_attestation_required', 'sit_cwm_attestation_required' ), array_column( $without['failed'], 'code' ) );
+		$this->assertSame( array( 422, 422 ), array_column( $without['failed'], 'status' ) );
+		$this->assert_status( $a, 'review' );
+
+		$with = $this->batch(
+			array( $a, $b ),
+			'change_status',
+			array(
+				'status'   => 'approved',
+				'attested' => true,
+			)
+		)->get_data();
+
+		$this->assertSame( array( $a, $b ), $with['succeeded'] );
+		$this->assertSame( '1', $this->activity->get_for_post( $a )[0]->get_context()['attested'] );
+	}
+
+	/**
+	 * `attested` must be a boolean.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_batch_rejects_non_boolean_attested() {
+		$post = $this->create_managed_post( array( 'post_author' => self::fixture_user( 'author' ) ) );
+
+		wp_set_current_user( self::fixture_user( 'editor' ) );
+
+		$response = $this->batch(
+			array( $post ),
+			'change_status',
+			array(
+				'status'   => 'writing',
+				'attested' => array( 'yes' ),
+			)
+		);
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assert_status( $post, 'draft' );
+	}
+
+	/**
 	 * Logged-out requests are 401 and change nothing.
 	 *
 	 * @return void

@@ -168,6 +168,7 @@ class WorkflowController extends AbstractController {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Added ai_origin.
+	 * @since 1.2.0 Added attested.
 	 *
 	 * @return array
 	 */
@@ -214,6 +215,13 @@ class WorkflowController extends AbstractController {
 				'enum'              => AiOrigin::VALUES,
 				'validate_callback' => 'rest_validate_request_arg',
 				'sanitize_callback' => 'sanitize_key',
+			),
+			'attested'    => array(
+				'description'       => __( 'Whether the user confirms they reviewed the content. Required to approve when the site requires attestation.', 'sapphireit-editorial-workflow' ),
+				'type'              => 'boolean',
+				'required'          => false,
+				'validate_callback' => 'rest_validate_request_arg',
+				'sanitize_callback' => 'rest_sanitize_boolean',
 			),
 		);
 	}
@@ -271,6 +279,7 @@ class WorkflowController extends AbstractController {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Added ai_origin.
+	 * @since 1.2.0 Passes attested to the transition check.
 	 *
 	 * @param WP_REST_Request $request Request.
 	 * @return true|WP_Error
@@ -320,7 +329,7 @@ class WorkflowController extends AbstractController {
 			);
 		}
 
-		$check = $this->workflow->check_transition( $post->ID, (string) $request->get_param( 'from' ), (string) $request->get_param( 'status' ) );
+		$check = $this->workflow->check_transition( $post->ID, (string) $request->get_param( 'from' ), (string) $request->get_param( 'status' ), null, $this->transition_args( $request ) );
 
 		return is_wp_error( $check ) ? $this->error_to_response( $check ) : true;
 	}
@@ -332,6 +341,7 @@ class WorkflowController extends AbstractController {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Added ai_origin.
+	 * @since 1.2.0 Passes attested to the transition.
 	 *
 	 * @param WP_REST_Request $request Request.
 	 * @return WP_REST_Response|WP_Error Fresh workflow state on success.
@@ -373,7 +383,7 @@ class WorkflowController extends AbstractController {
 
 		if ( $request->has_param( 'status' ) ) {
 			$steps[] = function () use ( $post_id, $request ) {
-				return $this->workflow->transition( $post_id, (string) $request->get_param( 'from' ), (string) $request->get_param( 'status' ) );
+				return $this->workflow->transition( $post_id, (string) $request->get_param( 'from' ), (string) $request->get_param( 'status' ), null, $this->transition_args( $request ) );
 			};
 		}
 
@@ -386,6 +396,18 @@ class WorkflowController extends AbstractController {
 		}
 
 		return $this->workflow_response( $post_id );
+	}
+
+	/**
+	 * Transition args from a request (F10). Only boolean true attests.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return array{attested: bool}
+	 */
+	private function transition_args( $request ): array {
+		return array( 'attested' => true === $request->get_param( 'attested' ) );
 	}
 
 	/**
@@ -443,6 +465,7 @@ class WorkflowController extends AbstractController {
 	 * @since 1.1.0 Added `publish_gate` (E10).
 	 * @since 1.2.0 Added blocked_transitions.
 	 * @since 1.2.0 Added ai_origin.
+	 * @since 1.2.0 Added attestation.
 	 *
 	 * @return array
 	 */
@@ -584,6 +607,16 @@ class WorkflowController extends AbstractController {
 					'type'        => 'boolean',
 					'readonly'    => true,
 					'context'     => array( 'view', 'edit' ),
+				),
+				'attestation'           => array(
+					'description' => __( 'Whether approving needs the user to confirm they reviewed the content, and the statement they confirm. Display hint only.', 'sapphireit-editorial-workflow' ),
+					'type'        => 'object',
+					'readonly'    => true,
+					'context'     => array( 'view', 'edit' ),
+					'properties'  => array(
+						'required'  => array( 'type' => 'boolean' ),
+						'statement' => array( 'type' => 'string' ),
+					),
 				),
 			),
 		);

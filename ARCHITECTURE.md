@@ -258,7 +258,7 @@ Two properties fall out of this shape:
 
 ## The `transition()` pipeline
 
-`WorkflowManager::transition( $post_id, $from, $to, $user_id )`, in order. Any
+`WorkflowManager::transition( $post_id, $from, $to, $user_id, $args )`, in order. Any
 step failing returns a `WP_Error` and **writes nothing** — no meta, no activity
 row, no action fired.
 
@@ -269,9 +269,10 @@ row, no action fired.
 | 3 | **Status exists.** `$to` is in the `StatusManager` registry. | `sit_cwm_invalid_status` **400** |
 | 4 | **Edge exists.** `TransitionManager::is_valid( $from, $to )`. | `sit_cwm_invalid_transition` **400** |
 | 5 | **Authorization.** `PermissionManager::can_change_status()` — user exists, `edit_post` on this post, the capability mapped to `$to`, `publish_post` for `published`, then the `sit_cwm_can_transition` filter's final word. | `sit_cwm_forbidden` **403** |
-| 6 | **Persist.** `PostRepository` writes `_sit_cwm_status`. | `sit_cwm_update_failed` **500** |
-| 7 | **Log.** Exactly one `status_changed` row. | |
-| 8 | **Announce.** `do_action( 'sit_cwm_status_changed', $post_id, $from, $to, $user_id )`. | |
+| 6 | **Attestation** (1.2). Approving a post that requires it (`Governance\Attestation::is_required()`) needs `$args['attested']` to be boolean `true`. After step 5, so a user who may not approve gets 403, not 422. | `sit_cwm_attestation_required` **422** |
+| 7 | **Persist.** `PostRepository` writes `_sit_cwm_status`. | `sit_cwm_update_failed` **500** |
+| 8 | **Log.** Exactly one `status_changed` row; an attested approval adds `attested` and the statement to its context. | |
+| 9 | **Announce.** `do_action( 'sit_cwm_status_changed', $post_id, $from, $to, $user_id )`. | |
 
 Notes on the ordering:
 
@@ -280,9 +281,9 @@ Notes on the ordering:
   already see. Otherwise the error codes would enumerate private post IDs.
 - **Step 2 before step 5.** A stale client learns its view is out of date rather
   than being told it lacks a permission it may well have.
-- **Step 5 last** among the checks, because it is the expensive one — it
+- **Step 5 last** among the authorization checks, because it is the expensive one — it
   consults roles, meta capabilities and a filter.
-- `can_transition()` runs steps 1–5 *without* writing, and `transition()`
+- `can_transition()` runs steps 1–6 *without* writing, and `transition()`
   re-runs all of them itself. There is deliberately no check-then-act gap
   between the two: the REST permission callback calling `check_transition()`
   first is an optimization for error reporting, never the authorization.
@@ -581,6 +582,7 @@ before the plugin has booted.
 | `Core\Settings::is_notification_enabled(` | `is_notification_enabled( string $event ): bool` | `bool` | 1.1.0 |
 | `Core\Settings::prevents_self_approval(` | `prevents_self_approval(): bool` | `bool` | 1.1.0 |
 | `Core\Settings::ai_origin_default(` | `ai_origin_default( string $post_type ): string` | `string` | 1.2.0 |
+| `Core\Settings::requires_attestation(` | `requires_attestation(): bool` | `bool` | 1.2.0 |
 | `Core\Settings::enabled_post_types(` | `enabled_post_types(): array` | `string[]` | 1.0.0 |
 | `Core\Settings::is_post_type_enabled(` | `is_post_type_enabled( string $post_type ): bool` | `bool` | 1.0.0 |
 
@@ -647,9 +649,9 @@ before the plugin has booted.
 | `Workflow\WorkflowManager::get_capability_hints(` | `get_capability_hints( int $post_id, array $transitions, ?int $user_id = null ): array` | `array{can_change_status:` | 1.0.0 |
 | `Workflow\WorkflowManager::get_available_transitions(` | `get_available_transitions( int $post_id, ?int $user_id = null ): array` | `array<int,` | 1.0.0 |
 | `Workflow\WorkflowManager::get_blocked_transitions(` | `get_blocked_transitions( int $post_id, ?int $user_id = null ): array` | `array<int,` | 1.2.0 |
-| `Workflow\WorkflowManager::can_transition(` | `can_transition( int $post_id, string $from, string $to, ?int $user_id = null ): bool` | `bool` | 1.0.0 |
-| `Workflow\WorkflowManager::check_transition(` | `check_transition( int $post_id, string $from, string $to, ?int $user_id = null )` | `true\|WP_Error` | 1.0.0 |
-| `Workflow\WorkflowManager::transition(` | `transition( int $post_id, string $from, string $to, ?int $user_id = null )` | `true\|WP_Error` | 1.0.0 |
+| `Workflow\WorkflowManager::can_transition(` | `can_transition( int $post_id, string $from, string $to, ?int $user_id = null, array $args = array() ): bool` | `bool` | 1.0.0; 1.2.0: Added `$args` |
+| `Workflow\WorkflowManager::check_transition(` | `check_transition( int $post_id, string $from, string $to, ?int $user_id = null, array $args = array() )` | `true\|WP_Error` | 1.0.0; 1.2.0: Added `$args` |
+| `Workflow\WorkflowManager::transition(` | `transition( int $post_id, string $from, string $to, ?int $user_id = null, array $args = array() )` | `true\|WP_Error` | 1.0.0; 1.2.0: Added `$args` |
 | `Workflow\WorkflowManager::assign_reviewer(` | `assign_reviewer( int $post_id, int $reviewer_id, ?int $user_id = null )` | `true\|WP_Error` | 1.0.0; 1.1.0: Refuses the post's author while self-approval is prevented |
 | `Workflow\WorkflowManager::set_due_date(` | `set_due_date( int $post_id, string $date, ?int $user_id = null )` | `true\|WP_Error` | 1.0.0 |
 | `Workflow\WorkflowManager::add_comment(` | `add_comment( int $post_id, string $message, ?int $user_id = null )` | `int\|WP_Error` | 1.0.0 |
@@ -715,6 +717,17 @@ Constants (`@api`): `ACTIONS`, `PUBLICATION_ACTIONS`.
 | `Governance\AiOrigin::options(` | `static options(): array` | `array<string,` | 1.2.0 |
 
 Constants (`@api`): `HUMAN`, `AI_ASSISTED`, `AI_GENERATED`, `NOT_DECLARED`, `VALUES`.
+
+#### `Governance\Attestation`
+
+Service id `attestation`. Decides whether approving needs an explicit "I
+reviewed this" (the `require_attestation` setting, then the
+`sit_cwm_require_attestation` filter) and supplies the statement.
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Governance\Attestation::is_required(` | `is_required( int $post_id ): bool` | `bool` | 1.2.0 |
+| `Governance\Attestation::statement(` | `statement(): string` | `string` | 1.2.0 |
 
 #### `Publishing\PublishGate`
 
@@ -791,6 +804,7 @@ Every `sit_cwm_*` hook, covered by the [stability rule](#stability-rule).
 | filter | `sit_cwm_status_capability_map` | `array $map, int $post_id`. **Signature changed in 1.2.0** | 1.2.0 |
 | filter | `sit_cwm_can_transition` | `bool $allowed, int $post_id, string $from, string $to, int $user_id`; return `bool\|WP_Error`. **Signature changed in 1.2.0**: a `WP_Error` denies with its own code and message, but only when the capability checks passed (see [the contract](#the-sit_cwm_can_transition-contract)) | 1.2.0 |
 | filter | `sit_cwm_available_transitions` | `array $transitions, int $post_id, string $from, int $user_id` | 1.0.0 |
+| filter | `sit_cwm_require_attestation` | `bool $required, int $post_id`. Whether approving the post needs the approver to confirm they reviewed it; only boolean `true` requires | 1.2.0 |
 | filter | `sit_cwm_enabled_post_types` | `string[] $post_types` | 1.0.0 |
 | filter | `sit_cwm_available_post_types` | `array $post_types` | 1.0.0 |
 | filter | `sit_cwm_activity_actions` | `string[] $actions` | 1.0.0 |
@@ -872,7 +886,7 @@ compared on `plugins_loaded`, so an upgrade runs without reactivation.
 
 | Option | Autoloaded | Contents |
 |---|---|---|
-| `sit_cwm_settings` | yes | `{ post_types, delete_data_on_uninstall, publish_gate: { post_type: mode }, notifications: { event: bool }, prevent_self_approval, ai_origin_defaults: { post_type: ai_origin } }` — small on purpose. Missing keys are filled from `Settings::defaults()`, so 1.0 sites need no migration |
+| `sit_cwm_settings` | yes | `{ post_types, delete_data_on_uninstall, publish_gate: { post_type: mode }, notifications: { event: bool }, prevent_self_approval, ai_origin_defaults: { post_type: ai_origin }, require_attestation }` — small on purpose. Missing keys are filled from `Settings::defaults()`, so 1.0 sites need no migration |
 | `sit_cwm_db_version` | no | Schema version (still `1.0.0`: 1.1 changes no schema) |
 | `sit_cwm_caps_revision` | no | Capability revision applied (`2` since 1.1) |
 
@@ -1090,8 +1104,11 @@ user can already see. Read methods return `[]` / `false` in the same cases.
 | 3 | `$to` is a registered status | `sit_cwm_invalid_status` 400 |
 | 4 | `$from → $to` is in the transition map | `sit_cwm_invalid_transition` 400 |
 | 5 | `PermissionManager::can_change_status` | `sit_cwm_forbidden` 403 |
+| 6 | Attestation: `$to` is `approved`, `Attestation::is_required()`, and `$args['attested']` is not boolean `true` (1.2) | `sit_cwm_attestation_required` 422 |
 
-Then: persist → log one `status_changed` row → `sit_cwm_status_changed`.
+Then: persist → log one `status_changed` row → `sit_cwm_status_changed`. An
+attested approval stores `attested: '1'` and the statement in the row's context,
+whether or not attestation was required.
 `can_transition()` runs the same private validator without writing, and
 `transition()` always re-validates, so there is no check-then-act gap between
 the two. The 409 guard is application-level, not a database lock.

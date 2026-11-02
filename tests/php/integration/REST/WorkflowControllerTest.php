@@ -139,6 +139,49 @@ final class WorkflowControllerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * With attestation required, approving over REST without `attested` is a
+	 * 422 that writes nothing; with it, the approval goes through (F10).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_rest_approve_without_attestation_is_422_and_with_it_succeeds() {
+		( new Settings() )->update( array( 'require_attestation' => true ) );
+
+		$post = $this->make_post( $this->make_user( 'author' ), 'review' );
+
+		wp_set_current_user( $this->make_user( 'editor' ) );
+
+		$this->assertTrue( $this->get( $post )->get_data()['attestation']['required'] );
+		$this->assert_error_response(
+			$this->post(
+				$post,
+				array(
+					'from'   => 'review',
+					'status' => 'approved',
+				)
+			),
+			'sit_cwm_attestation_required',
+			422
+		);
+		$this->assertSame( 'review', $this->posts->get_status( $post ) );
+
+		$response = $this->post(
+			$post,
+			array(
+				'from'     => 'review',
+				'status'   => 'approved',
+				'attested' => true,
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'approved', $this->posts->get_status( $post ) );
+		$this->assertSame( '1', $this->activity->get_for_post( $post )[0]->get_context()['attested'] );
+	}
+
+	/**
 	 * Logged-out requests are 401 on every route.
 	 *
 	 * @return void

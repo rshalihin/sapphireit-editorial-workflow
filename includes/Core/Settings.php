@@ -55,9 +55,10 @@ final class Settings {
 	 * @since 1.0.0
 	 * @since 1.1.0 Added `publish_gate`, `notifications` and `prevent_self_approval`.
 	 * @since 1.2.0 Added `ai_origin_defaults` (no type has a default, F14).
+	 * @since 1.2.0 Added `require_attestation` (off, F14).
 	 * @internal
 	 *
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool, ai_origin_defaults: array<string, string>}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool, ai_origin_defaults: array<string, string>, require_attestation: bool}
 	 */
 	public function defaults(): array {
 		return array(
@@ -67,6 +68,7 @@ final class Settings {
 			'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
 			'prevent_self_approval'    => false,
 			'ai_origin_defaults'       => array(),
+			'require_attestation'      => false,
 		);
 	}
 
@@ -75,9 +77,10 @@ final class Settings {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Includes `ai_origin_defaults`.
+	 * @since 1.2.0 Includes `require_attestation`.
 	 * @api
 	 *
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool, ai_origin_defaults: array<string, string>}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool, ai_origin_defaults: array<string, string>, require_attestation: bool}
 	 */
 	public function all(): array {
 		$defaults = $this->defaults();
@@ -123,6 +126,7 @@ final class Settings {
 	 * @since 1.0.0
 	 * @since 1.1.0 Accepts `publish_gate`, `notifications` and `prevent_self_approval`.
 	 * @since 1.2.0 Accepts `ai_origin_defaults`.
+	 * @since 1.2.0 Accepts `require_attestation`.
 	 * @internal
 	 *
 	 * @param mixed $partial Partial settings, e.g. `[ 'post_types' => [ 'post' ] ]`.
@@ -151,6 +155,10 @@ final class Settings {
 
 		if ( array_key_exists( 'prevent_self_approval', $partial ) ) {
 			$settings['prevent_self_approval'] = rest_sanitize_boolean( $partial['prevent_self_approval'] );
+		}
+
+		if ( array_key_exists( 'require_attestation', $partial ) ) {
+			$settings['require_attestation'] = rest_sanitize_boolean( $partial['require_attestation'] );
 		}
 
 		if ( array_key_exists( 'publish_gate', $partial ) ) {
@@ -257,6 +265,21 @@ final class Settings {
 	 */
 	public function prevents_self_approval(): bool {
 		return true === (bool) $this->get( 'prevent_self_approval', false );
+	}
+
+	/**
+	 * Whether approvers must confirm they reviewed the content (F10).
+	 *
+	 * Raw stored value. The `sit_cwm_require_attestation` filter is applied
+	 * per post by `Attestation`, not here.
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @return bool
+	 */
+	public function requires_attestation(): bool {
+		return true === (bool) $this->get( 'require_attestation', false );
 	}
 
 	/**

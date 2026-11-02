@@ -207,6 +207,7 @@ final class SettingsPageTest extends TestCase {
 				'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
 				'prevent_self_approval'    => false,
 				'ai_origin_defaults'       => array(),
+				'require_attestation'      => false,
 			),
 			$clean
 		);
@@ -247,6 +248,7 @@ final class SettingsPageTest extends TestCase {
 				'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
 				'prevent_self_approval'    => false,
 				'ai_origin_defaults'       => array(),
+				'require_attestation'      => false,
 			),
 			$this->page->sanitize( null )
 		);
@@ -265,7 +267,7 @@ final class SettingsPageTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( array( 'post_types', 'delete_data_on_uninstall', 'publish_gate', 'notifications', 'prevent_self_approval', 'ai_origin_defaults' ), array_keys( $clean ) );
+		$this->assertSame( array( 'post_types', 'delete_data_on_uninstall', 'publish_gate', 'notifications', 'prevent_self_approval', 'ai_origin_defaults', 'require_attestation' ), array_keys( $clean ) );
 	}
 
 	/**

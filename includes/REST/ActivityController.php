@@ -356,6 +356,7 @@ class ActivityController extends AbstractController {
 	 * Activity item schema.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added `attested` and `attestation`.
 	 *
 	 * @return array
 	 */
@@ -440,6 +441,18 @@ class ActivityController extends AbstractController {
 				),
 				'gate_reason'           => array(
 					'description' => __( 'Why a publish went ahead without approval: log_only, capability or error; null otherwise.', 'sapphireit-editorial-workflow' ),
+					'type'        => array( 'string', 'null' ),
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+				),
+				'attested'              => array(
+					'description' => __( 'True when the approver confirmed they reviewed the content; null otherwise.', 'sapphireit-editorial-workflow' ),
+					'type'        => array( 'boolean', 'null' ),
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+				),
+				'attestation'           => array(
+					'description' => __( 'The statement the approver confirmed, plain text; null otherwise.', 'sapphireit-editorial-workflow' ),
 					'type'        => array( 'string', 'null' ),
 					'context'     => array( 'view', 'edit' ),
 					'readonly'    => true,

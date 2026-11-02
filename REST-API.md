@@ -108,7 +108,11 @@ curl -sS -u "$CWM_AUTH" "$CWM_SITE/wp-json/sit-cwm/v1/posts/125/workflow" | jq
     "mode": "enforce",
     "outcome": "refused"
   },
-  "self_approval_blocked": false
+  "self_approval_blocked": false,
+  "attestation": {
+    "required": true,
+    "statement": "I confirm I have reviewed this content and approve it for publication."
+  }
 }
 ```
 
@@ -153,6 +157,16 @@ inspects content to detect it.
 
 See [Declaring AI use](#declaring-ai-use) for how to set it.
 
+### `attestation` (since 1.2)
+
+| Field | Values |
+|---|---|
+| `required` | `true` when moving this post to `approved` needs `"attested": true` (the site's review attestation setting, then the `sit_cwm_require_attestation` filter) |
+| `statement` | the statement the approver confirms (translated). It is stored with the approval in the activity log |
+
+A display hint, like `capabilities`. The server enforces the requirement on
+every route to `approved`, whatever this says.
+
 ---
 
 ## `POST /posts/{post_id}/workflow`
@@ -163,7 +177,8 @@ combination. At least one must be present.
 **Permissions** — logged in → post readable (`404`) → `edit_post` on it (`403`)
 → per field: `sit_cwm_assign_reviewer` for `reviewer_id` and `due_date`,
 `sit_cwm_change_workflow` for `ai_origin` (`403`) → for `status`, the full
-transition check (`400`/`403`/`409`). Everything is authorized *before*
+transition check (`400`/`403`/`409`, and `422` for an unattested approval that
+requires attestation). Everything is authorized *before*
 anything is written.
 
 ### Arguments
@@ -176,6 +191,7 @@ anything is written.
 | `reviewer_id` | body | integer | ≥ 0; `0` clears the reviewer. Must hold `sit_cwm_review_content` |
 | `due_date` | body | string | `YYYY-MM-DD`, or `""` to clear |
 | `ai_origin` | body | string | since 1.2; one of `human`, `ai_assisted`, `ai_generated`. `""` is rejected: a declaration can be changed but not withdrawn |
+| `attested` | body | boolean | since 1.2; the user confirms they reviewed the content. Required with `"status": "approved"` when `attestation.required` is `true`. An attested approval stores the statement in its activity row, required or not |
 
 Unknown body fields are ignored.
 
@@ -281,7 +297,9 @@ X-WP-TotalPages: 6
     "user": { "id": 7, "name": "Sam Idrissi", "avatar": "https://…" },
     "workflow_status": null,
     "workflow_status_label": null,
-    "gate_reason": null
+    "gate_reason": null,
+    "attested": null,
+    "attestation": null
   },
   {
     "id": 411,
@@ -298,7 +316,9 @@ X-WP-TotalPages: 6
     "user": { "id": 4, "name": "Dana Okafor", "avatar": "https://…" },
     "workflow_status": null,
     "workflow_status_label": null,
-    "gate_reason": null
+    "gate_reason": null,
+    "attested": null,
+    "attestation": null
   },
   {
     "id": 409,
@@ -315,7 +335,9 @@ X-WP-TotalPages: 6
     "user": { "id": 1, "name": "Site Admin", "avatar": "https://…" },
     "workflow_status": "review",
     "workflow_status_label": "Review",
-    "gate_reason": "capability"
+    "gate_reason": "capability",
+    "attested": null,
+    "attestation": null
   }
 ]
 ```
@@ -346,6 +368,13 @@ Every item carries three more fields, `null` for the 1.0 actions:
 | `workflow_status` | string \| null | The workflow status slug at the moment of the publication event |
 | `workflow_status_label` | string \| null | Its label |
 | `gate_reason` | string \| null | On `publish_gate_bypassed` only: `log_only`, `capability` (the bypass capability) or `error` (a gate layer failed open) |
+
+#### Attested approvals (since 1.2)
+
+Every item also carries `attested` (boolean \| null) and `attestation`
+(string \| null). On a `status_changed` row for an approval sent with
+`"attested": true` they are `true` and the exact statement the approver
+confirmed, as plain text. They are `null` on every other row.
 
 ---
 
@@ -524,11 +553,11 @@ anything the same requests sent one at a time could not.
 |---|---|---|
 | `post_ids` | array of integer | required, 1–100 items, each ≥ 1. Duplicates are processed once |
 | `action` | string | required: `change_status`, `assign_reviewer` or `set_due_date` |
-| `payload` | object | required; exactly the key the action needs, no others |
+| `payload` | object | required; exactly the key the action needs, no others (except the optional `attested` with `change_status`) |
 
 | `action` | required `payload` key |
 |---|---|
-| `change_status` | `status` — a registered status slug |
+| `change_status` | `status` — a registered status slug. Since 1.2 it may add `attested` (boolean), which applies to every post in the batch: required to approve when attestation is required |
 | `assign_reviewer` | `reviewer_id` — integer ≥ 0, `0` clears |
 | `set_due_date` | `due_date` — `YYYY-MM-DD`, or `""` to clear |
 
@@ -715,6 +744,7 @@ Errors are standard WordPress `WP_Error` JSON:
 | `rest_forbidden` | **401** | Not logged in. |
 | `sit_cwm_forbidden` | **403** | Logged in, post visible, but not allowed to do this. |
 | `sit_cwm_self_approval` | **403** | Since 1.1. Moving your own post to `approved` while self-approval is prevented. From `POST /posts/{post_id}/workflow` and per item from the batch route. |
+| `sit_cwm_attestation_required` | **422** | Since 1.2. Moving a post to `approved` without `"attested": true` while attestation is required for it. From `POST /posts/{post_id}/workflow` and per item from the batch route. A user who may not approve gets `403` instead. |
 | `sit_cwm_not_managed` | **404** | The post is missing, has no workflow, **or** is not readable by you. Deliberately indistinguishable — see below. |
 | `sit_cwm_invalid_post` | **404** | Per-batch-item equivalent of the above. |
 | `sit_cwm_invalid_status` | **400** | `status` is not a registered slug. |

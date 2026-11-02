@@ -331,6 +331,8 @@ final class Settings implements Bootable {
 			&& is_scalar( $input['prevent_self_approval'] )
 			&& rest_sanitize_boolean( $input['prevent_self_approval'] );
 		$clean['ai_origin_defaults']       = $this->sanitize_ai_origin_defaults( $input['ai_origin_defaults'] ?? array(), (array) $current['ai_origin_defaults'] );
+		// No field on this screen yet, so saving keeps the stored value.
+		$clean['require_attestation'] = true === $current['require_attestation'];
 
 		return $clean;
 	}

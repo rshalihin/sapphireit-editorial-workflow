@@ -145,7 +145,7 @@ final class AssetsTest extends WP_UnitTestCase {
 		$data = json_decode( substr( $before[0], strlen( 'window.sitCwm = ' ), -1 ), true );
 
 		$this->assertSame( $assets->bootstrap_data(), $data );
-		$this->assertSame( array( 'restNamespace', 'statuses', 'capabilities', 'postTypes', 'adminUrl' ), array_keys( $data ) );
+		$this->assertSame( array( 'restNamespace', 'statuses', 'capabilities', 'postTypes', 'adminUrl', 'requireAttestation', 'attestationStatement' ), array_keys( $data ) );
 	}
 
 	/**
@@ -180,6 +180,26 @@ final class AssetsTest extends WP_UnitTestCase {
 
 		$this->assertSame( array_fill_keys( Capabilities::all(), false ), $data['capabilities'] );
 		$this->assertSame( array(), $data['postTypes'] );
+	}
+
+	/**
+	 * The bootstrap carries the site's attestation setting and the statement
+	 * for the bulk modal (F10).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_bootstrap_data_exposes_attestation() {
+		$assets = $this->make_assets( 'build' );
+		$data   = $assets->bootstrap_data();
+
+		$this->assertFalse( $data['requireAttestation'] );
+		$this->assertSame( 'I confirm I have reviewed this content and approve it for publication.', $data['attestationStatement'] );
+
+		( new Settings() )->update( array( 'require_attestation' => true ) );
+
+		$this->assertTrue( $assets->bootstrap_data()['requireAttestation'] );
 	}
 
 	/**

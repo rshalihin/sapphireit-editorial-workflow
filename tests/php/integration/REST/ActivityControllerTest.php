@@ -277,7 +277,7 @@ final class ActivityControllerTest extends WP_UnitTestCase {
 		$this->assertSame( '1', $response->get_headers()['X-WP-Total'] );
 		$this->assertCount( 1, $data );
 		$this->assertSame(
-			array( 'id', 'action', 'action_label', 'old_value', 'old_label', 'new_value', 'new_label', 'message', 'created_at', 'created_at_human', 'user_id', 'user', 'workflow_status', 'workflow_status_label', 'gate_reason' ),
+			array( 'id', 'action', 'action_label', 'old_value', 'old_label', 'new_value', 'new_label', 'message', 'created_at', 'created_at_human', 'user_id', 'user', 'workflow_status', 'workflow_status_label', 'gate_reason', 'attested', 'attestation' ),
 			array_keys( $data[0] )
 		);
 		$this->assertSame( $editor, $data[0]['user_id'] );
@@ -368,6 +368,47 @@ final class ActivityControllerTest extends WP_UnitTestCase {
 		$this->assertNull( $item['workflow_status'] );
 		$this->assertNull( $item['workflow_status_label'] );
 		$this->assertNull( $item['gate_reason'] );
+	}
+
+	/**
+	 * An attested approval exposes `attested` and the statement; a comment
+	 * exposes both as null; a stored `attested` other than `'1'` reads as
+	 * null (F10).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_items_expose_attested_and_statement() {
+		$admin     = $this->make_user( 'administrator' );
+		$post      = $this->make_post( $admin );
+		$statement = 'I confirm I have reviewed this content and approve it for publication.';
+
+		$this->activity->log_status_change(
+			$post,
+			'review',
+			'approved',
+			$admin,
+			array(
+				'attested'    => '1',
+				'attestation' => $statement,
+				'reason'      => 'dropped',
+			)
+		);
+		$this->activity->log_comment( $post, 'Nice', $admin );
+		$this->activity->log_status_change( $post, 'approved', 'review', $admin, array( 'attested' => 'yes' ) );
+
+		wp_set_current_user( $admin );
+
+		$data = $this->get_activity( $post )->get_data();
+
+		$this->assertNull( $data[0]['attested'] );
+		$this->assertNull( $data[0]['attestation'] );
+		$this->assertNull( $data[1]['attested'] );
+		$this->assertNull( $data[1]['attestation'] );
+		$this->assertTrue( $data[2]['attested'] );
+		$this->assertSame( $statement, $data[2]['attestation'] );
+		$this->assertNull( $data[2]['gate_reason'] );
 	}
 
 	/**

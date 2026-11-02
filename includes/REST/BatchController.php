@@ -108,6 +108,7 @@ class BatchController extends AbstractController {
 	 * unknown payload keys are rejected by the schema.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 The payload accepts `attested` (F10).
 	 *
 	 * @return array
 	 */
@@ -135,7 +136,7 @@ class BatchController extends AbstractController {
 				'sanitize_callback' => 'sanitize_key',
 			),
 			'payload'  => array(
-				'description'          => __( 'Action payload: status, reviewer_id or due_date, matching the action.', 'sapphireit-editorial-workflow' ),
+				'description'          => __( 'Action payload: status, reviewer_id or due_date, matching the action. A status change may add attested.', 'sapphireit-editorial-workflow' ),
 				'type'                 => 'object',
 				'required'             => true,
 				'properties'           => array(
@@ -151,6 +152,10 @@ class BatchController extends AbstractController {
 					'due_date'    => array(
 						'type'      => 'string',
 						'maxLength' => 10,
+					),
+					'attested'    => array(
+						'description' => __( 'With a status change: whether the user confirms they reviewed every post. Required to approve when the site requires attestation.', 'sapphireit-editorial-workflow' ),
+						'type'        => 'boolean',
 					),
 				),
 				'additionalProperties' => false,
@@ -226,8 +231,10 @@ class BatchController extends AbstractController {
 
 	/**
 	 * Keeps only the payload key the action uses, sanitized for its type.
+	 * A status change also keeps `attested`, as a strict boolean.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Keeps `attested` for `change_status`.
 	 *
 	 * @param mixed           $value   Validated value.
 	 * @param WP_REST_Request $request Request.
@@ -244,7 +251,10 @@ class BatchController extends AbstractController {
 
 		switch ( $key ) {
 			case 'status':
-				return array( 'status' => sanitize_key( (string) $value['status'] ) );
+				return array(
+					'status'   => sanitize_key( (string) $value['status'] ),
+					'attested' => isset( $value['attested'] ) && true === rest_sanitize_boolean( $value['attested'] ),
+				);
 
 			case 'reviewer_id':
 				return array( 'reviewer_id' => absint( $value['reviewer_id'] ) );

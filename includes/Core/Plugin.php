@@ -21,6 +21,7 @@ use Sit_Cwm\Core\Interfaces\Bootable;
 use Sit_Cwm\Editor\ClassicMetaBox;
 use Sit_Cwm\Editor\SidebarAssets;
 use Sit_Cwm\Governance\AiOriginStamper;
+use Sit_Cwm\Governance\Attestation;
 use Sit_Cwm\Notifications\Deduplicator;
 use Sit_Cwm\Notifications\MessageBuilder;
 use Sit_Cwm\Notifications\Notifier;
@@ -321,8 +322,16 @@ final class Plugin {
 					$c->get( 'transition_manager' ),
 					$c->get( 'permission_manager' ),
 					$c->get( 'post_repository' ),
-					$c->get( 'activity_logger' )
+					$c->get( 'activity_logger' ),
+					$c->get( 'attestation' )
 				);
+			}
+		);
+
+		$this->container->set(
+			'attestation',
+			static function ( Container $c ) {
+				return new Attestation( $c->get( 'settings' ) );
 			}
 		);
 
@@ -520,7 +529,9 @@ final class Plugin {
 					$c->get( 'permission_manager' ),
 					SIT_CWM_PLUGIN_DIR . 'assets/build/',
 					SIT_CWM_PLUGIN_URL . 'assets/build/',
-					SIT_CWM_PLUGIN_DIR . 'languages'
+					SIT_CWM_PLUGIN_DIR . 'languages',
+					$c->get( 'settings' ),
+					$c->get( 'attestation' )
 				);
 			}
 		);

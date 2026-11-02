@@ -57,6 +57,7 @@ final class SettingsTest extends WP_UnitTestCase {
 			'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
 			'prevent_self_approval'    => false,
 			'ai_origin_defaults'       => array(),
+			'require_attestation'      => false,
 		);
 
 		$this->assertSame( $expected, $this->settings->defaults() );
@@ -96,6 +97,7 @@ final class SettingsTest extends WP_UnitTestCase {
 				'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
 				'prevent_self_approval'    => false,
 				'ai_origin_defaults'       => array(),
+				'require_attestation'      => false,
 			),
 			get_option( Settings::OPTION )
 		);
@@ -352,6 +354,33 @@ final class SettingsTest extends WP_UnitTestCase {
 
 		$this->assertTrue( $settings->update( array( 'prevent_self_approval' => 'false' ) ) );
 		$this->assertFalse( $settings->prevents_self_approval() );
+	}
+
+	/**
+	 * Review attestation is off by default and after upgrading from 1.1, and
+	 * truthy values sanitize to true (F14).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_require_attestation_defaults_off_and_sanitizes_to_bool() {
+		$this->assertFalse( ( new Settings() )->defaults()['require_attestation'] );
+
+		update_option( Settings::OPTION, array( 'post_types' => array( 'post' ) ) ); // 1.1 option.
+
+		$settings = new Settings();
+		$this->assertFalse( $settings->requires_attestation() );
+
+		foreach ( array( 'yes', 1, true ) as $value ) {
+			$this->assertTrue( $settings->update( array( 'require_attestation' => false ) ) );
+			$this->assertTrue( $settings->update( array( 'require_attestation' => $value ) ) );
+			$this->assertTrue( $settings->get( 'require_attestation' ) );
+			$this->assertTrue( $settings->requires_attestation() );
+		}
+
+		$this->assertTrue( $settings->update( array( 'require_attestation' => 'false' ) ) );
+		$this->assertFalse( $settings->requires_attestation() );
 	}
 
 	/**

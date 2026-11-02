@@ -8,6 +8,7 @@
 
 namespace Sit_Cwm\Core;
 
+use Sit_Cwm\Governance\Attestation;
 use Sit_Cwm\Workflow\PermissionManager;
 use Sit_Cwm\Workflow\StatusManager;
 
@@ -72,6 +73,22 @@ final class Assets {
 	private $permissions;
 
 	/**
+	 * Plugin settings.
+	 *
+	 * @since 1.2.0
+	 * @var Settings
+	 */
+	private $settings;
+
+	/**
+	 * Review attestation.
+	 *
+	 * @since 1.2.0
+	 * @var Attestation
+	 */
+	private $attestation;
+
+	/**
 	 * Absolute path of the build directory, with trailing slash.
 	 *
 	 * @since 1.0.0
@@ -107,19 +124,24 @@ final class Assets {
 	 * Constructor.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $settings and $attestation.
 	 *
 	 * @param StatusManager     $statuses      Status registry.
 	 * @param PermissionManager $permissions   Workflow authorization.
 	 * @param string            $build_dir     Absolute build directory path.
 	 * @param string            $build_url     Build directory URL.
 	 * @param string            $languages_dir Absolute translations directory path.
+	 * @param Settings|null     $settings      Plugin settings; a fresh accessor when null.
+	 * @param Attestation|null  $attestation   Review attestation; built from $settings when null.
 	 */
-	public function __construct( StatusManager $statuses, PermissionManager $permissions, string $build_dir, string $build_url, string $languages_dir ) {
+	public function __construct( StatusManager $statuses, PermissionManager $permissions, string $build_dir, string $build_url, string $languages_dir, ?Settings $settings = null, ?Attestation $attestation = null ) {
 		$this->statuses      = $statuses;
 		$this->permissions   = $permissions;
 		$this->build_dir     = trailingslashit( $build_dir );
 		$this->build_url     = trailingslashit( $build_url );
 		$this->languages_dir = $languages_dir;
+		$this->settings      = $settings ?? new Settings();
+		$this->attestation   = $attestation ?? new Attestation( $this->settings );
 	}
 
 	/**
@@ -188,9 +210,14 @@ final class Assets {
 	 * trusted on the way back. Contains no nonces or other secrets
 	 * (`@wordpress/api-fetch` already carries the `wp_rest` nonce).
 	 *
-	 * @since 1.0.0
+	 * `requireAttestation` is the site setting only; the per-post answer,
+	 * after the `sit_cwm_require_attestation` filter, is in the workflow
+	 * payload (F10).
 	 *
-	 * @return array{restNamespace: string, statuses: array[], capabilities: array<string, bool>, postTypes: array[], adminUrl: string}
+	 * @since 1.0.0
+	 * @since 1.2.0 Added `requireAttestation` and `attestationStatement`.
+	 *
+	 * @return array{restNamespace: string, statuses: array[], capabilities: array<string, bool>, postTypes: array[], adminUrl: string, requireAttestation: bool, attestationStatement: string}
 	 */
 	public function bootstrap_data(): array {
 		$post_types = array();
@@ -210,12 +237,14 @@ final class Assets {
 		}
 
 		return array(
-			'restNamespace' => self::REST_NAMESPACE,
+			'restNamespace'        => self::REST_NAMESPACE,
 			// Site-wide context (F2).
-			'statuses'      => array_values( $this->statuses->all() ),
-			'capabilities'  => $this->permissions->capability_flags(),
-			'postTypes'     => $post_types,
-			'adminUrl'      => admin_url(),
+			'statuses'             => array_values( $this->statuses->all() ),
+			'capabilities'         => $this->permissions->capability_flags(),
+			'postTypes'            => $post_types,
+			'adminUrl'             => admin_url(),
+			'requireAttestation'   => $this->settings->requires_attestation(),
+			'attestationStatement' => $this->attestation->statement(),
 		);
 	}
 

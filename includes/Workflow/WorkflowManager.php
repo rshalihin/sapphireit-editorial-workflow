@@ -11,6 +11,7 @@ namespace Sit_Cwm\Workflow;
 use Sit_Cwm\Activity\ActivityLogger;
 use Sit_Cwm\Content\PostRepository;
 use Sit_Cwm\Governance\AiOrigin;
+use Sit_Cwm\Governance\Attestation;
 use WP_Error;
 use WP_User;
 
@@ -80,9 +81,18 @@ final class WorkflowManager {
 	private $activity;
 
 	/**
+	 * Review attestation; null when not wired.
+	 *
+	 * @since 1.2.0
+	 * @var Attestation|null
+	 */
+	private $attestation;
+
+	/**
 	 * Constructor. Does not touch WordPress.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $attestation.
 	 * @internal
 	 *
 	 * @param StatusManager     $statuses    Status registry.
@@ -90,19 +100,23 @@ final class WorkflowManager {
 	 * @param PermissionManager $permissions Authorization.
 	 * @param PostRepository    $posts       Workflow meta persistence.
 	 * @param ActivityLogger    $activity    Activity history.
+	 * @param Attestation|null  $attestation Review attestation; null never
+	 *                                       requires or records it.
 	 */
 	public function __construct(
 		StatusManager $statuses,
 		TransitionManager $transitions,
 		PermissionManager $permissions,
 		PostRepository $posts,
-		ActivityLogger $activity
+		ActivityLogger $activity,
+		?Attestation $attestation = null
 	) {
 		$this->statuses    = $statuses;
 		$this->transitions = $transitions;
 		$this->permissions = $permissions;
 		$this->posts       = $posts;
 		$this->activity    = $activity;
+		$this->attestation = $attestation;
 	}
 
 	/**
@@ -130,6 +144,7 @@ final class WorkflowManager {
 	 * @since 1.0.0
 	 * @since 1.2.0 Adds `blocked_transitions`.
 	 * @since 1.2.0 Added ai_origin.
+	 * @since 1.2.0 Added attestation.
 	 * @api
 	 *
 	 * @param int      $post_id Post id.
@@ -174,6 +189,7 @@ final class WorkflowManager {
 			'blocked_transitions'   => $this->get_blocked_transitions( $post_id, $user_id ),
 			'capabilities'          => $this->get_capability_hints( $post_id, $transitions, $user_id ),
 			'self_approval_blocked' => $this->self_approval_hint( $post_id, $state['status'], $user_id ),
+			'attestation'           => $this->attestation_hint( $post_id ),
 		);
 	}
 
@@ -319,16 +335,19 @@ final class WorkflowManager {
 	 * Runs the same checks as `transition()`, without writes or actions.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $args.
 	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param string   $from    Status the caller believes is current.
 	 * @param string   $to      Target status slug.
 	 * @param int|null $user_id User id; null for the current user.
+	 * @param array    $args    Optional. `attested` (bool): the user confirmed they
+	 *                          reviewed the content (F10). Default empty.
 	 * @return bool
 	 */
-	public function can_transition( int $post_id, string $from, string $to, ?int $user_id = null ): bool {
-		return true === $this->check_transition( $post_id, $from, $to, $user_id );
+	public function can_transition( int $post_id, string $from, string $to, ?int $user_id = null, array $args = array() ): bool {
+		return true === $this->check_transition( $post_id, $from, $to, $user_id, $args );
 	}
 
 	/**
@@ -338,16 +357,19 @@ final class WorkflowManager {
 	 * with the same error `transition()` would return. Writes nothing.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $args.
 	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param string   $from    Status the caller believes is current.
 	 * @param string   $to      Target status slug.
 	 * @param int|null $user_id User id; null for the current user.
+	 * @param array    $args    Optional. `attested` (bool): the user confirmed they
+	 *                          reviewed the content (F10). Default empty.
 	 * @return true|WP_Error
 	 */
-	public function check_transition( int $post_id, string $from, string $to, ?int $user_id = null ) {
-		$error = $this->validate_transition( $post_id, $from, $to, $this->resolve_user_id( $user_id ) );
+	public function check_transition( int $post_id, string $from, string $to, ?int $user_id = null, array $args = array() ) {
+		$error = $this->validate_transition( $post_id, $from, $to, $this->resolve_user_id( $user_id ), $args );
 
 		return null === $error ? true : $error;
 	}
@@ -362,18 +384,25 @@ final class WorkflowManager {
 	 * stored now, so two editors acting on the same stale state cannot both
 	 * succeed. The comparison is application-level, not a database lock.
 	 *
+	 * An attested approval (`$args['attested']` is boolean true) records the
+	 * attestation statement with its activity row, whether or not it was
+	 * required.
+	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $args.
 	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param string   $from    Status the caller saw as current.
 	 * @param string   $to      Target status slug.
 	 * @param int|null $user_id Acting user id; null for the current user.
+	 * @param array    $args    Optional. `attested` (bool): the user confirmed they
+	 *                          reviewed the content (F10). Default empty.
 	 * @return true|WP_Error
 	 */
-	public function transition( int $post_id, string $from, string $to, ?int $user_id = null ) {
+	public function transition( int $post_id, string $from, string $to, ?int $user_id = null, array $args = array() ) {
 		$user_id = $this->resolve_user_id( $user_id );
-		$error   = $this->validate_transition( $post_id, $from, $to, $user_id );
+		$error   = $this->validate_transition( $post_id, $from, $to, $user_id, $args );
 
 		if ( null !== $error ) {
 			return $error;
@@ -383,7 +412,16 @@ final class WorkflowManager {
 			return $this->update_failed();
 		}
 
-		$this->activity->log_status_change( $post_id, $from, $to, $user_id );
+		$context = array();
+
+		if ( 'approved' === $to && null !== $this->attestation && true === ( $args['attested'] ?? null ) ) {
+			$context = array(
+				'attested'    => '1',
+				'attestation' => $this->attestation->statement(),
+			);
+		}
+
+		$this->activity->log_status_change( $post_id, $from, $to, $user_id, $context );
 
 		/**
 		 * Fires after a post's workflow status changed.
@@ -670,14 +708,17 @@ final class WorkflowManager {
 	 * @since 1.0.0
 	 * @since 1.1.0 Returns `sit_cwm_self_approval` for a blocked self-approval.
 	 * @since 1.2.0 Returns an extension's `WP_Error` veto verbatim (F3).
+	 * @since 1.2.0 Returns `sit_cwm_attestation_required` for an unattested
+	 *              approval that requires attestation (F10).
 	 *
 	 * @param int    $post_id Post id.
 	 * @param string $from    Status the caller saw as current.
 	 * @param string $to      Target status slug.
 	 * @param int    $user_id Resolved acting user id.
+	 * @param array  $args    Transition args; see `transition()`.
 	 * @return WP_Error|null Null when the transition may proceed.
 	 */
-	private function validate_transition( int $post_id, string $from, string $to, int $user_id ): ?WP_Error {
+	private function validate_transition( int $post_id, string $from, string $to, int $user_id, array $args ): ?WP_Error {
 		$error = $this->check_post( $post_id, $user_id );
 
 		if ( null !== $error ) {
@@ -727,6 +768,15 @@ final class WorkflowManager {
 			return $this->forbidden();
 		}
 
+		// After authorization, so a user who may not approve gets 403, not 422.
+		if ( 'approved' === $to && null !== $this->attestation && $this->attestation->is_required( $post_id ) && true !== ( $args['attested'] ?? null ) ) {
+			return new WP_Error(
+				'sit_cwm_attestation_required',
+				__( 'Confirm that you reviewed this content before approving it.', 'sapphireit-editorial-workflow' ),
+				array( 'status' => 422 )
+			);
+		}
+
 		return null;
 	}
 
@@ -747,6 +797,29 @@ final class WorkflowManager {
 			&& $this->transitions->is_valid( $status, 'approved', $post_id )
 			&& user_can( $user_id, $this->permissions->capability_for_status( 'approved', $post_id ) )
 			&& $this->permissions->is_self_approval_blocked( $post_id, $user_id );
+	}
+
+	/**
+	 * Attestation hint for the workflow payload (F10). Display only: the
+	 * requirement is enforced by `validate_transition()`.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param int $post_id Post id.
+	 * @return array{required: bool, statement: string}
+	 */
+	private function attestation_hint( int $post_id ): array {
+		if ( null === $this->attestation ) {
+			return array(
+				'required'  => false,
+				'statement' => '',
+			);
+		}
+
+		return array(
+			'required'  => $this->attestation->is_required( $post_id ),
+			'statement' => $this->attestation->statement(),
+		);
 	}
 
 	/**

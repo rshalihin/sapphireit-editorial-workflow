@@ -146,6 +146,15 @@ final class ActivityLogger implements Bootable {
 	const VALUE_MAX_LENGTH = 191;
 
 	/**
+	 * Longest stored attestation statement (F10).
+	 *
+	 * @since 1.2.0
+	 * @internal
+	 * @var int
+	 */
+	const ATTESTATION_MAX_LENGTH = 500;
+
+	/**
 	 * Schema owner, source of the table name.
 	 *
 	 * @since 1.0.0
@@ -296,16 +305,36 @@ final class ActivityLogger implements Bootable {
 	/**
 	 * Logs a workflow status change.
 	 *
+	 * Context keeps only an attestation (F10): `attested` when it is exactly
+	 * `'1'`, and the `attestation` statement as plain text, truncated to
+	 * `ATTESTATION_MAX_LENGTH`. Anything else is dropped.
+	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $context.
 	 * @internal Callers must authorize first.
 	 *
 	 * @param int      $post_id Post id.
 	 * @param string   $from    Previous status slug.
 	 * @param string   $to      New status slug.
 	 * @param int|null $user_id Acting user; `null` for the current user.
+	 * @param array    $context Optional. `attested` and `attestation`.
 	 * @return int Inserted id, `0` on failure.
 	 */
-	public function log_status_change( int $post_id, string $from, string $to, ?int $user_id = null ): int {
+	public function log_status_change( int $post_id, string $from, string $to, ?int $user_id = null, array $context = array() ): int {
+		$clean = array();
+
+		if ( isset( $context['attested'] ) && '1' === $context['attested'] ) {
+			$clean['attested'] = '1';
+		}
+
+		if ( isset( $context['attestation'] ) && is_string( $context['attestation'] ) ) {
+			$statement = mb_substr( sanitize_text_field( $context['attestation'] ), 0, self::ATTESTATION_MAX_LENGTH );
+
+			if ( '' !== $statement ) {
+				$clean['attestation'] = $statement;
+			}
+		}
+
 		return $this->log(
 			$post_id,
 			'status_changed',
@@ -313,6 +342,7 @@ final class ActivityLogger implements Bootable {
 				array(
 					'old_value' => $from,
 					'new_value' => $to,
+					'context'   => $clean,
 				),
 				$user_id
 			)
