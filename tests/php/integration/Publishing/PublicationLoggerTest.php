@@ -8,6 +8,7 @@
 
 namespace Sit_Cwm\Tests\Integration\Publishing;
 
+use Sit_Cwm\Activity\ActivityEntry;
 use Sit_Cwm\Core\Settings;
 use Sit_Cwm\Publishing\PublicationLogger;
 use Sit_Cwm\Publishing\PublishGate;
@@ -318,6 +319,51 @@ final class PublicationLoggerTest extends TestCase {
 	 */
 	public function test_request_source_is_other_in_a_plain_request() {
 		$this->assertSame( 'other', RequestSource::detect() );
+	}
+
+	/**
+	 * Publication rows record the AI origin in effect at that moment, or
+	 * `none` when nothing was declared (F9, F12).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_publication_rows_record_ai_origin() {
+		$declared = self::factory()->post->create( array( 'post_status' => 'draft' ) );
+		$this->posts->set_ai_origin( $declared, 'ai_generated' );
+		wp_publish_post( $declared );
+
+		$this->assertSame( 'ai_generated', $this->latest( $declared, 'post_published' )->get_context()['ai_origin'] );
+
+		$this->posts->set_ai_origin( $declared, 'human' );
+		wp_update_post(
+			array(
+				'ID'          => $declared,
+				'post_status' => 'draft',
+			)
+		);
+
+		$this->assertSame( 'human', $this->latest( $declared, 'post_unpublished' )->get_context()['ai_origin'] );
+
+		$undeclared = self::factory()->post->create( array( 'post_status' => 'draft' ) );
+		wp_publish_post( $undeclared );
+
+		$this->assertSame( 'none', $this->latest( $undeclared, 'post_published' )->get_context()['ai_origin'] );
+	}
+
+	/**
+	 * The newest entry of an action for a post.
+	 *
+	 * @param int    $post_id Post id.
+	 * @param string $action  Activity action.
+	 * @return ActivityEntry
+	 */
+	private function latest( int $post_id, string $action ): ActivityEntry {
+		$entries = $this->activity->get_for_post( $post_id, array( 'action' => $action ) );
+		$this->assertNotEmpty( $entries, "No {$action} entry." );
+
+		return $entries[0];
 	}
 
 	/**

@@ -604,6 +604,109 @@ final class WorkflowControllerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The payload carries the declared AI origin, its label and whether the
+	 * current user may declare it (F9).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_workflow_payload_has_ai_origin_object() {
+		$author = $this->make_user( 'author' );
+		$post   = $this->make_post( $author );
+
+		wp_set_current_user( $author );
+
+		$this->assertSame(
+			array(
+				'value'       => '',
+				'label'       => 'Not declared',
+				'can_declare' => true,
+			),
+			$this->get( $post )->get_data()['ai_origin']
+		);
+	}
+
+	/**
+	 * `ai_origin` is accepted alone or with a status change, and recorded with
+	 * via `workflow` before the status change.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_workflow_post_sets_ai_origin_alone_or_with_status() {
+		$post = $this->make_post( $this->make_user( 'author' ) );
+
+		wp_set_current_user( $this->make_user( 'editor' ) );
+
+		$response = $this->post(
+			$post,
+			array(
+				'ai_origin' => 'ai_generated',
+				'from'      => 'draft',
+				'status'    => 'writing',
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'ai_generated', $response->get_data()['ai_origin']['value'] );
+		$this->assertSame( 'writing', $response->get_data()['status'] );
+
+		$declared = $this->activity->get_for_post( $post, array( 'action' => 'ai_origin_changed' ) );
+
+		$this->assertCount( 1, $declared );
+		$this->assertSame( array( 'via' => 'workflow' ), $declared[0]->get_context() );
+
+		$status_changed = $this->activity->get_for_post( $post, array( 'action' => 'status_changed' ) );
+
+		$this->assertCount( 1, $status_changed );
+		$this->assertLessThan( $status_changed[0]->get_id(), $declared[0]->get_id(), 'The declaration is recorded before the status change.' );
+
+		$alone = $this->post( $post, array( 'ai_origin' => 'ai_assisted' ) );
+
+		$this->assertSame( 200, $alone->get_status() );
+		$this->assertSame( 'ai_assisted', $alone->get_data()['ai_origin']['value'] );
+		$this->assertSame( 'AI-assisted', $alone->get_data()['ai_origin']['label'] );
+	}
+
+	/**
+	 * An invalid value is 400; a user who may not declare gets 403 or 404,
+	 * and nothing is written.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_workflow_post_rejects_bad_value_and_unauthorised_user() {
+		$author = $this->make_user( 'author' );
+		$post   = $this->make_post( $author );
+
+		wp_set_current_user( $this->make_user( 'editor' ) );
+
+		$this->assertSame( 400, $this->post( $post, array( 'ai_origin' => '' ) )->get_status() );
+		$this->assertSame( 400, $this->post( $post, array( 'ai_origin' => 'robot' ) )->get_status() );
+
+		wp_set_current_user( $this->make_user( 'subscriber' ) );
+
+		$this->assertContains( $this->post( $post, array( 'ai_origin' => 'human' ) )->get_status(), array( 403, 404 ) );
+
+		// Can edit the post, but lacks sit_cwm_change_workflow.
+		$no_workflow = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		$user        = get_userdata( $no_workflow );
+
+		foreach ( array( 'edit_posts', 'edit_others_posts' ) as $cap ) {
+			$user->add_cap( $cap );
+		}
+
+		wp_set_current_user( $no_workflow );
+
+		$this->assert_error_response( $this->post( $post, array( 'ai_origin' => 'human' ) ), 'sit_cwm_forbidden', 403 );
+		$this->assertSame( '', $this->posts->get_ai_origin( $post ) );
+		$this->assertSame( 0, $this->activity->count_for_post( $post ) );
+	}
+
+	/**
 	 * The container builds the controller.
 	 *
 	 * @return void

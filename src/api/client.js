@@ -192,13 +192,14 @@ export function getWorkflow( postId, { signal } = {} ) {
 }
 
 /**
- * Changes a post's status, reviewer and/or due date.
+ * Changes a post's status, reviewer, due date and/or declared AI use.
  *
  * A status change must carry `from` (the status the user saw); the server
  * answers 409 when it no longer matches.
  *
  * @param {number} postId  Post id.
- * @param {Object} payload `{ from, status }`, `{ reviewer_id }` and/or `{ due_date }`.
+ * @param {Object} payload `{ from, status }`, `{ reviewer_id }`, `{ due_date }`
+ *                         and/or `{ ai_origin }`.
  * @return {Promise<Object>} Fresh workflow state.
  */
 export function updateWorkflow( postId, payload ) {

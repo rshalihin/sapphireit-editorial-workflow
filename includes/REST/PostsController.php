@@ -11,6 +11,7 @@ namespace Sit_Cwm\REST;
 use Sit_Cwm\Activity\ActivityLogger;
 use Sit_Cwm\Content\PostRepository;
 use Sit_Cwm\Core\Settings;
+use Sit_Cwm\Governance\AiOrigin;
 use Sit_Cwm\Workflow\PermissionManager;
 use Sit_Cwm\Workflow\StatusManager;
 use Sit_Cwm\Workflow\WorkflowManager;
@@ -335,6 +336,7 @@ class PostsController extends AbstractController {
 	 * Dashboard row schema.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added ai_origin.
 	 *
 	 * @return array
 	 */
@@ -416,6 +418,12 @@ class PostsController extends AbstractController {
 				'is_overdue'            => array(
 					'description' => __( 'Whether the due date has passed before the workflow completed.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'boolean',
+					'readonly'    => true,
+				),
+				'ai_origin'             => array(
+					'description' => __( 'Declared AI use (not detected), or an empty string when nothing was declared.', 'sapphireit-editorial-workflow' ),
+					'type'        => 'string',
+					'enum'        => array_merge( array( AiOrigin::NOT_DECLARED ), AiOrigin::VALUES ),
 					'readonly'    => true,
 				),
 				'last_activity'         => array(
@@ -506,6 +514,7 @@ class PostsController extends AbstractController {
 	 * One dashboard row. All lookups must already be primed.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added ai_origin.
 	 *
 	 * @param WP_Post $post     Post.
 	 * @param int     $user_id  Requesting user id.
@@ -536,6 +545,7 @@ class PostsController extends AbstractController {
 			'reviewer'              => $reviewer_id > 0 && isset( $users[ $reviewer_id ] ) ? $users[ $reviewer_id ] : null,
 			'due_date'              => $due_date,
 			'is_overdue'            => '' !== $due_date && $due_date < $today && ! $this->statuses->is_final( $status, $post->ID ),
+			'ai_origin'             => $this->posts->get_ai_origin( $post->ID ),
 			'last_activity'         => isset( $activity[ $post->ID ][0] ) ? $this->formatter->format( $activity[ $post->ID ][0], $users ) : null,
 			'edit_link'             => (string) get_edit_post_link( $post->ID, 'raw' ),
 			'available_transitions' => $transitions,

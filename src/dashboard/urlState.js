@@ -25,6 +25,7 @@ import {
  */
 const DEFAULT_FIELDS = [
 	'status',
+	'ai_origin',
 	'reviewer',
 	'due_date',
 	'author',

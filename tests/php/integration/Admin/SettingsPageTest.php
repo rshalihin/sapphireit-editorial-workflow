@@ -614,6 +614,117 @@ final class SettingsPageTest extends TestCase {
 	}
 
 	/**
+	 * The AI use default field has one select per enabled type, and saving
+	 * keeps valid declarations only (F14, F16).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_ai_origin_default_field_renders_and_saves() {
+		global $wp_settings_fields;
+
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+		$this->page->register_settings();
+
+		$this->assertArrayHasKey( 'sit_cwm_ai_origin_defaults', $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION ] );
+
+		ob_start();
+		$this->page->render_ai_origin_defaults_field();
+		$html = ob_get_clean();
+
+		$this->assertStringContainsString( 'name="sit_cwm_settings[ai_origin_defaults][post]"', $html );
+		$this->assertStringContainsString( 'name="sit_cwm_settings[ai_origin_defaults][page]"', $html );
+		$this->assertStringContainsString( 'No default (Not declared)', $html );
+		$this->assertStringContainsString( '>AI-generated</option>', $html );
+		$this->assertStringContainsString( 'Recorded on new content of each type when it is created.', $html );
+
+		$saved = $this->page->sanitize(
+			array(
+				'post_types'         => array( 'post', 'page' ),
+				'ai_origin_defaults' => array(
+					'post' => 'ai_assisted',
+					'page' => 'bogus',
+				),
+			)
+		);
+
+		$this->assertSame( array( 'post' => 'ai_assisted' ), $saved['ai_origin_defaults'] );
+	}
+
+	/**
+	 * The stored default is selected; "No default" is chosen when none is set.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_ai_origin_default_field_selects_the_stored_value() {
+		$this->assertTrue( $this->store->update( array( 'ai_origin_defaults' => array( 'page' => 'human' ) ) ) );
+
+		ob_start();
+		$this->page->render_ai_origin_defaults_field();
+		$html = ob_get_clean();
+
+		$this->assertMatchesRegularExpression( '/name="sit_cwm_settings\[ai_origin_defaults\]\[page\]">(?:(?!<\/select>).)*<option value="human"\s+selected/s', $html );
+		$this->assertMatchesRegularExpression( '/name="sit_cwm_settings\[ai_origin_defaults\]\[post\]">(?:(?!<\/select>).)*<option value=""\s+selected/s', $html );
+	}
+
+	/**
+	 * Defaults of types not shown on the form survive a save, and a
+	 * programmatic update is not wiped by the registered sanitizer.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_keeps_ai_origin_defaults_for_types_not_shown() {
+		$this->page->register_settings();
+
+		$this->assertTrue(
+			$this->store->update(
+				array(
+					'post_types'         => array( 'post' ),
+					'ai_origin_defaults' => array(
+						'post' => 'human',
+						'page' => 'ai_generated',
+					),
+				)
+			)
+		);
+		$this->assertSame(
+			array(
+				'post' => 'human',
+				'page' => 'ai_generated',
+			),
+			$this->store->get( 'ai_origin_defaults' )
+		);
+
+		// "No default" for post clears it; page is not on the form and is kept.
+		$clean = $this->page->sanitize(
+			array(
+				'post_types'         => array( 'post' ),
+				'ai_origin_defaults' => array( 'post' => '' ),
+			)
+		);
+
+		$this->assertSame( array( 'page' => 'ai_generated' ), $clean['ai_origin_defaults'] );
+		// A scalar keeps the stored map.
+		$this->assertSame(
+			array(
+				'post' => 'human',
+				'page' => 'ai_generated',
+			),
+			$this->page->sanitize(
+				array(
+					'post_types'         => array( 'post' ),
+					'ai_origin_defaults' => 'scalar',
+				)
+			)['ai_origin_defaults']
+		);
+	}
+
+	/**
 	 * Unknown events are ignored; scalar or forged toggles never fatal.
 	 *
 	 * @since 1.1.0
@@ -847,6 +958,7 @@ final class SettingsPageTest extends TestCase {
 		$this->assertStringContainsString( 'Needs Changes', $tab['content'] );
 		$this->assertStringContainsString( 'Publish gate:', $tab['content'] );
 		$this->assertStringContainsString( 'Email notifications:', $tab['content'] );
+		$this->assertStringContainsString( 'AI use is declared by people or tools, never detected.', $tab['content'] );
 	}
 
 	/**

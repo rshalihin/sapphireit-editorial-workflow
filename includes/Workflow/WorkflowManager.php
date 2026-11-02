@@ -10,6 +10,7 @@ namespace Sit_Cwm\Workflow;
 
 use Sit_Cwm\Activity\ActivityLogger;
 use Sit_Cwm\Content\PostRepository;
+use Sit_Cwm\Governance\AiOrigin;
 use WP_Error;
 use WP_User;
 
@@ -128,6 +129,7 @@ final class WorkflowManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Adds `blocked_transitions`.
+	 * @since 1.2.0 Added ai_origin.
 	 * @api
 	 *
 	 * @param int      $post_id Post id.
@@ -150,6 +152,7 @@ final class WorkflowManager {
 		}
 
 		$transitions = $this->get_available_transitions( $post_id, $user_id );
+		$ai_origin   = $this->posts->get_ai_origin( $post_id );
 
 		return array(
 			'post_id'               => $state['post_id'],
@@ -162,6 +165,11 @@ final class WorkflowManager {
 			'status_is_unknown'     => $this->posts->has_unknown_status( $state['post_id'] ),
 			'reviewer'              => $this->reviewer_summary( $state['reviewer_id'] ),
 			'due_date'              => $state['due_date'],
+			'ai_origin'             => array(
+				'value'       => $ai_origin,
+				'label'       => AiOrigin::label( $ai_origin ),
+				'can_declare' => $this->permissions->can_declare_ai_origin( $post_id, $user_id ),
+			),
 			'available_transitions' => $transitions,
 			'blocked_transitions'   => $this->get_blocked_transitions( $post_id, $user_id ),
 			'capabilities'          => $this->get_capability_hints( $post_id, $transitions, $user_id ),
@@ -579,6 +587,78 @@ final class WorkflowManager {
 		do_action( 'sit_cwm_comment_added', $post_id, $activity_id, $message, $user_id );
 
 		return $activity_id;
+	}
+
+	/**
+	 * Declares how a post was made (F9). The only writer of the flag for
+	 * people and agents; new posts are stamped by `AiOriginStamper`.
+	 *
+	 * A declaration can be changed but never withdrawn: `$origin` must be a
+	 * value from `AiOrigin::VALUES`, never "Not declared". Declaring the
+	 * current value again is a no-op that logs nothing.
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @param int      $post_id Post id.
+	 * @param string   $origin  A value from `AiOrigin::VALUES`.
+	 * @param int|null $user_id Acting user id; null for the current user.
+	 * @param string   $via     Route the change arrived by, one of
+	 *                          `ActivityLogger::AI_ORIGIN_VIAS`; anything else
+	 *                          is recorded as `workflow`.
+	 * @return true|WP_Error
+	 */
+	public function set_ai_origin( int $post_id, string $origin, ?int $user_id = null, string $via = 'workflow' ) {
+		$user_id = $this->resolve_user_id( $user_id );
+		$error   = $this->check_post( $post_id, $user_id );
+
+		if ( null !== $error ) {
+			return $error;
+		}
+
+		if ( ! in_array( $origin, AiOrigin::VALUES, true ) ) {
+			return new WP_Error(
+				'sit_cwm_invalid_ai_origin',
+				__( 'Choose Human-written, AI-assisted or AI-generated.', 'sapphireit-editorial-workflow' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( ! $this->permissions->can_declare_ai_origin( $post_id, $user_id ) ) {
+			return $this->forbidden();
+		}
+
+		if ( ! in_array( $via, ActivityLogger::AI_ORIGIN_VIAS, true ) ) {
+			$via = 'workflow';
+		}
+
+		$previous = $this->posts->get_ai_origin( $post_id );
+
+		if ( $previous === $origin ) {
+			return true;
+		}
+
+		if ( ! $this->posts->set_ai_origin( $post_id, $origin ) ) {
+			return $this->update_failed();
+		}
+
+		$this->activity->log_ai_origin_changed( $post_id, $origin, $previous, $via, $user_id );
+
+		/**
+		 * Fires after a post's declared AI origin changed, whether a person or
+		 * agent declared it or a new post was stamped with the site default.
+		 *
+		 * @since 1.2.0
+		 *
+		 * @param int    $post_id  Post id.
+		 * @param string $origin   New value, one of `AiOrigin::VALUES`.
+		 * @param string $previous Previous value; `''` when nothing was declared.
+		 * @param int    $user_id  Acting user id; `0` when nobody was logged in.
+		 * @param string $via      `workflow`, `post_api` or `default`.
+		 */
+		do_action( 'sit_cwm_ai_origin_changed', $post_id, $origin, $previous, $user_id, $via );
+
+		return true;
 	}
 
 	/**

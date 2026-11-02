@@ -200,6 +200,45 @@ describe( 'WorkflowPanel blocked transitions', () => {
 	} );
 } );
 
+describe( 'WorkflowPanel AI use', () => {
+	it( 'shows the control and saves through setAiOrigin', async () => {
+		const setAiOrigin = jest.fn().mockResolvedValue( null );
+		mockWorkflow(
+			makeWorkflow( {
+				ai_origin: {
+					value: '',
+					label: 'Not declared',
+					can_declare: true,
+				},
+			} )
+		);
+		useWorkflow.mockReturnValue( {
+			...useWorkflow(),
+			setAiOrigin,
+		} );
+
+		render( <ClassicPanel postId={ 42 } postType="post" /> );
+
+		await userEvent.selectOptions(
+			screen.getByRole( 'combobox', { name: 'AI use' } ),
+			'ai_assisted'
+		);
+
+		expect( setAiOrigin ).toHaveBeenCalledWith( 'ai_assisted' );
+	} );
+
+	it( 'is absent when an older server sends no AI use', () => {
+		mockWorkflow( makeWorkflow() );
+
+		render( <WorkflowPanel postId={ 42 } /> );
+
+		expect(
+			screen.queryByRole( 'combobox', { name: 'AI use' } )
+		).toBeNull();
+		expect( screen.queryByText( 'AI use' ) ).toBeNull();
+	} );
+} );
+
 describe( 'WorkflowPanel onStatusChanged', () => {
 	it( 'is called once after a successful transition', async () => {
 		const onStatusChanged = jest.fn();

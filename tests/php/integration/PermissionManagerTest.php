@@ -613,6 +613,25 @@ final class PermissionManagerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Anyone who may work a post through the workflow may declare its AI
+	 * origin; an author may not on someone else's post (F9).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_can_declare_ai_origin() {
+		$contributor = $this->make_user( 'contributor' );
+		$post        = $this->make_post( $contributor );
+
+		$this->assertTrue( $this->permissions->can_declare_ai_origin( $post, $contributor ) );
+		$this->assertTrue( $this->permissions->can_declare_ai_origin( $post, $this->make_user( 'editor' ) ) );
+		$this->assertFalse( $this->permissions->can_declare_ai_origin( $post, $this->make_user( 'subscriber' ) ) );
+		$this->assertFalse( $this->permissions->can_declare_ai_origin( $post, $this->make_user( 'author' ) ), 'Not their post.' );
+		$this->assertFalse( $this->permissions->can_declare_ai_origin( $post, 0 ) );
+	}
+
+	/**
 	 * Asserts every post-scoped method denies.
 	 *
 	 * @param int      $post_id Post id.

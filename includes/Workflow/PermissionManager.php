@@ -449,6 +449,23 @@ final class PermissionManager {
 	}
 
 	/**
+	 * Whether a user may declare a post's AI origin (F9).
+	 *
+	 * Anyone who may work a post through the workflow may say how it was
+	 * made, so an author can declare on their own post but not on others'.
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @param int      $post_id Post id.
+	 * @param int|null $user_id User id; null for the current user.
+	 * @return bool
+	 */
+	public function can_declare_ai_origin( int $post_id, ?int $user_id = null ): bool {
+		return $this->can_on_post( $post_id, $user_id, Capabilities::CHANGE_WORKFLOW );
+	}
+
+	/**
 	 * Whether a user may move a post to a workflow status.
 	 *
 	 * Checks, cheapest first: the user exists; the post exists and its type is

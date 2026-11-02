@@ -9,6 +9,7 @@
 namespace Sit_Cwm\REST;
 
 use Sit_Cwm\Content\PostRepository;
+use Sit_Cwm\Governance\AiOrigin;
 use Sit_Cwm\Publishing\GateDecision;
 use Sit_Cwm\Publishing\PublishGate;
 use Sit_Cwm\Workflow\PermissionManager;
@@ -31,9 +32,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  * WorkflowManager, applied through WorkflowManager, and answered with the
  * fresh `WorkflowManager::get_workflow()` payload.
  *
- * A POST may combine `status`, `reviewer_id` and `due_date`. Every part is
- * authorized and validated in the permission check before anything is
- * written, then applied in a fixed order (reviewer → due date → status). The
+ * A POST may combine `status`, `reviewer_id`, `due_date` and `ai_origin`.
+ * Every part is authorized and validated in the permission check before
+ * anything is written, then applied in a fixed order (AI origin → reviewer →
+ * due date → status), so a declaration sent with a status change is recorded
+ * before it. The
  * write itself is not transactional: if a later part still fails (e.g. a
  * concurrent edit between check and write), earlier parts stay applied.
  *
@@ -42,6 +45,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.0
  * @since 1.1.0 Responses carry `publish_gate`.
+ * @since 1.2.0 Added ai_origin.
  * @internal
  */
 class WorkflowController extends AbstractController {
@@ -163,6 +167,7 @@ class WorkflowController extends AbstractController {
 	 * Arguments accepted by the POST route. Anything else in the body is ignored.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added ai_origin.
 	 *
 	 * @return array
 	 */
@@ -201,6 +206,14 @@ class WorkflowController extends AbstractController {
 				'required'          => false,
 				'validate_callback' => array( $this, 'validate_due_date' ),
 				'sanitize_callback' => array( $this, 'sanitize_due_date' ),
+			),
+			'ai_origin'   => array(
+				'description'       => __( 'Declared AI use (not detected). Can be changed but not withdrawn.', 'sapphireit-editorial-workflow' ),
+				'type'              => 'string',
+				'required'          => false,
+				'enum'              => AiOrigin::VALUES,
+				'validate_callback' => 'rest_validate_request_arg',
+				'sanitize_callback' => 'sanitize_key',
 			),
 		);
 	}
@@ -257,6 +270,7 @@ class WorkflowController extends AbstractController {
 	 * written here; WorkflowManager re-checks everything when applying.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added ai_origin.
 	 *
 	 * @param WP_REST_Request $request Request.
 	 * @return true|WP_Error
@@ -286,6 +300,10 @@ class WorkflowController extends AbstractController {
 			return $this->forbidden();
 		}
 
+		if ( $request->has_param( 'ai_origin' ) && ! $this->permissions->can_declare_ai_origin( $post->ID ) ) {
+			return $this->forbidden();
+		}
+
 		if ( ! $request->has_param( 'status' ) ) {
 			return true;
 		}
@@ -308,11 +326,12 @@ class WorkflowController extends AbstractController {
 	}
 
 	/**
-	 * Applies reviewer, due date and status changes, in that order.
+	 * Applies AI origin, reviewer, due date and status changes, in that order.
 	 *
 	 * The first failure aborts and is returned; earlier changes stay applied.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added ai_origin.
 	 *
 	 * @param WP_REST_Request $request Request.
 	 * @return WP_REST_Response|WP_Error Fresh workflow state on success.
@@ -320,19 +339,25 @@ class WorkflowController extends AbstractController {
 	public function update_item( $request ) {
 		$post_id = absint( $request->get_param( 'post_id' ) );
 
-		if ( ! $request->has_param( 'status' ) && ! $request->has_param( 'reviewer_id' ) && ! $request->has_param( 'due_date' ) ) {
+		if ( ! $request->has_param( 'status' ) && ! $request->has_param( 'reviewer_id' ) && ! $request->has_param( 'due_date' ) && ! $request->has_param( 'ai_origin' ) ) {
 			return new WP_Error(
 				'rest_missing_callback_param',
 				/* translators: %s: Comma-separated parameter names. */
-				sprintf( __( 'Missing parameter(s): %s', 'sapphireit-editorial-workflow' ), 'status, reviewer_id, due_date' ),
+				sprintf( __( 'Missing parameter(s): %s', 'sapphireit-editorial-workflow' ), 'status, reviewer_id, due_date, ai_origin' ),
 				array(
 					'status' => 400,
-					'params' => array( 'status', 'reviewer_id', 'due_date' ),
+					'params' => array( 'status', 'reviewer_id', 'due_date', 'ai_origin' ),
 				)
 			);
 		}
 
 		$steps = array();
+
+		if ( $request->has_param( 'ai_origin' ) ) {
+			$steps[] = function () use ( $post_id, $request ) {
+				return $this->workflow->set_ai_origin( $post_id, (string) $request->get_param( 'ai_origin' ), null, 'workflow' );
+			};
+		}
 
 		if ( $request->has_param( 'reviewer_id' ) ) {
 			$steps[] = function () use ( $post_id, $request ) {
@@ -417,6 +442,7 @@ class WorkflowController extends AbstractController {
 	 * @since 1.0.0
 	 * @since 1.1.0 Added `publish_gate` (E10).
 	 * @since 1.2.0 Added blocked_transitions.
+	 * @since 1.2.0 Added ai_origin.
 	 *
 	 * @return array
 	 */
@@ -489,6 +515,20 @@ class WorkflowController extends AbstractController {
 				'due_date'              => array(
 					'description' => __( 'Due date as YYYY-MM-DD, or an empty string.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
+				),
+				'ai_origin'             => array(
+					'description' => __( 'Declared AI use (not detected), and whether the current user may change it.', 'sapphireit-editorial-workflow' ),
+					'type'        => 'object',
+					'readonly'    => true,
+					'context'     => array( 'view', 'edit' ),
+					'properties'  => array(
+						'value'       => array(
+							'type' => 'string',
+							'enum' => array_merge( array( AiOrigin::NOT_DECLARED ), AiOrigin::VALUES ),
+						),
+						'label'       => array( 'type' => 'string' ),
+						'can_declare' => array( 'type' => 'boolean' ),
+					),
 				),
 				'available_transitions' => array(
 					'description' => __( 'Transitions the current user may perform now.', 'sapphireit-editorial-workflow' ),

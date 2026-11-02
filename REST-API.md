@@ -43,7 +43,7 @@ HTTPS unless the site defines `WP_ENVIRONMENT_TYPE` as `local`.
 | Method | Route | Purpose |
 |---|---|---|
 | `GET` | [`/posts/{post_id}/workflow`](#get-postspost_idworkflow) | One post's workflow state |
-| `POST` | [`/posts/{post_id}/workflow`](#post-postspost_idworkflow) | Change status, reviewer and/or due date |
+| `POST` | [`/posts/{post_id}/workflow`](#post-postspost_idworkflow) | Change status, reviewer, due date and/or declared AI origin |
 | `GET` | [`/posts/{post_id}/activity`](#get-postspost_idactivity) | Paginated activity history |
 | `POST` | [`/posts/{post_id}/comments`](#post-postspost_idcomments) | Add a workflow comment |
 | `GET` | [`/statuses`](#get-statuses) | Status registry + transition map |
@@ -88,6 +88,11 @@ curl -sS -u "$CWM_AUTH" "$CWM_SITE/wp-json/sit-cwm/v1/posts/125/workflow" | jq
     "avatar": "https://secure.gravatar.com/avatar/…?s=48"
   },
   "due_date": "2026-10-02",
+  "ai_origin": {
+    "value": "ai_assisted",
+    "label": "AI-assisted",
+    "can_declare": true
+  },
   "available_transitions": [
     { "slug": "approved",      "label": "Approved",      "is_forward": true,  "is_rollback": false },
     { "slug": "needs_changes", "label": "Needs Changes", "is_forward": false, "is_rollback": true  }
@@ -135,17 +140,31 @@ offered `approved`: `approved` is a legal next step, the user holds
 [self-approval is prevented](WORKFLOW.md#self-approval). Otherwise `false`. A
 display hint, like `capabilities`; same routes as `publish_gate`.
 
+### `ai_origin` (since 1.2)
+
+How the post was made, **as declared** by a person or a tool. The plugin never
+inspects content to detect it.
+
+| Field | Values |
+|---|---|
+| `value` | `human`, `ai_assisted`, `ai_generated`, or `""` when nothing has been declared |
+| `label` | `Human-written`, `AI-assisted`, `AI-generated` or `Not declared` (translated) |
+| `can_declare` | whether the current user may change it: `sit_cwm_change_workflow` plus `edit_post` on this post. A display hint, like `capabilities` |
+
+See [Declaring AI use](#declaring-ai-use) for how to set it.
+
 ---
 
 ## `POST /posts/{post_id}/workflow`
 
-Changes the status, the reviewer, the due date, or any combination. At least one
-must be present.
+Changes the status, the reviewer, the due date, the declared AI origin, or any
+combination. At least one must be present.
 
 **Permissions** — logged in → post readable (`404`) → `edit_post` on it (`403`)
-→ per field: `sit_cwm_assign_reviewer` for `reviewer_id` and `due_date` (`403`)
-→ for `status`, the full transition check (`400`/`403`/`409`). Everything is
-authorized *before* anything is written.
+→ per field: `sit_cwm_assign_reviewer` for `reviewer_id` and `due_date`,
+`sit_cwm_change_workflow` for `ai_origin` (`403`) → for `status`, the full
+transition check (`400`/`403`/`409`). Everything is authorized *before*
+anything is written.
 
 ### Arguments
 
@@ -156,12 +175,14 @@ authorized *before* anything is written.
 | `from` | body | string | **required whenever `status` is sent**; the status the client believed was current |
 | `reviewer_id` | body | integer | ≥ 0; `0` clears the reviewer. Must hold `sit_cwm_review_content` |
 | `due_date` | body | string | `YYYY-MM-DD`, or `""` to clear |
+| `ai_origin` | body | string | since 1.2; one of `human`, `ai_assisted`, `ai_generated`. `""` is rejected: a declaration can be changed but not withdrawn |
 
 Unknown body fields are ignored.
 
 ### Order of operations
 
-Changes are applied **reviewer → due date → status**. The write is not
+Changes are applied **AI origin → reviewer → due date → status**, so a
+declaration sent with a status change is recorded before it. The write is not
 transactional: if a later step fails (a concurrent edit between the check and
 the write), the earlier steps stay applied. In practice the permission check has
 already validated every part, so this only triggers on a genuine race.
@@ -459,6 +480,7 @@ curl -sS -u "$CWM_AUTH" -D- -G \
     "reviewer": { "id": 4, "name": "Dana Okafor", "avatar": "https://…" },
     "due_date": "2026-09-12",
     "is_overdue": true,
+    "ai_origin": "ai_assisted",
     "last_activity": {
       "id": 412,
       "action": "status_changed",
@@ -479,7 +501,8 @@ curl -sS -u "$CWM_AUTH" -D- -G \
 
 With `X-WP-Total` and `X-WP-TotalPages` headers. `title` is the **raw** post
 title — escape it at output. `edit_link` is `""` when the user cannot edit the
-post.
+post. `ai_origin` (since 1.2) is the declared value, `""` when nothing was
+declared; unlike the workflow route it is a bare string, with no label or hint.
 
 One page costs a fixed number of queries regardless of its size: the reviewer,
 author and last-activity lookups are batch-loaded, not per row.
@@ -598,6 +621,81 @@ curl -sS -u "$CWM_AUTH" -G \
 
 ---
 
+## Declaring AI use
+
+Since 1.2 a post can declare how it was made: `human`, `ai_assisted` or
+`ai_generated`. The value is **declared, not detected**. Nothing in the plugin
+inspects content. Until something is declared it reads as `""` ("Not
+declared"). A declaration can be changed but never withdrawn back to `""`.
+
+Declaring needs `sit_cwm_change_workflow` and `edit_post` on the post, so an
+author can declare on their own posts but not on others'. Declaring the value
+the post already has is a no-op and logs nothing. Each real change is logged as
+`ai_origin_changed`, with a `via` value in its context:
+
+| `via` | Arrived by |
+|---|---|
+| `workflow` | `POST /sit-cwm/v1/posts/{post_id}/workflow` (the sidebar, the classic box, agents working in steps) |
+| `post_api` | the `sit_cwm_ai_origin` field on core's `wp/v2` post routes |
+| `default` | the post type's default, stamped once when a post is created with nothing declared |
+
+There are two ways to declare.
+
+### On the workflow route
+
+Send `ai_origin` alone or with other changes. It is applied first:
+
+```sh
+curl -sS -u "$CWM_AUTH" -X POST \
+  -H 'Content-Type: application/json' \
+  -d '{"ai_origin":"ai_generated","from":"draft","status":"writing"}' \
+  "$CWM_SITE/wp-json/sit-cwm/v1/posts/125/workflow" | jq '.ai_origin, .status'
+```
+
+```json
+{ "value": "ai_generated", "label": "AI-generated", "can_declare": true }
+"writing"
+```
+
+### On core's post routes (`wp/v2`)
+
+Every workflow-enabled post type gets a `sit_cwm_ai_origin` field on
+`/wp/v2/{rest_base}`. An agent can create a draft and declare its origin in one
+call:
+
+```sh
+curl -sS -u "$CWM_AUTH" -X POST \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Agent draft","status":"draft","sit_cwm_ai_origin":"ai_generated"}' \
+  "$CWM_SITE/wp-json/wp/v2/posts" | jq '{id, sit_cwm_ai_origin}'
+```
+
+```json
+{ "id": 131, "sit_cwm_ai_origin": "ai_generated" }
+```
+
+That logs one `ai_origin_changed` entry with `via: post_api`. The type's
+default is **not** stamped on top, because the field is saved before the
+default would be applied.
+
+- The field is in the `edit` context only. Reading it needs `?context=edit`,
+  which core allows only to users who can edit the post. It never appears in
+  public `view` responses.
+- It accepts `""` and ignores it, so a client can send back the post it read.
+  Any other value outside the enum is `400 rest_invalid_param`.
+- A user who can edit the post but lacks `sit_cwm_change_workflow` gets
+  `403 sit_cwm_forbidden`, and nothing is declared.
+- **A rejected field does not undo the post write.** This is core behaviour:
+  core saves the post first and the extra fields after it. A `POST
+  /wp/v2/posts` whose `sit_cwm_ai_origin` is refused still creates the post
+  (and an update still saves its other fields), but the response is the error,
+  not the post. Agents should check the response status and, on a refused
+  create, look the draft up or declare again through the workflow route. A
+  create whose field is refused is not stamped with the type's default either.
+- Post types that are not workflow-enabled do not get the field.
+
+---
+
 ## Errors
 
 Errors are standard WordPress `WP_Error` JSON:
@@ -623,6 +721,7 @@ Errors are standard WordPress `WP_Error` JSON:
 | `sit_cwm_invalid_transition` | **400** | That edge is not in the transition graph from the post's current status. |
 | `sit_cwm_invalid_user` | **400** | The reviewer does not exist, does not hold `sit_cwm_review_content`, or is the post's author while self-approval is prevented. |
 | `sit_cwm_invalid_date` | **400** | The due date is not a real `YYYY-MM-DD` date. |
+| `sit_cwm_invalid_ai_origin` | **400** | Since 1.2. The AI origin is not `human`, `ai_assisted` or `ai_generated`. Usually caught earlier as `rest_invalid_param`. |
 | `sit_cwm_invalid_batch` | **400** | Fewer than 1 or more than 100 IDs, unknown action, or a mismatched payload. |
 | `sit_cwm_empty_comment` | **400** | The comment has no visible text after sanitizing. |
 | `sit_cwm_comment_too_long` | **400** | Over 5000 characters. |
@@ -659,7 +758,9 @@ usernames or email addresses.
 
 ## Core routes (`wp/v2`)
 
-The plugin adds no routes outside `sit-cwm/v1`, but when a post type's publish
+The plugin adds no routes outside `sit-cwm/v1`. Since 1.2 it adds one field,
+`sit_cwm_ai_origin`, to the post routes of workflow-enabled types (see
+[Declaring AI use](#declaring-ai-use)). And when a post type's publish
 gate is set to `enforce` it changes two things about core's `wp/v2` post routes
 for that type:
 

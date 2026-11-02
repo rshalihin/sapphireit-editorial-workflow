@@ -12,6 +12,7 @@ use Sit_Cwm\Activity\ActivityLogger;
 use Sit_Cwm\Content\PostRepository;
 use Sit_Cwm\Core\Interfaces\Bootable;
 use Sit_Cwm\Core\Settings;
+use Sit_Cwm\Governance\AiOrigin;
 use Throwable;
 use WP_Post;
 
@@ -93,10 +94,14 @@ final class PublicationLogger implements Bootable {
 	 * Logs `post_published` on entry into `publish` and `post_unpublished` on
 	 * exit from it (including to `trash`), for workflow-enabled post types.
 	 *
+	 * Context keys: `workflow_status`, `gate_mode`, `source` and, from 1.2.0,
+	 * `ai_origin` (the declared value at that moment, or `none`; F9, F12).
+	 *
 	 * Never raises: logging must not break a save, so any failure is swallowed
 	 * (the same fail-open principle as the gate layers, E5).
 	 *
 	 * @since 1.1.0
+	 * @since 1.2.0 Records `ai_origin`.
 	 *
 	 * @param mixed $new_status New post status.
 	 * @param mixed $old_status Previous post status (`new` for a new post).
@@ -125,6 +130,8 @@ final class PublicationLogger implements Bootable {
 				return;
 			}
 
+			$ai_origin = $this->posts->get_ai_origin( (int) $post->ID );
+
 			$this->activity->log_publication_event(
 				(int) $post->ID,
 				$action,
@@ -134,6 +141,7 @@ final class PublicationLogger implements Bootable {
 					'workflow_status' => $this->posts->get_status( (int) $post->ID ),
 					'gate_mode'       => $this->gate->mode_for( $post->post_type, (int) $post->ID ),
 					'source'          => RequestSource::detect(),
+					'ai_origin'       => AiOrigin::NOT_DECLARED === $ai_origin ? 'none' : $ai_origin,
 				),
 				get_current_user_id()
 			);

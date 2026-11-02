@@ -15,6 +15,7 @@ import { store as noticesStore } from '@wordpress/notices';
  * Internal dependencies
  */
 import * as client from '../api/client';
+import { aiOriginLabel } from '../utils/aiOrigin';
 import { decodeText, formatDate } from '../utils/format';
 
 /**
@@ -51,12 +52,12 @@ const GONE = { code: 'sit_cwm_gone', message: '', status: 404 };
  * `isGone`, and every later mutation is refused without a request.
  *
  * Reviewer, due date and comment changes are announced to screen readers;
- * status changes raise a snackbar, which announces itself.
+ * status and AI use changes raise a snackbar, which announces itself.
  *
  * @param {number} postId Post id.
  * @return {Object} `{ workflow, isLoading, isSaving, isGone, error,
  *                  activityVersion, updateStatus, assignReviewer, setDueDate,
- *                  addComment, refresh, clearError }`.
+ *                  setAiOrigin, addComment, refresh, clearError }`.
  */
 export default function useWorkflow( postId ) {
 	const [ workflow, setWorkflow ] = useState( null );
@@ -342,6 +343,30 @@ export default function useWorkflow( postId ) {
 		[ update ]
 	);
 
+	const setAiOrigin = useCallback(
+		async ( value ) => {
+			const { data, error: err } = await update( { ai_origin: value } );
+
+			if ( data ) {
+				createSuccessNotice(
+					sprintf(
+						/* translators: %s: Declared AI use, e.g. "AI-assisted". */
+						__(
+							'AI use declared as %s.',
+							'sapphireit-editorial-workflow'
+						),
+						data.ai_origin?.label ||
+							aiOriginLabel( data.ai_origin?.value )
+					),
+					{ id: 'sit-cwm-ai-origin-changed', type: 'snackbar' }
+				);
+			}
+
+			return err;
+		},
+		[ update, createSuccessNotice ]
+	);
+
 	const addComment = useCallback(
 		async ( message ) => {
 			const { error: err } = await run(
@@ -372,6 +397,7 @@ export default function useWorkflow( postId ) {
 		updateStatus,
 		assignReviewer,
 		setDueDate,
+		setAiOrigin,
 		addComment,
 		refresh,
 		clearError,

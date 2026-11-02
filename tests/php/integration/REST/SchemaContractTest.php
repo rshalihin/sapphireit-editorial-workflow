@@ -8,6 +8,7 @@
 
 namespace Sit_Cwm\Tests\Integration\REST;
 
+use Sit_Cwm\Governance\AiOrigin;
 use Sit_Cwm\Publishing\GateDecision;
 use Sit_Cwm\Publishing\PublishGate;
 use Sit_Cwm\Tests\TestCase;
@@ -151,6 +152,40 @@ final class SchemaContractTest extends TestCase {
 			),
 			$field['items']['properties']
 		);
+	}
+
+	/**
+	 * The workflow schema declares `ai_origin` as a read-only object, and the
+	 * dashboard row schema as a string, both with the same closed enum (F9).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_schemas_declare_ai_origin() {
+		$values   = array_merge( array( '' ), AiOrigin::VALUES );
+		$workflow = $this->schema( $this->route( 'workflow' ) )['properties']['ai_origin'] ?? null;
+
+		$this->assertIsArray( $workflow, 'Workflow ai_origin is not declared.' );
+		$this->assertSame( 'object', $workflow['type'] );
+		$this->assertTrue( $workflow['readonly'] );
+		$this->assertSame(
+			array(
+				'value'       => array(
+					'type' => 'string',
+					'enum' => $values,
+				),
+				'label'       => array( 'type' => 'string' ),
+				'can_declare' => array( 'type' => 'boolean' ),
+			),
+			$workflow['properties']
+		);
+
+		$row = $this->schema( '/sit-cwm/v1/posts' )['properties']['ai_origin'] ?? null;
+
+		$this->assertIsArray( $row, 'Row ai_origin is not declared.' );
+		$this->assertSame( 'string', $row['type'] );
+		$this->assertSame( $values, $row['enum'] );
 	}
 
 	/**

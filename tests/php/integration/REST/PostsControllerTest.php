@@ -372,7 +372,7 @@ final class PostsControllerTest extends WP_UnitTestCase {
 		$row = $rows[0];
 
 		$this->assertSame(
-			array( 'post_id', 'title', 'post_type', 'post_status', 'author', 'status', 'status_label', 'status_is_unknown', 'reviewer', 'due_date', 'is_overdue', 'last_activity', 'edit_link', 'available_transitions', 'capabilities' ),
+			array( 'post_id', 'title', 'post_type', 'post_status', 'author', 'status', 'status_label', 'status_is_unknown', 'reviewer', 'due_date', 'is_overdue', 'ai_origin', 'last_activity', 'edit_link', 'available_transitions', 'capabilities' ),
 			array_keys( $row )
 		);
 		$this->assertSame(
@@ -578,6 +578,27 @@ final class PostsControllerTest extends WP_UnitTestCase {
 		wp_set_current_user( $admin );
 
 		$this->assertSame( array( $post ), $this->ids( array( 'search' => 'nullprobe' ) ) );
+	}
+
+	/**
+	 * Rows carry the declared AI origin, `''` when nothing was declared (F9).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_rows_include_ai_origin() {
+		$admin      = $this->make_user( 'administrator' );
+		$declared   = $this->make_post( $admin, 'originprobe' );
+		$undeclared = $this->make_post( $admin, 'originprobe' );
+
+		$this->posts->set_ai_origin( $declared, 'human' );
+		wp_set_current_user( $admin );
+
+		$response = $this->get_posts( array( 'search' => 'originprobe' ) );
+
+		$this->assertSame( 'human', $this->find_row( $response, $declared )['ai_origin'] );
+		$this->assertSame( '', $this->find_row( $response, $undeclared )['ai_origin'] );
 	}
 
 	/**

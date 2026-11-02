@@ -20,6 +20,7 @@ use Sit_Cwm\Content\PostRepository;
 use Sit_Cwm\Core\Interfaces\Bootable;
 use Sit_Cwm\Editor\ClassicMetaBox;
 use Sit_Cwm\Editor\SidebarAssets;
+use Sit_Cwm\Governance\AiOriginStamper;
 use Sit_Cwm\Notifications\Deduplicator;
 use Sit_Cwm\Notifications\MessageBuilder;
 use Sit_Cwm\Notifications\Notifier;
@@ -33,6 +34,7 @@ use Sit_Cwm\Publishing\PublicationLogger;
 use Sit_Cwm\Publishing\PublishGate;
 use Sit_Cwm\Publishing\RefusalNotices;
 use Sit_Cwm\REST\ActivityController;
+use Sit_Cwm\REST\AiOriginField;
 use Sit_Cwm\REST\ActivityFormatter;
 use Sit_Cwm\REST\BatchController;
 use Sit_Cwm\REST\PostsController;
@@ -91,6 +93,7 @@ final class Plugin {
 			'publish_gate.layer.rest',
 			'publish_gate.layer.schedule',
 			'notifications',
+			'governance.ai_stamper',
 		),
 		'admin' => array(
 			'admin.dashboard',
@@ -107,6 +110,7 @@ final class Plugin {
 			'rest.users',
 			'rest.posts',
 			'rest.batch',
+			'rest.ai_origin_field',
 		),
 	);
 
@@ -407,6 +411,13 @@ final class Plugin {
 		);
 
 		$this->container->set(
+			'governance.ai_stamper',
+			static function ( Container $c ) {
+				return new AiOriginStamper( $c->get( 'post_repository' ), $c->get( 'settings' ), $c->get( 'activity_logger' ) );
+			}
+		);
+
+		$this->container->set(
 			'bulk_processor',
 			static function ( Container $c ) {
 				return new BulkProcessor( $c->get( 'workflow_manager' ) );
@@ -491,6 +502,13 @@ final class Plugin {
 					$c->get( 'status_manager' ),
 					$c->get( 'post_repository' )
 				);
+			}
+		);
+
+		$this->container->set(
+			'rest.ai_origin_field',
+			static function ( Container $c ) {
+				return new AiOriginField( $c->get( 'workflow_manager' ), $c->get( 'post_repository' ), $c->get( 'settings' ) );
 			}
 		);
 

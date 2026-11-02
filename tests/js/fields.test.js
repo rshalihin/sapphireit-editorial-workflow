@@ -51,6 +51,7 @@ describe( 'buildFields', () => {
 		expect( buildFields().map( ( entry ) => entry.id ) ).toEqual( [
 			'title',
 			'status',
+			'ai_origin',
 			'reviewer',
 			'due_date',
 			'author',
@@ -235,6 +236,20 @@ describe( 'field rendering', () => {
 			container.querySelector( '.sit-cwm-status-swatch' ).style
 				.backgroundColor
 		).toBe( 'rgb(219, 166, 23)' );
+	} );
+
+	it( 'renders the declared AI use, read-only', () => {
+		const aiOrigin = field( buildFields(), 'ai_origin' );
+
+		expect( aiOrigin.label ).toBe( 'AI use' );
+		expect( aiOrigin.enableSorting ).toBe( false );
+		expect( aiOrigin.filterBy ).toBe( false );
+
+		renderCell( 'ai_origin', row( { ai_origin: 'ai_generated' } ) );
+		renderCell( 'ai_origin', row( { ai_origin: '' } ) );
+
+		expect( screen.getByText( 'AI-generated' ) ).toBeTruthy();
+		expect( screen.getByText( 'Not declared' ) ).toBeTruthy();
 	} );
 
 	it( 'renders a dash for an unassigned reviewer', () => {

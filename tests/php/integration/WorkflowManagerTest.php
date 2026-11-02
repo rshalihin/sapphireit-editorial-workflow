@@ -659,7 +659,7 @@ final class WorkflowManagerTest extends WP_UnitTestCase {
 		$state = $this->workflow->get_workflow( $post );
 
 		$this->assertSame(
-			array( 'post_id', 'post_title', 'post_type', 'post_status', 'edit_link', 'status', 'status_label', 'status_is_unknown', 'reviewer', 'due_date', 'available_transitions', 'blocked_transitions', 'capabilities', 'self_approval_blocked' ),
+			array( 'post_id', 'post_title', 'post_type', 'post_status', 'edit_link', 'status', 'status_label', 'status_is_unknown', 'reviewer', 'due_date', 'ai_origin', 'available_transitions', 'blocked_transitions', 'capabilities', 'self_approval_blocked' ),
 			array_keys( $state )
 		);
 		$this->assertSame( $post, $state['post_id'] );
@@ -866,6 +866,88 @@ final class WorkflowManagerTest extends WP_UnitTestCase {
 		$this->assertInstanceOf( WP_Error::class, $result, $message );
 		$this->assertSame( $code, $result->get_error_code(), $message );
 		$this->assertSame( array( 'status' => $status ), $result->get_error_data(), $message );
+	}
+
+	/**
+	 * Declaring an AI origin writes it, logs one entry and fires the action
+	 * once; declaring the same value again is a no-op (F9).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_set_ai_origin_writes_logs_and_fires() {
+		$post   = $this->make_post( $this->make_user( 'author' ) );
+		$editor = $this->make_user( 'editor' );
+		$fired  = array();
+		add_action(
+			'sit_cwm_ai_origin_changed',
+			static function () use ( &$fired ) {
+				$fired[] = func_get_args();
+			},
+			10,
+			5
+		);
+
+		$this->assertTrue( $this->workflow->set_ai_origin( $post, 'ai_assisted', $editor ) );
+		$this->assertSame( 'ai_assisted', $this->posts->get_ai_origin( $post ) );
+		$this->assertSame( array( array( $post, 'ai_assisted', '', $editor, 'workflow' ) ), $fired );
+		$this->assertSame( 1, $this->activity->count_for_post( $post ) );
+
+		$entry = $this->activity->get_for_post( $post )[0];
+		$this->assertSame( array( 'ai_origin_changed', null, 'ai_assisted', $editor ), array( $entry->get_action(), $entry->get_old_value(), $entry->get_new_value(), $entry->get_user_id() ) );
+
+		$this->assertTrue( $this->workflow->set_ai_origin( $post, 'ai_assisted', $editor ), 'Same value: no-op.' );
+		$this->assertSame( 1, $this->activity->count_for_post( $post ) );
+		$this->assertCount( 1, $fired );
+
+		$this->assertTrue( $this->workflow->set_ai_origin( $post, 'human', $editor ) );
+		$this->assertSame( array( $post, 'human', 'ai_assisted', $editor, 'workflow' ), $fired[1] );
+		$this->assertSame( 2, $this->activity->count_for_post( $post ) );
+	}
+
+	/**
+	 * Invalid values, "Not declared", unauthorized users and unmanaged posts
+	 * are refused, and nothing is written, logged or fired.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_set_ai_origin_errors() {
+		// Published, so the subscriber can read it and is refused for lack of capability.
+		$post        = self::factory()->post->create( array( 'post_author' => $this->make_user( 'author' ) ) );
+		$editor      = $this->make_user( 'editor' );
+		$this->fired = array();
+
+		$this->assert_error( $this->workflow->set_ai_origin( $post, '', $editor ), 'sit_cwm_invalid_ai_origin', 400, 'A declaration cannot be withdrawn.' );
+		$this->assert_error( $this->workflow->set_ai_origin( $post, 'robot', $editor ), 'sit_cwm_invalid_ai_origin', 400 );
+		$this->assert_error( $this->workflow->set_ai_origin( $post, 'Human', $editor ), 'sit_cwm_invalid_ai_origin', 400 );
+		$this->assert_error( $this->workflow->set_ai_origin( $post, 'human', $this->make_user( 'subscriber' ) ), 'sit_cwm_forbidden', 403 );
+		$this->assert_error( $this->workflow->set_ai_origin( PHP_INT_MAX, 'human', $this->make_user( 'administrator' ) ), 'sit_cwm_not_managed', 404 );
+		$this->assert_error( $this->workflow->set_ai_origin( $post, 'human', 0 ), 'sit_cwm_not_managed', 404, 'Logged out.' );
+
+		$this->assertSame( '', $this->posts->get_ai_origin( $post ) );
+		$this->assertSame( 0, $this->activity->count_for_post( $post, array( 'action' => 'ai_origin_changed' ) ) );
+		$this->assertSame( array(), $this->fired );
+	}
+
+	/**
+	 * An unknown route is recorded as `workflow`; a known one is kept.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_invalid_via_falls_back_to_workflow() {
+		$post   = $this->make_post( $this->make_user( 'author' ) );
+		$editor = $this->make_user( 'editor' );
+
+		$this->workflow->set_ai_origin( $post, 'human', $editor, 'hacker' );
+		$this->assertSame( array( 'via' => 'workflow' ), $this->activity->get_for_post( $post )[0]->get_context() );
+
+		$this->workflow->set_ai_origin( $post, 'ai_generated', $editor, 'post_api' );
+		$this->assertSame( array( 'via' => 'post_api' ), $this->activity->get_for_post( $post )[0]->get_context() );
 	}
 
 	/**

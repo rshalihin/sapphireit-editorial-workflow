@@ -205,6 +205,7 @@ never moves the workflow.
 | `PostsController` | `GET /posts` — the dashboard collection, batch-loaded. |
 | `BatchController` | `POST /posts/batch`, delegating to `BulkProcessor`. |
 | `UserController` | `GET /users` — assignable reviewers, deliberately narrow. |
+| `AiOriginField` | The `sit_cwm_ai_origin` field on `wp/v2` routes of workflow-enabled types (edit context only), writing through `WorkflowManager::set_ai_origin()` with via `post_api`. |
 | `ActivityFormatter` | Turns an `ActivityEntry` into its REST shape, resolving slugs and user IDs to labels. |
 | `UserSummaries` | Batch user loading. One `get_users()` field-list query for every author, reviewer and activity actor on a page. |
 
@@ -630,6 +631,7 @@ before the plugin has booted.
 | `Workflow\PermissionManager::can_assign_reviewer(` | `can_assign_reviewer( int $post_id, ?int $user_id = null ): bool` | `bool` | 1.0.0 |
 | `Workflow\PermissionManager::can_set_due_date(` | `can_set_due_date( int $post_id, ?int $user_id = null ): bool` | `bool` | 1.0.0 |
 | `Workflow\PermissionManager::can_comment(` | `can_comment( int $post_id, ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::can_declare_ai_origin(` | `can_declare_ai_origin( int $post_id, ?int $user_id = null ): bool` | `bool` | 1.2.0 |
 | `Workflow\PermissionManager::can_change_status(` | `can_change_status( int $post_id, string $to, ?int $user_id = null ): bool` | `bool` | 1.0.0; 1.1.0: Refuses `approved` to the post's author when self-approval is prevented; 1.2.0: Delegates to `check_change_status()` |
 | `Workflow\PermissionManager::check_change_status(` | `check_change_status( int $post_id, string $to, ?int $user_id = null )` | `true\|WP_Error` | 1.2.0 |
 | `Workflow\PermissionManager::is_self_approval_blocked(` | `is_self_approval_blocked( int $post_id, ?int $user_id = null ): bool` | `bool` | 1.1.0 |
@@ -651,6 +653,7 @@ before the plugin has booted.
 | `Workflow\WorkflowManager::assign_reviewer(` | `assign_reviewer( int $post_id, int $reviewer_id, ?int $user_id = null )` | `true\|WP_Error` | 1.0.0; 1.1.0: Refuses the post's author while self-approval is prevented |
 | `Workflow\WorkflowManager::set_due_date(` | `set_due_date( int $post_id, string $date, ?int $user_id = null )` | `true\|WP_Error` | 1.0.0 |
 | `Workflow\WorkflowManager::add_comment(` | `add_comment( int $post_id, string $message, ?int $user_id = null )` | `int\|WP_Error` | 1.0.0 |
+| `Workflow\WorkflowManager::set_ai_origin(` | `set_ai_origin( int $post_id, string $origin, ?int $user_id = null, string $via = 'workflow' )` | `true\|WP_Error` | 1.2.0 |
 
 #### `Workflow\Capabilities`
 
@@ -779,6 +782,7 @@ Every `sit_cwm_*` hook, covered by the [stability rule](#stability-rule).
 | action | `sit_cwm_reviewer_assigned` | `int $post_id, int $reviewer_id, int $previous_id, int $user_id` | 1.0.0 |
 | action | `sit_cwm_due_date_changed` | `int $post_id, string $date, string $previous, int $user_id` | 1.0.0 |
 | action | `sit_cwm_comment_added` | `int $post_id, int $activity_id, string $message, int $user_id` | 1.0.0 |
+| action | `sit_cwm_ai_origin_changed` | `int $post_id, string $origin, string $previous, int $user_id, string $via`. `$previous` is `''` when nothing was declared; `$via` is `workflow`, `post_api` or `default` (the creation stamp, whose `$user_id` is `0` when nobody is logged in) | 1.2.0 |
 | action | `sit_cwm_activity_logged` | `int $activity_id, ActivityEntry $entry`. Publication rows fire it too; there is no separate publication action | 1.0.0 |
 | action | `sit_cwm_db_upgraded` | `string $from_version, string $to_version` | 1.0.0 |
 | filter | `sit_cwm_statuses` | `array $statuses, int $post_id`. **Signature changed in 1.2.0** (added `$post_id`; see the [site-wide context contract](#site-wide-context-contract)) | 1.2.0 |
@@ -1052,6 +1056,7 @@ All require an existing user, a managed post and `edit_post` on it, plus:
 | `can_edit_post` | — |
 | `can_view_activity` | `sit_cwm_view_activity` |
 | `can_comment` | `sit_cwm_view_activity` |
+| `can_declare_ai_origin` | `sit_cwm_change_workflow` (1.2). Asked by `WorkflowManager::set_ai_origin()` |
 | `can_assign_reviewer` | `sit_cwm_assign_reviewer` |
 | `can_set_due_date` | `sit_cwm_assign_reviewer` |
 | `can_manage` (no post) | `sit_cwm_manage_workflows` |

@@ -20,6 +20,7 @@ import { __, sprintf } from '@wordpress/i18n';
  */
 import { isNetworkError } from '../api/client';
 import useWorkflow from '../hooks/useWorkflow';
+import AiOriginControl from '../sidebar/components/AiOriginControl';
 import CommentForm from '../sidebar/components/CommentForm';
 import DueDateControl from '../sidebar/components/DueDateControl';
 import ReviewerControl from '../sidebar/components/ReviewerControl';
@@ -119,6 +120,7 @@ function WorkflowPanel( {
 		updateStatus,
 		assignReviewer,
 		setDueDate,
+		setAiOrigin,
 		addComment,
 		refresh,
 		clearError,
@@ -254,6 +256,16 @@ function WorkflowPanel( {
 					status={ workflow.status }
 					label={ workflow.status_label }
 				/>
+
+				{ /* A 1.1 server sends no AI use. */ }
+				{ workflow.ai_origin && (
+					<AiOriginControl
+						value={ workflow.ai_origin.value }
+						canDeclare={ !! workflow.ai_origin.can_declare }
+						isSaving={ isLocked }
+						onChange={ setAiOrigin }
+					/>
+				) }
 
 				<PublishGateNotice
 					gate={ workflow.publish_gate }

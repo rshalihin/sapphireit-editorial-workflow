@@ -10,6 +10,7 @@ namespace Sit_Cwm\Admin;
 
 use Sit_Cwm\Core\Interfaces\Bootable;
 use Sit_Cwm\Core\Settings as SettingsStore;
+use Sit_Cwm\Governance\AiOrigin;
 use Sit_Cwm\Notifications\NotificationEvents;
 use Sit_Cwm\Publishing\PublishGate;
 use Sit_Cwm\Workflow\Capabilities;
@@ -21,8 +22,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * "Editorial Workflow → Settings": the post types the workflow applies to,
- * the uninstall data preference, and (since 1.1.0) the publish gate mode per
- * enabled post type and the email notification toggles.
+ * the uninstall data preference, (since 1.1.0) the publish gate mode per
+ * enabled post type and the email notification toggles, and (since 1.2.0) the
+ * AI use default per enabled post type.
  *
  * Built on the Settings API: the form posts to `options.php`, which verifies
  * the nonce printed by `settings_fields()` and the capability returned for the
@@ -195,6 +197,7 @@ final class Settings implements Bootable {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Adds the publish gate and email notifications sections.
+	 * @since 1.2.0 Adds the AI use default field.
 	 *
 	 * @return void
 	 */
@@ -222,6 +225,14 @@ final class Settings implements Bootable {
 			'sit_cwm_post_types',
 			__( 'Enabled content types', 'sapphireit-editorial-workflow' ),
 			array( $this, 'render_post_types_field' ),
+			self::MENU_SLUG,
+			self::SECTION
+		);
+
+		add_settings_field(
+			'sit_cwm_ai_origin_defaults',
+			__( 'AI use default', 'sapphireit-editorial-workflow' ),
+			array( $this, 'render_ai_origin_defaults_field' ),
 			self::MENU_SLUG,
 			self::SECTION
 		);
@@ -284,13 +295,15 @@ final class Settings implements Bootable {
 	 * Also runs for programmatic `update_option()` calls while the setting is
 	 * registered, so it must accept an already clean settings array unchanged.
 	 * Gate modes are kept per selectable post type and known mode; unchecked
-	 * notification boxes submit nothing, so a missing event is off.
+	 * notification boxes submit nothing, so a missing event is off. AI use
+	 * defaults are kept like gate modes, with undeclarable values dropped.
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Sanitizes `publish_gate`, `notifications` and `prevent_self_approval`.
+	 * @since 1.2.0 Sanitizes `ai_origin_defaults`.
 	 *
 	 * @param mixed $input Submitted value.
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool, ai_origin_defaults: array<string, string>}
 	 */
 	public function sanitize( $input ): array {
 		$current = $this->settings->all();
@@ -317,6 +330,7 @@ final class Settings implements Bootable {
 		$clean['prevent_self_approval']    = ! empty( $input['prevent_self_approval'] )
 			&& is_scalar( $input['prevent_self_approval'] )
 			&& rest_sanitize_boolean( $input['prevent_self_approval'] );
+		$clean['ai_origin_defaults']       = $this->sanitize_ai_origin_defaults( $input['ai_origin_defaults'] ?? array(), (array) $current['ai_origin_defaults'] );
 
 		return $clean;
 	}
@@ -399,6 +413,58 @@ final class Settings implements Bootable {
 		printf(
 			'<p class="description">%s</p>',
 			esc_html__( 'Turning a content type off stops the workflow for it. Its workflow statuses, reviewers, due dates, publish gate mode and activity history are kept, and come back if you turn it on again.', 'sapphireit-editorial-workflow' )
+		);
+	}
+
+	/**
+	 * Prints one AI use default select per enabled post type (F14, F16).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function render_ai_origin_defaults_field(): void {
+		$options = array( AiOrigin::NOT_DECLARED => __( 'No default (Not declared)', 'sapphireit-editorial-workflow' ) ) + AiOrigin::options();
+		$printed = false;
+
+		foreach ( $this->settings->enabled_post_types() as $post_type ) {
+			$object = get_post_type_object( $post_type );
+
+			if ( null === $object ) {
+				continue;
+			}
+
+			$id      = 'sit-cwm-ai-origin-' . $post_type;
+			$current = $this->settings->ai_origin_default( $post_type );
+
+			printf(
+				'<p><label for="%1$s">%2$s</label> <select id="%1$s" name="%3$s">',
+				esc_attr( $id ),
+				esc_html( $object->labels->name ),
+				esc_attr( SettingsStore::OPTION . '[ai_origin_defaults][' . $post_type . ']' )
+			);
+
+			foreach ( $options as $value => $label ) {
+				printf(
+					'<option value="%1$s"%2$s>%3$s</option>',
+					esc_attr( (string) $value ),
+					selected( $current, (string) $value, false ),
+					esc_html( $label )
+				);
+			}
+
+			echo '</select></p>';
+
+			$printed = true;
+		}
+
+		if ( ! $printed ) {
+			printf( '<p>%s</p>', esc_html__( 'Enable a content type above first.', 'sapphireit-editorial-workflow' ) );
+		}
+
+		printf(
+			'<p class="description">%s</p>',
+			esc_html__( 'Recorded on new content of each type when it is created. Authors can change it; every change is logged.', 'sapphireit-editorial-workflow' )
 		);
 	}
 
@@ -583,6 +649,7 @@ final class Settings implements Bootable {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Explains the publish gate, self-approval and email notifications.
+	 * @since 1.2.0 Explains that AI use is declared.
 	 *
 	 * @return string Escaped HTML.
 	 */
@@ -607,6 +674,7 @@ final class Settings implements Bootable {
 		$html .= '<p>' . esc_html__( 'Publish gate: Off changes nothing, Log only records every publish that skipped approval, and Enforce blocks publishing until the content is approved. Administrators can still publish, and that is recorded.', 'sapphireit-editorial-workflow' ) . '</p>';
 		$html .= '<p>' . esc_html__( 'Self-approval: when prevented, nobody can move content they wrote to Approved, administrators included, and the author is not offered as its reviewer. Someone else with approval rights has to approve it.', 'sapphireit-editorial-workflow' ) . '</p>';
 		$html .= '<p>' . esc_html__( 'Email notifications: each event can be switched on separately. Nobody is emailed about their own actions, and comment text is only included for people allowed to read the activity history.', 'sapphireit-editorial-workflow' ) . '</p>';
+		$html .= '<p>' . esc_html__( 'AI use is declared by people or tools, never detected.', 'sapphireit-editorial-workflow' ) . '</p>';
 
 		return $html;
 	}
@@ -715,6 +783,61 @@ final class Settings implements Bootable {
 		}
 
 		return $modes;
+	}
+
+	/**
+	 * Keeps the submitted AI use defaults for selectable post types with a
+	 * declarable value; "No default" (`''`) and unknown values are dropped.
+	 * Anything but a map keeps the stored defaults.
+	 *
+	 * Like the gate modes, a selectable type that is not enabled has no select
+	 * on the form, so it keeps its stored default unless the input carries
+	 * one. `SettingsStore::update()` applies the same F14 rule to what this
+	 * returns.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param mixed                 $value   Submitted value.
+	 * @param array<string, string> $current Stored defaults, kept when the value is not a map.
+	 * @return array<string, string> Post type => value.
+	 */
+	private function sanitize_ai_origin_defaults( $value, array $current ): array {
+		if ( ! is_array( $value ) ) {
+			$this->add_error( 'sit_cwm_invalid_ai_origin_defaults', __( 'The AI use defaults were not changed because the submitted value was invalid.', 'sapphireit-editorial-workflow' ) );
+
+			return $current;
+		}
+
+		$available = $this->settings->selectable_post_types();
+		$origins   = array();
+		$rejected  = false;
+
+		foreach ( $value as $post_type => $origin ) {
+			$slug  = is_string( $post_type ) ? sanitize_key( $post_type ) : '';
+			$clean = AiOrigin::sanitize( $origin );
+
+			if ( '' === $slug || ! isset( $available[ $slug ] ) ) {
+				$rejected = true;
+			} elseif ( AiOrigin::NOT_DECLARED !== $clean ) {
+				$origins[ $slug ] = $clean;
+			} elseif ( AiOrigin::NOT_DECLARED !== $origin ) {
+				$rejected = true;
+			}
+		}
+
+		$shown = $this->settings->enabled_post_types();
+
+		foreach ( $current as $post_type => $origin ) {
+			if ( ! isset( $origins[ $post_type ] ) && ! array_key_exists( $post_type, $value ) && isset( $available[ $post_type ] ) && ! in_array( $post_type, $shown, true ) ) {
+				$origins[ $post_type ] = $origin;
+			}
+		}
+
+		if ( $rejected ) {
+			$this->add_error( 'sit_cwm_unknown_ai_origin_defaults', __( 'AI use defaults for unknown content types or values were ignored.', 'sapphireit-editorial-workflow' ) );
+		}
+
+		return $origins;
 	}
 
 	/**

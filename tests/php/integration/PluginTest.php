@@ -14,6 +14,7 @@ use Sit_Cwm\Core\Deactivator;
 use Sit_Cwm\Core\Interfaces\Bootable;
 use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Editor\ClassicMetaBox;
+use Sit_Cwm\Governance\AiOriginStamper;
 use Sit_Cwm\Notifications\Deduplicator;
 use Sit_Cwm\Notifications\MessageBuilder;
 use Sit_Cwm\Notifications\Notifier;
@@ -365,10 +366,11 @@ final class PluginTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The notifier and its helpers are wired; the notifier boots last in the
-	 * core phase and hooks the three 1.0 workflow actions at 20.
+	 * The notifier and its helpers are wired; the notifier boots after every
+	 * 1.1 core service and hooks the three 1.0 workflow actions at 20.
 	 *
 	 * @since 1.1.0
+	 * @since 1.2.0 Only the AI-origin stamper follows it.
 	 *
 	 * @return void
 	 */
@@ -387,7 +389,24 @@ final class PluginTest extends WP_UnitTestCase {
 		$this->assertSame( 20, has_action( 'sit_cwm_comment_added', array( $notifier, 'on_comment_added' ) ) );
 
 		$core = Plugin::BOOT_PHASES['core'];
-		$this->assertSame( 'notifications', end( $core ) );
+		$this->assertSame( array( 'notifications', 'governance.ai_stamper' ), array_slice( $core, -2 ) );
+	}
+
+	/**
+	 * The AI-origin stamper is wired last in the core phase and hooks
+	 * `wp_after_insert_post`.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_ai_origin_stamper_is_wired_in_core_phase() {
+		$plugin = new Plugin( new Container() );
+		$plugin->boot();
+
+		$stamper = $plugin->container()->get( 'governance.ai_stamper' );
+		$this->assertInstanceOf( AiOriginStamper::class, $stamper );
+		$this->assertSame( 10, has_action( 'wp_after_insert_post', array( $stamper, 'handle' ) ) );
 	}
 
 	/**

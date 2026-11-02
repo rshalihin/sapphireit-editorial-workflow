@@ -23,6 +23,7 @@ import { caution, Icon } from '@wordpress/icons';
  */
 import StatusBadge from './StatusBadge';
 import { FILTER_OPERATORS } from '../hooks/usePosts';
+import { aiOriginLabel } from '../utils/aiOrigin';
 import {
 	decodeText,
 	displayTitle,
@@ -105,6 +106,10 @@ const StatusCell = memo( ( { item } ) => {
 			isUnknown={ !! item.status_is_unknown }
 		/>
 	);
+} );
+
+const AiOriginCell = memo( ( { item } ) => {
+	return <span>{ aiOriginLabel( item.ai_origin || '' ) }</span>;
 } );
 
 const ReviewerCell = memo( ( { item } ) => {
@@ -263,6 +268,15 @@ export default function buildFields( { reviewers = [], authors = [] } = {} ) {
 				} ) ),
 			enableSorting: false,
 			filterBy: { operators: FILTER_OPERATORS.status },
+		},
+		{
+			id: 'ai_origin',
+			type: 'text',
+			label: __( 'AI use', 'sapphireit-editorial-workflow' ),
+			getValue: ( { item } ) => item.ai_origin || '',
+			render: AiOriginCell,
+			enableSorting: false,
+			filterBy: false,
 		},
 		{
 			id: 'reviewer',

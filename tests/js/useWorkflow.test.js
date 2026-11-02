@@ -164,6 +164,47 @@ describe( 'useWorkflow', () => {
 		);
 	} );
 
+	it( 'declares AI use and applies the server response', async () => {
+		apiFetch.mockResolvedValueOnce( workflow() ).mockResolvedValueOnce(
+			workflow( {
+				ai_origin: {
+					value: 'human',
+					label: 'Human-written',
+					can_declare: true,
+				},
+			} )
+		);
+
+		const { result } = renderHook( () => useWorkflow( 42 ) );
+
+		await waitFor( () => expect( result.current.workflow ).not.toBeNull() );
+
+		let error;
+
+		await act( async () => {
+			error = await result.current.setAiOrigin( 'human' );
+		} );
+
+		expect( error ).toBeNull();
+		expect( apiFetch ).toHaveBeenLastCalledWith( {
+			path: '/sit-cwm/v1/posts/42/workflow',
+			method: 'POST',
+			data: { ai_origin: 'human' },
+		} );
+		expect( result.current.workflow.ai_origin.value ).toBe( 'human' );
+		expect( result.current.activityVersion ).toBe( 1 );
+		expect( select( noticesStore ).getNotices() ).toEqual(
+			expect.arrayContaining( [
+				expect.objectContaining( {
+					id: 'sit-cwm-ai-origin-changed',
+					content: 'AI use declared as Human-written.',
+				} ),
+			] )
+		);
+
+		dispatch( noticesStore ).removeNotice( 'sit-cwm-ai-origin-changed' );
+	} );
+
 	it( 'refetches and reports a conflict on 409 without retrying', async () => {
 		apiFetch
 			.mockResolvedValueOnce( workflow() )
