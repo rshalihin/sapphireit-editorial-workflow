@@ -328,6 +328,51 @@ final class PostMetaTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A status that only one post's registry knows survives the meta sanitizer (F2).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_status_meta_keeps_a_post_specific_slug() {
+		$post_id = self::factory()->post->create();
+
+		update_post_meta( $post_id, PostRepository::META_STATUS, 'legal_review' ); // Direct write, as set_status() does after validating.
+
+		$this->assertSame( 'legal_review', get_metadata_raw( 'post', $post_id, PostRepository::META_STATUS, true ) );
+	}
+
+	/**
+	 * The status meta schema checks the slug's shape, not a site-wide enum (F2).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_status_meta_schema_uses_pattern_not_enum() {
+		$keys   = get_registered_meta_keys( 'post', 'post' );
+		$schema = $keys[ PostRepository::META_STATUS ]['show_in_rest']['schema'];
+
+		$this->assertArrayNotHasKey( 'enum', $schema );
+		$this->assertSame( '^[a-z0-9_-]+$', $schema['pattern'] );
+	}
+
+	/**
+	 * A malformed status is still reset to the default on write.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_status_meta_still_rejects_malformed_values() {
+		$post_id = self::factory()->post->create();
+
+		update_post_meta( $post_id, PostRepository::META_STATUS, 'Bad Value!' );
+
+		$this->assertSame( 'draft', get_metadata_raw( 'post', $post_id, PostRepository::META_STATUS, true ) );
+	}
+
+	/**
 	 * `meta` object of a single-post REST response.
 	 *
 	 * @param int    $post_id   Post id.

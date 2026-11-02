@@ -9,6 +9,7 @@
 namespace Sit_Cwm\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
+use ReflectionProperty;
 use Sit_Cwm\Workflow\StatusManager;
 use Sit_Cwm\Workflow\TransitionManager;
 
@@ -392,6 +393,148 @@ final class TransitionManagerTest extends TestCase {
 		);
 
 		$this->assertTrue( $this->manager->is_valid( 'writing', 'approved' ) );
+	}
+
+	/**
+	 * Review Focus 1: an unkeyed memo would hand post 8 the map computed for post 7.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_map_is_memoised_per_post() {
+		add_filter( 'sit_cwm_statuses', array( $this, 'add_legal_review_for_post_7' ), 10, 2 );
+		add_filter(
+			'sit_cwm_transition_map',
+			static function ( $map, $post_id ) {
+				if ( 7 === $post_id ) {
+					$map['review']       = array( 'legal_review', 'needs_changes' );
+					$map['legal_review'] = array( 'approved', 'needs_changes' );
+				}
+				return $map;
+			},
+			10,
+			2
+		);
+
+		$this->assertSame( array( 'legal_review', 'needs_changes' ), $this->manager->targets_for( 'review', 7 ) );
+		$this->assertSame( array( 'approved', 'needs_changes' ), $this->manager->targets_for( 'review', 8 ) );
+		$this->assertSame( array( 'approved', 'needs_changes' ), $this->manager->targets_for( 'review' ) );
+		$this->assertTrue( $this->manager->is_valid( 'legal_review', 'approved', 7 ) );
+		$this->assertFalse( $this->manager->is_valid( 'legal_review', 'approved', 8 ) );
+	}
+
+	/**
+	 * A post's map is validated against that same post's status registry.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_post_map_is_validated_against_that_posts_registry() {
+		// legal_review exists only for post 7, so post 8's map must drop it.
+		add_filter( 'sit_cwm_statuses', array( $this, 'add_legal_review_for_post_7' ), 10, 2 );
+		add_filter(
+			'sit_cwm_transition_map',
+			static function ( $map ) {
+				$map['review'] = array( 'legal_review', 'approved' );
+				return $map;
+			}
+		);
+
+		$this->assertSame( array( 'legal_review', 'approved' ), $this->manager->targets_for( 'review', 7 ) );
+		$this->assertSame( array( 'approved' ), $this->manager->targets_for( 'review', 8 ) );
+	}
+
+	/**
+	 * The rollback filter receives the post id, and `describe()` passes it on.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_rollback_filter_receives_post_id_and_describe_uses_it() {
+		add_filter(
+			'sit_cwm_rollback_transitions',
+			static function ( $rollbacks, $post_id ) {
+				if ( 5 === $post_id ) {
+					unset( $rollbacks['review'] );
+				}
+				return $rollbacks;
+			},
+			10,
+			2
+		);
+
+		$this->assertTrue( $this->manager->describe( 'review', 'needs_changes' )['is_rollback'] );
+		$this->assertFalse( $this->manager->describe( 'review', 'needs_changes', 5 )['is_rollback'] );
+		$this->assertTrue( $this->manager->describe( 'review', 'needs_changes', 5 )['is_forward'] );
+	}
+
+	/**
+	 * `describe()` takes the label from the post's registry.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_describe_label_comes_from_the_posts_registry() {
+		add_filter( 'sit_cwm_statuses', array( $this, 'add_legal_review_for_post_7' ), 10, 2 );
+		add_filter(
+			'sit_cwm_transition_map',
+			static function ( $map, $post_id ) {
+				if ( 7 === $post_id ) {
+					$map['review'] = array( 'legal_review' );
+				}
+				return $map;
+			},
+			10,
+			2
+		);
+
+		$this->assertSame( 'Legal Review', $this->manager->describe( 'review', 'legal_review', 7 )['label'] );
+	}
+
+	/**
+	 * The memo never holds more than MEMO_LIMIT maps, and `flush()` empties it.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_memo_is_bounded_and_flush_clears_all() {
+		for ( $i = 1; $i <= TransitionManager::MEMO_LIMIT + 5; $i++ ) {
+			$this->manager->map( $i );
+		}
+
+		$memo = new ReflectionProperty( TransitionManager::class, 'map' );
+		$memo->setAccessible( true );
+
+		$this->assertLessThanOrEqual( TransitionManager::MEMO_LIMIT, count( $memo->getValue( $this->manager ) ) );
+
+		$this->manager->flush();
+
+		$this->assertSame( array(), $memo->getValue( $this->manager ) );
+	}
+
+	/**
+	 * Filter callback: registers `legal_review` for post 7 only.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param array $statuses Status definitions keyed by slug.
+	 * @param int   $post_id  Post id.
+	 * @return array
+	 */
+	public function add_legal_review_for_post_7( $statuses, $post_id ) {
+		if ( 7 === $post_id ) {
+			$statuses['legal_review'] = array(
+				'slug'  => 'legal_review',
+				'label' => 'Legal Review',
+				'order' => 35,
+			);
+		}
+		return $statuses;
 	}
 
 	/**

@@ -17,9 +17,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Pure structure: no permissions, no database, no post state. Authorization
  * lives in PermissionManager; WorkflowManager is the only place the two meet.
- * The map is filterable through `sit_cwm_transition_map`, and the filter
- * result is validated against the StatusManager registry so an extension can
- * never introduce an unknown status or a self-transition.
+ * The map is filterable through `sit_cwm_transition_map`, per post, see F2,
+ * and the filter result is validated against that post's StatusManager
+ * registry so an extension can never introduce an unknown status or a
+ * self-transition.
  *
  * @since 1.0.0
  */
@@ -53,6 +54,16 @@ final class TransitionManager {
 	);
 
 	/**
+	 * Most post maps kept in each memo before it is emptied (F2).
+	 *
+	 * Bounds memory in long loops (export, batch) without an LRU.
+	 *
+	 * @since 1.2.0
+	 * @var int
+	 */
+	const MEMO_LIMIT = 256;
+
+	/**
 	 * Status registry.
 	 *
 	 * @since 1.0.0
@@ -61,20 +72,22 @@ final class TransitionManager {
 	private $statuses;
 
 	/**
-	 * Resolved transition map, memoised per request.
+	 * Resolved transition maps keyed by post id. Keyed, never shared: see F2.
 	 *
 	 * @since 1.0.0
-	 * @var array<string, string[]>|null
+	 * @since 1.2.0 Keyed by post id.
+	 * @var array<int, array<string, string[]>>
 	 */
-	private $map = null;
+	private $map = array();
 
 	/**
-	 * Resolved rollback map, memoised per request.
+	 * Resolved rollback maps keyed by post id. Keyed, never shared: see F2.
 	 *
 	 * @since 1.0.0
-	 * @var array<string, string[]>|null
+	 * @since 1.2.0 Keyed by post id.
+	 * @var array<int, array<string, string[]>>
 	 */
-	private $rollbacks = null;
+	private $rollbacks = array();
 
 	/**
 	 * Constructor.
@@ -94,33 +107,43 @@ final class TransitionManager {
 	 * and duplicates are removed; sources without targets are omitted.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
 	 *
+	 * @param int $post_id Post id; 0 when the question is not about one post.
 	 * @return array<string, string[]> Source slug => ordered target slugs.
 	 */
-	public function map(): array {
-		if ( null !== $this->map ) {
-			return $this->map;
+	public function map( int $post_id = 0 ): array {
+		$post_id = max( 0, $post_id );
+
+		if ( isset( $this->map[ $post_id ] ) ) {
+			return $this->map[ $post_id ];
 		}
 
-		$core = $this->normalize( self::MAP );
+		$core = $this->normalize( self::MAP, $post_id );
 
 		/**
 		 * Filters the workflow transition map.
 		 *
 		 * Return an array of source status slug => list of target status slugs.
-		 * Unknown statuses, self-transitions and malformed entries are dropped.
-		 * Returning a non-array keeps the core map.
+		 * Unknown statuses (for this post's registry), self-transitions and
+		 * malformed entries are dropped. Returning a non-array keeps the core map.
 		 *
 		 * @since 1.0.0
+		 * @since 1.2.0 Added $post_id.
 		 *
-		 * @param array<string, string[]> $map Transition map.
+		 * @param array<string, string[]> $map     Transition map.
+		 * @param int                     $post_id Post id; 0 when the question is not about one post.
 		 */
-		$filtered = apply_filters( 'sit_cwm_transition_map', $core );
-		$map      = is_array( $filtered ) ? $this->normalize( $filtered ) : $core;
+		$filtered = apply_filters( 'sit_cwm_transition_map', $core, $post_id );
+		$map      = is_array( $filtered ) ? $this->normalize( $filtered, $post_id ) : $core;
 
 		// Filters (and the status registry) are settled once `init` has run.
 		if ( did_action( 'init' ) ) {
-			$this->map = $map;
+			if ( count( $this->map ) >= self::MEMO_LIMIT ) {
+				$this->map = array();
+			}
+
+			$this->map[ $post_id ] = $map;
 		}
 
 		return $map;
@@ -130,12 +153,14 @@ final class TransitionManager {
 	 * Legal next statuses from a status, in map order.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
 	 *
-	 * @param string $from Current status slug.
+	 * @param string $from    Current status slug.
+	 * @param int    $post_id Post id; 0 when the question is not about one post.
 	 * @return string[] Target slugs; empty for unknown or terminal statuses.
 	 */
-	public function targets_for( string $from ): array {
-		$map = $this->map();
+	public function targets_for( string $from, int $post_id = 0 ): array {
+		$map = $this->map( $post_id );
 
 		return isset( $map[ $from ] ) ? $map[ $from ] : array();
 	}
@@ -146,13 +171,15 @@ final class TransitionManager {
 	 * Says nothing about whether any user may perform it.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
 	 *
-	 * @param string $from Current status slug.
-	 * @param string $to   Target status slug.
+	 * @param string $from    Current status slug.
+	 * @param string $to      Target status slug.
+	 * @param int    $post_id Post id; 0 when the question is not about one post.
 	 * @return bool
 	 */
-	public function is_valid( string $from, string $to ): bool {
-		return in_array( $to, $this->targets_for( $from ), true );
+	public function is_valid( string $from, string $to, int $post_id = 0 ): bool {
+		return in_array( $to, $this->targets_for( $from, $post_id ), true );
 	}
 
 	/**
@@ -162,49 +189,56 @@ final class TransitionManager {
 	 * status label, unescaped; escape at output.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
 	 *
-	 * @param string $from Current status slug.
-	 * @param string $to   Target status slug.
+	 * @param string $from    Current status slug.
+	 * @param string $to      Target status slug.
+	 * @param int    $post_id Post id; 0 when the question is not about one post.
 	 * @return array{slug: string, label: string, is_forward: bool, is_rollback: bool}
 	 */
-	public function describe( string $from, string $to ): array {
-		$is_valid    = $this->is_valid( $from, $to );
-		$rollbacks   = $this->rollbacks();
+	public function describe( string $from, string $to, int $post_id = 0 ): array {
+		$is_valid    = $this->is_valid( $from, $to, $post_id );
+		$rollbacks   = $this->rollbacks( $post_id );
 		$is_rollback = $is_valid && isset( $rollbacks[ $from ] ) && in_array( $to, $rollbacks[ $from ], true );
 
 		return array(
 			'slug'        => $to,
-			'label'       => $this->statuses->label( $to ),
+			'label'       => $this->statuses->label( $to, $post_id ),
 			'is_forward'  => $is_valid && ! $is_rollback,
 			'is_rollback' => $is_rollback,
 		);
 	}
 
 	/**
-	 * Discards the memoised maps so the next call re-resolves them.
+	 * Discards every memoised map so the next call re-resolves it.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Empties every post's entry.
 	 *
 	 * @return void
 	 */
 	public function flush(): void {
-		$this->map       = null;
-		$this->rollbacks = null;
+		$this->map       = array();
+		$this->rollbacks = array();
 	}
 
 	/**
 	 * The validated rollback map.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
 	 *
+	 * @param int $post_id Post id; 0 when the question is not about one post.
 	 * @return array<string, string[]> Source slug => rollback target slugs.
 	 */
-	private function rollbacks(): array {
-		if ( null !== $this->rollbacks ) {
-			return $this->rollbacks;
+	private function rollbacks( int $post_id ): array {
+		$post_id = max( 0, $post_id );
+
+		if ( isset( $this->rollbacks[ $post_id ] ) ) {
+			return $this->rollbacks[ $post_id ];
 		}
 
-		$core = $this->normalize( self::ROLLBACKS );
+		$core = $this->normalize( self::ROLLBACKS, $post_id );
 
 		/**
 		 * Filters which transitions count as rollbacks (sending content back).
@@ -213,14 +247,20 @@ final class TransitionManager {
 		 * transitions that are also in the transition map.
 		 *
 		 * @since 1.0.0
+		 * @since 1.2.0 Added $post_id.
 		 *
 		 * @param array<string, string[]> $rollbacks Rollback map.
+		 * @param int                     $post_id   Post id; 0 when the question is not about one post.
 		 */
-		$filtered  = apply_filters( 'sit_cwm_rollback_transitions', $core );
-		$rollbacks = is_array( $filtered ) ? $this->normalize( $filtered ) : $core;
+		$filtered  = apply_filters( 'sit_cwm_rollback_transitions', $core, $post_id );
+		$rollbacks = is_array( $filtered ) ? $this->normalize( $filtered, $post_id ) : $core;
 
 		if ( did_action( 'init' ) ) {
-			$this->rollbacks = $rollbacks;
+			if ( count( $this->rollbacks ) >= self::MEMO_LIMIT ) {
+				$this->rollbacks = array();
+			}
+
+			$this->rollbacks[ $post_id ] = $rollbacks;
 		}
 
 		return $rollbacks;
@@ -230,22 +270,24 @@ final class TransitionManager {
 	 * Keeps only registered, non-self, de-duplicated transitions.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
 	 *
-	 * @param array $raw Raw map.
+	 * @param array $raw     Raw map.
+	 * @param int   $post_id Post id whose status registry applies.
 	 * @return array<string, string[]>
 	 */
-	private function normalize( array $raw ): array {
+	private function normalize( array $raw, int $post_id ): array {
 		$map = array();
 
 		foreach ( $raw as $from => $targets ) {
-			if ( ! is_string( $from ) || ! $this->statuses->exists( $from ) || ! is_array( $targets ) ) {
+			if ( ! is_string( $from ) || ! $this->statuses->exists( $from, $post_id ) || ! is_array( $targets ) ) {
 				continue;
 			}
 
 			$valid = array();
 
 			foreach ( $targets as $to ) {
-				if ( ! is_string( $to ) || $from === $to || ! $this->statuses->exists( $to ) || in_array( $to, $valid, true ) ) {
+				if ( ! is_string( $to ) || $from === $to || ! $this->statuses->exists( $to, $post_id ) || in_array( $to, $valid, true ) ) {
 					continue;
 				}
 

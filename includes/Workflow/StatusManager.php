@@ -49,30 +49,49 @@ final class StatusManager {
 	const FALLBACK_ORDER = 1000;
 
 	/**
-	 * Resolved registry, memoised per request.
+	 * Most post registries kept in the memo before it is emptied (F2).
+	 *
+	 * Bounds memory in long loops (export, batch) without an LRU.
+	 *
+	 * @since 1.2.0
+	 * @var int
+	 */
+	const MEMO_LIMIT = 256;
+
+	/**
+	 * Resolved registries keyed by post id. Keyed, never shared: see F2.
 	 *
 	 * @since 1.0.0
-	 * @var array<string, array>|null
+	 * @since 1.2.0 Keyed by post id.
+	 * @var array<int, array<string, array>>
 	 */
-	private $statuses = null;
+	private $statuses = array();
 
 	/**
 	 * All statuses, keyed by slug, in `order` sequence.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
 	 *
+	 * @param int $post_id Post id; 0 when the question is not about one post.
 	 * @return array<string, array{slug: string, label: string, description: string, color: string, order: int, is_final: bool}>
 	 */
-	public function all(): array {
-		if ( null !== $this->statuses ) {
-			return $this->statuses;
+	public function all( int $post_id = 0 ): array {
+		$post_id = max( 0, $post_id );
+
+		if ( isset( $this->statuses[ $post_id ] ) ) {
+			return $this->statuses[ $post_id ];
 		}
 
-		$statuses = $this->resolve();
+		$statuses = $this->resolve( $post_id );
 
 		// Translations are not loaded before `init`; don't cache untranslated labels.
 		if ( did_action( 'init' ) ) {
-			$this->statuses = $statuses;
+			if ( count( $this->statuses ) >= self::MEMO_LIMIT ) {
+				$this->statuses = array();
+			}
+
+			$this->statuses[ $post_id ] = $statuses;
 		}
 
 		return $statuses;
@@ -82,23 +101,27 @@ final class StatusManager {
 	 * Status slugs in `order` sequence.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
 	 *
+	 * @param int $post_id Post id; 0 when the question is not about one post.
 	 * @return string[]
 	 */
-	public function slugs(): array {
-		return array_keys( $this->all() );
+	public function slugs( int $post_id = 0 ): array {
+		return array_keys( $this->all( $post_id ) );
 	}
 
 	/**
 	 * A single status definition.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
 	 *
-	 * @param string $slug Status slug.
+	 * @param string $slug    Status slug.
+	 * @param int    $post_id Post id; 0 when the question is not about one post.
 	 * @return array|null Definition, or null when the slug is not registered.
 	 */
-	public function get( string $slug ): ?array {
-		$statuses = $this->all();
+	public function get( string $slug, int $post_id = 0 ): ?array {
+		$statuses = $this->all( $post_id );
 
 		return isset( $statuses[ $slug ] ) ? $statuses[ $slug ] : null;
 	}
@@ -107,24 +130,28 @@ final class StatusManager {
 	 * Whether a slug is a registered status. Exact match, no normalisation.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
 	 *
-	 * @param string $slug Status slug.
+	 * @param string $slug    Status slug.
+	 * @param int    $post_id Post id; 0 when the question is not about one post.
 	 * @return bool
 	 */
-	public function exists( string $slug ): bool {
-		return null !== $this->get( $slug );
+	public function exists( string $slug, int $post_id = 0 ): bool {
+		return null !== $this->get( $slug, $post_id );
 	}
 
 	/**
 	 * Human-readable label for a status. Not escaped; escape at output.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
 	 *
-	 * @param string $slug Status slug.
+	 * @param string $slug    Status slug.
+	 * @param int    $post_id Post id; 0 when the question is not about one post.
 	 * @return string Label, or the slug itself when it is not registered.
 	 */
-	public function label( string $slug ): string {
-		$status = $this->get( $slug );
+	public function label( string $slug, int $post_id = 0 ): string {
+		$status = $this->get( $slug, $post_id );
 
 		return null === $status ? $slug : $status['label'];
 	}
@@ -144,36 +171,46 @@ final class StatusManager {
 	 * Whether a status ends the workflow cycle.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
 	 *
-	 * @param string $slug Status slug.
+	 * @param string $slug    Status slug.
+	 * @param int    $post_id Post id; 0 when the question is not about one post.
 	 * @return bool False for unregistered slugs.
 	 */
-	public function is_final( string $slug ): bool {
-		$status = $this->get( $slug );
+	public function is_final( string $slug, int $post_id = 0 ): bool {
+		$status = $this->get( $slug, $post_id );
 
 		return null !== $status && $status['is_final'];
 	}
 
 	/**
-	 * Shared status sanitizer for post meta and REST arguments.
+	 * Shared status sanitizer for REST arguments and stored values.
 	 *
 	 * Surrounding whitespace is trimmed; anything else that is not already a
 	 * canonical registered slug (wrong case, invalid characters, unknown slug,
 	 * non-string) yields the default status.
 	 *
-	 * @since 1.0.0
+	 * `$post_id` is deliberately untyped: core passes extra arguments (the meta
+	 * key, the REST request) to a `sanitize_callback`, and any non-int means
+	 * the site-wide registry, so this stays usable as a callback (F2).
 	 *
-	 * @param mixed $value Raw value.
+	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
+	 *
+	 * @param mixed $value   Raw value.
+	 * @param mixed $post_id Post id whose registry applies; 0 or any non-int for the site-wide one.
 	 * @return string A registered status slug.
 	 */
-	public function sanitize( $value ): string {
+	public function sanitize( $value, $post_id = 0 ): string {
+		$post_id = is_int( $post_id ) ? $post_id : 0;
+
 		if ( ! is_string( $value ) ) {
 			return $this->default_status();
 		}
 
 		$value = trim( $value );
 
-		if ( sanitize_key( $value ) !== $value || ! $this->exists( $value ) ) {
+		if ( sanitize_key( $value ) !== $value || ! $this->exists( $value, $post_id ) ) {
 			return $this->default_status();
 		}
 
@@ -181,14 +218,42 @@ final class StatusManager {
 	}
 
 	/**
-	 * Discards the memoised registry so the next call re-resolves it.
+	 * Shape-only sanitizer for the stored status meta (F2).
+	 *
+	 * `sanitize_meta()` receives no post id, so it cannot know which post's
+	 * registry applies. This only checks that the value is a canonical slug;
+	 * PostRepository::set_status() validates it against the post's registry
+	 * before writing.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string A canonical slug, or the default status.
+	 */
+	public function sanitize_stored( $value ): string {
+		if ( ! is_string( $value ) ) {
+			return $this->default_status();
+		}
+
+		$value = trim( $value );
+
+		if ( '' === $value || sanitize_key( $value ) !== $value ) {
+			return $this->default_status();
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Discards every memoised registry so the next call re-resolves it.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Empties every post's entry.
 	 *
 	 * @return void
 	 */
 	public function flush(): void {
-		$this->statuses = null;
+		$this->statuses = array();
 	}
 
 	/**
@@ -199,10 +264,12 @@ final class StatusManager {
 	 * status that every managed post relies on).
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
 	 *
+	 * @param int $post_id Post id; 0 when the question is not about one post.
 	 * @return array<string, array>
 	 */
-	private function resolve(): array {
+	private function resolve( int $post_id ): array {
 		$core = $this->normalize( $this->core_statuses() );
 
 		/**
@@ -212,11 +279,17 @@ final class StatusManager {
 		 * and a non-empty `label`; `description`, `color` (hex), `order` (int)
 		 * and `is_final` (bool) are optional. Invalid entries are dropped.
 		 *
+		 * For `$post_id` 0, return every status any post can have: site-wide
+		 * readers (dashboard filters, the statuses route, bootstrap data) ask
+		 * without a post.
+		 *
 		 * @since 1.0.0
+		 * @since 1.2.0 Added $post_id.
 		 *
 		 * @param array $statuses Status definitions keyed by slug.
+		 * @param int   $post_id  Post id; 0 when the question is not about one post.
 		 */
-		$filtered = apply_filters( 'sit_cwm_statuses', $core );
+		$filtered = apply_filters( 'sit_cwm_statuses', $core, $post_id );
 
 		if ( ! is_array( $filtered ) ) {
 			return $core;

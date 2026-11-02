@@ -9,6 +9,7 @@
 namespace Sit_Cwm\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
+use ReflectionProperty;
 use Sit_Cwm\Workflow\StatusManager;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -301,5 +302,216 @@ final class StatusManagerTest extends TestCase {
 		);
 
 		$this->assertTrue( $this->manager->exists( 'extra' ) );
+	}
+
+	/**
+	 * The filter receives the post id, and 0 when no post is given (F2).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_filter_receives_post_id_and_zero_by_default() {
+		$seen = array();
+
+		add_filter(
+			'sit_cwm_statuses',
+			static function ( $statuses, $post_id ) use ( &$seen ) {
+				$seen[] = $post_id;
+				return $statuses;
+			},
+			10,
+			2
+		);
+
+		$this->manager->all();
+		$this->manager->all( 42 );
+
+		$this->assertSame( array( 0, 42 ), $seen );
+	}
+
+	/**
+	 * Review Focus 1: an unkeyed memo would hand post 2 the answer computed for post 1.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_registry_is_memoised_per_post() {
+		add_filter(
+			'sit_cwm_statuses',
+			static function ( $statuses, $post_id ) {
+				if ( 7 === $post_id ) {
+					$statuses['legal_review'] = array(
+						'slug'  => 'legal_review',
+						'label' => 'Legal Review',
+						'order' => 35,
+					);
+				}
+				return $statuses;
+			},
+			10,
+			2
+		);
+
+		$this->assertTrue( $this->manager->exists( 'legal_review', 7 ) );
+		$this->assertFalse( $this->manager->exists( 'legal_review', 8 ) );
+		$this->assertFalse( $this->manager->exists( 'legal_review' ) );
+		$this->assertTrue( $this->manager->exists( 'legal_review', 7 ) ); // Still right on the memoised read.
+		$this->assertSame( 'Legal Review', $this->manager->label( 'legal_review', 7 ) );
+		$this->assertSame( 'legal_review', $this->manager->label( 'legal_review', 8 ) );
+	}
+
+	/**
+	 * After `init` the filter runs once per post id; a one-argument callback works.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_filter_runs_once_per_post_after_init() {
+		$calls = 0;
+
+		add_filter(
+			'sit_cwm_statuses',
+			static function ( $statuses ) use ( &$calls ) {
+				++$calls;
+				return $statuses;
+			}
+		);
+
+		$this->manager->all( 3 );
+		$this->manager->all( 3 );
+		$this->manager->slugs( 3 );
+		$this->manager->all( 4 );
+
+		$this->assertSame( 2, $calls );
+	}
+
+	/**
+	 * The memo never holds more than MEMO_LIMIT registries.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_memo_is_bounded() {
+		for ( $i = 1; $i <= StatusManager::MEMO_LIMIT + 10; $i++ ) {
+			$this->manager->all( $i );
+		}
+
+		$memo = new ReflectionProperty( StatusManager::class, 'statuses' );
+		$memo->setAccessible( true );
+
+		$this->assertLessThanOrEqual( StatusManager::MEMO_LIMIT, count( $memo->getValue( $this->manager ) ) );
+	}
+
+	/**
+	 * A post context whose registry lacks the default status falls back to core.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_post_context_without_default_falls_back_to_core() {
+		add_filter(
+			'sit_cwm_statuses',
+			static function ( $statuses, $post_id ) {
+				if ( 9 !== $post_id ) {
+					return $statuses;
+				}
+
+				return array(
+					array(
+						'slug'  => 'only',
+						'label' => 'Only',
+					),
+				);
+			},
+			10,
+			2
+		);
+
+		$this->assertSame( self::CORE_SLUGS, $this->manager->slugs( 9 ) );
+	}
+
+	/**
+	 * `flush()` empties every post's entry.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_flush_clears_every_post_entry() {
+		$label = 'A';
+
+		add_filter(
+			'sit_cwm_statuses',
+			static function ( $statuses ) use ( &$label ) {
+				$statuses['draft']['label'] = $label;
+				return $statuses;
+			}
+		);
+
+		$this->manager->all( 5 );
+		$label = 'B';
+		$this->manager->flush();
+
+		$this->assertSame( 'B', $this->manager->label( 'draft', 5 ) );
+	}
+
+	/**
+	 * The stored-status sanitizer checks the shape only, not the registry.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_stored_checks_shape_only() {
+		$this->assertSame( 'legal_review', $this->manager->sanitize_stored( ' legal_review ' ) ); // Not registered, still kept.
+		$this->assertSame( 'draft', $this->manager->sanitize_stored( 'Legal Review' ) );
+		$this->assertSame( 'draft', $this->manager->sanitize_stored( '' ) );
+		$this->assertSame( 'draft', $this->manager->sanitize_stored( array( 'x' ) ) );
+	}
+
+	/**
+	 * `sanitize()` validates against the given post's registry.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_uses_post_registry() {
+		add_filter(
+			'sit_cwm_statuses',
+			static function ( $statuses, $post_id ) {
+				if ( 7 === $post_id ) {
+					$statuses['legal_review'] = array(
+						'slug'  => 'legal_review',
+						'label' => 'Legal Review',
+					);
+				}
+				return $statuses;
+			},
+			10,
+			2
+		);
+
+		$this->assertSame( 'legal_review', $this->manager->sanitize( 'legal_review', 7 ) );
+		$this->assertSame( 'draft', $this->manager->sanitize( 'legal_review' ) );
+	}
+
+	/**
+	 * `sanitize()` stays usable as a core `sanitize_callback`: a non-int second
+	 * argument (meta key, REST request) means the site-wide registry.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_tolerates_core_callback_arguments() {
+		$this->assertSame( 'review', $this->manager->sanitize( 'review', '_sit_cwm_status' ) );
+		$this->assertSame( 'review', $this->manager->sanitize( 'review', new \stdClass() ) );
+		$this->assertSame( 'draft', $this->manager->sanitize( 'bogus', '7' ) );
 	}
 }

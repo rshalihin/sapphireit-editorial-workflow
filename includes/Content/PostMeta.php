@@ -143,13 +143,14 @@ final class PostMeta implements Bootable {
 				'description'       => __( 'Editorial workflow status.', 'sapphireit-editorial-workflow' ),
 				'single'            => true,
 				'default'           => $this->statuses->default_status(),
+				// sanitize_meta() has no post id; the key is locked and set_status() validates per post (F2).
 				'show_in_rest'      => array(
 					'schema' => array(
-						'enum'    => $this->statuses->slugs(),
+						'pattern' => '^[a-z0-9_-]+$',
 						'context' => array( 'edit' ),
 					),
 				),
-				'sanitize_callback' => array( $this->statuses, 'sanitize' ),
+				'sanitize_callback' => array( $this->statuses, 'sanitize_stored' ),
 				// Deliberately always false — do not "fix". The workflow status may
 				// only change through WorkflowManager::transition(), which validates
 				// the transition and the user's permission. Allowing writes here
