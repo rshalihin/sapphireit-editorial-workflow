@@ -20,6 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * lookup per user, while given the already-loaded email it runs none.
  *
  * @since 1.0.0
+ * @internal
  */
 final class UserSummaries {
 

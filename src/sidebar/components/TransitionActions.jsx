@@ -29,7 +29,7 @@ export { requiresConfirmation };
  * @param {Object} transition `{ slug, label }`.
  * @return {string} Label.
  */
-function actionLabel( transition ) {
+export function actionLabel( transition ) {
 	return sprintf(
 		/* translators: %s: Target workflow status label. */
 		__( 'Move to %s', 'sapphireit-editorial-workflow' ),

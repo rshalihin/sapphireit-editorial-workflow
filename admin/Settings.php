@@ -32,6 +32,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Settings are not exposed through `/wp/v2/settings` (`show_in_rest` false).
  *
  * @since 1.0.0
+ * @internal
  */
 final class Settings implements Bootable {
 

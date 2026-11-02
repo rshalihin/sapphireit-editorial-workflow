@@ -42,6 +42,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.0
  * @since 1.1.0 Responses carry `publish_gate`.
+ * @internal
  */
 class WorkflowController extends AbstractController {
 
@@ -166,6 +167,7 @@ class WorkflowController extends AbstractController {
 	 * @return array
 	 */
 	private function get_update_args(): array {
+		// Site-wide context (F2).
 		$slugs = $this->statuses->slugs();
 
 		return array(
@@ -393,6 +395,7 @@ class WorkflowController extends AbstractController {
 	public function get_statuses( $request ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Signature required by the REST server.
 		$transitions = array();
 
+		// Site-wide context (F2).
 		foreach ( $this->transitions->map() as $from => $targets ) {
 			foreach ( $targets as $to ) {
 				$transitions[ $from ][] = $this->transitions->describe( $from, $to );
@@ -413,6 +416,7 @@ class WorkflowController extends AbstractController {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Added `publish_gate` (E10).
+	 * @since 1.2.0 Added blocked_transitions.
 	 *
 	 * @return array
 	 */
@@ -457,6 +461,7 @@ class WorkflowController extends AbstractController {
 				'status'                => array(
 					'description' => __( 'Workflow status.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
+					// Site-wide context (F2).
 					'enum'        => $this->statuses->slugs(),
 				),
 				'status_label'          => array(
@@ -489,6 +494,21 @@ class WorkflowController extends AbstractController {
 					'description' => __( 'Transitions the current user may perform now.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'array',
 					'items'       => $transition,
+					'readonly'    => true,
+				),
+				'blocked_transitions'   => array(
+					'description' => __( 'Transitions an extension refused, with its reason.', 'sapphireit-editorial-workflow' ),
+					'type'        => 'array',
+					'items'       => array(
+						'type'       => 'object',
+						'properties' => array(
+							'slug'    => array( 'type' => 'string' ),
+							'label'   => array( 'type' => 'string' ),
+							'code'    => array( 'type' => 'string' ),
+							'message' => array( 'type' => 'string' ),
+						),
+					),
+					'context'     => array( 'view', 'edit' ),
 					'readonly'    => true,
 				),
 				'capabilities'          => array(

@@ -34,6 +34,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 404, so a 403 never confirms that a hidden post exists.
  *
  * @since 1.0.0
+ * @api
  */
 final class WorkflowManager {
 
@@ -81,6 +82,7 @@ final class WorkflowManager {
 	 * Constructor. Does not touch WordPress.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param StatusManager     $statuses    Status registry.
 	 * @param TransitionManager $transitions Transition map.
@@ -108,6 +110,7 @@ final class WorkflowManager {
 	 * Performs no authorization; callers exposing it must check access.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int $post_id Post id.
 	 * @return string A registered status slug; the default for unmanaged posts.
@@ -124,6 +127,8 @@ final class WorkflowManager {
 	 * re-checks everything server-side.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Adds `blocked_transitions`.
+	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param int|null $user_id User the capabilities are computed for; null for
@@ -153,11 +158,12 @@ final class WorkflowManager {
 			'post_status'           => $state['post_status'],
 			'edit_link'             => (string) get_edit_post_link( $state['post_id'], 'raw' ),
 			'status'                => $state['status'],
-			'status_label'          => $this->statuses->label( $state['status'] ),
+			'status_label'          => $this->statuses->label( $state['status'], $post_id ),
 			'status_is_unknown'     => $this->posts->has_unknown_status( $state['post_id'] ),
 			'reviewer'              => $this->reviewer_summary( $state['reviewer_id'] ),
 			'due_date'              => $state['due_date'],
 			'available_transitions' => $transitions,
+			'blocked_transitions'   => $this->get_blocked_transitions( $post_id, $user_id ),
 			'capabilities'          => $this->get_capability_hints( $post_id, $transitions, $user_id ),
 			'self_approval_blocked' => $this->self_approval_hint( $post_id, $state['status'], $user_id ),
 		);
@@ -170,6 +176,7 @@ final class WorkflowManager {
 	 * same shape. Never trusted: every mutator re-checks server-side.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int      $post_id     Post id.
 	 * @param array    $transitions The user's available transitions for the post.
@@ -192,6 +199,7 @@ final class WorkflowManager {
 	 * Transitions from the post's current status that the user may perform.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param int|null $user_id User id; null for the current user.
@@ -208,9 +216,9 @@ final class WorkflowManager {
 		$from      = $this->posts->get_status( $post_id );
 		$available = array();
 
-		foreach ( $this->transitions->targets_for( $from ) as $to ) {
+		foreach ( $this->transitions->targets_for( $from, $post_id ) as $to ) {
 			if ( $this->permissions->can_change_status( $post_id, $to, $user_id ) ) {
-				$available[ $to ] = $this->transitions->describe( $from, $to );
+				$available[ $to ] = $this->transitions->describe( $from, $to, $post_id );
 			}
 		}
 
@@ -255,11 +263,55 @@ final class WorkflowManager {
 	}
 
 	/**
+	 * Legal next statuses an extension refused the user, with its reason (F3).
+	 *
+	 * Lists only `WP_Error` vetoes from `sit_cwm_can_transition`; targets the
+	 * user simply lacks the capability for are not reported. Display only,
+	 * and never overlapping `get_available_transitions()`.
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @param int      $post_id Post id.
+	 * @param int|null $user_id User id; null for the current user.
+	 * @return array<int, array{slug: string, label: string, code: string, message: string}>
+	 *         In transition-map order; empty when the post is not accessible.
+	 */
+	public function get_blocked_transitions( int $post_id, ?int $user_id = null ): array {
+		$user_id = $this->resolve_user_id( $user_id );
+
+		if ( null !== $this->check_post( $post_id, $user_id ) ) {
+			return array();
+		}
+
+		$from    = $this->posts->get_status( $post_id );
+		$blocked = array();
+
+		foreach ( $this->transitions->targets_for( $from, $post_id ) as $to ) {
+			$check = $this->permissions->check_change_status( $post_id, $to, $user_id );
+
+			if ( ! $check instanceof WP_Error || 'sit_cwm_forbidden' === $check->get_error_code() ) {
+				continue;
+			}
+
+			$blocked[] = array(
+				'slug'    => $to,
+				'label'   => $this->statuses->label( $to, $post_id ),
+				'code'    => (string) $check->get_error_code(),
+				'message' => $check->get_error_message(),
+			);
+		}
+
+		return $blocked;
+	}
+
+	/**
 	 * Whether a user may move a post from `$from` to `$to` right now.
 	 *
 	 * Runs the same checks as `transition()`, without writes or actions.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param string   $from    Status the caller believes is current.
@@ -278,6 +330,7 @@ final class WorkflowManager {
 	 * with the same error `transition()` would return. Writes nothing.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param string   $from    Status the caller believes is current.
@@ -302,6 +355,7 @@ final class WorkflowManager {
 	 * succeed. The comparison is application-level, not a database lock.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param string   $from    Status the caller saw as current.
@@ -349,6 +403,7 @@ final class WorkflowManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Refuses the post's author while self-approval is prevented.
+	 * @api
 	 *
 	 * @param int      $post_id     Post id.
 	 * @param int      $reviewer_id Reviewer user id; `0` clears.
@@ -416,6 +471,7 @@ final class WorkflowManager {
 	 * Setting the current date again is a no-op that logs nothing.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param string   $date    `Y-m-d`; `''` clears.
@@ -475,6 +531,7 @@ final class WorkflowManager {
 	 * Adds a workflow comment to a post's activity history.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param string   $message Comment body; post-safe HTML is kept.
@@ -528,10 +585,11 @@ final class WorkflowManager {
 	 * Shared transition checks, in the documented order: post gate (404),
 	 * stale `$from` (409), unknown target (400), illegal edge (400),
 	 * authorization (403; `sit_cwm_self_approval` when that rule is the only
-	 * reason, see `self_approval_hint()`).
+	 * reason, see `self_approval_hint()`; an extension's `WP_Error` veto as is).
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Returns `sit_cwm_self_approval` for a blocked self-approval.
+	 * @since 1.2.0 Returns an extension's `WP_Error` veto verbatim (F3).
 	 *
 	 * @param int    $post_id Post id.
 	 * @param string $from    Status the caller saw as current.
@@ -554,7 +612,7 @@ final class WorkflowManager {
 			);
 		}
 
-		if ( ! $this->statuses->exists( $to ) ) {
+		if ( ! $this->statuses->exists( $to, $post_id ) ) {
 			return new WP_Error(
 				'sit_cwm_invalid_status',
 				__( 'The requested workflow status does not exist.', 'sapphireit-editorial-workflow' ),
@@ -562,7 +620,7 @@ final class WorkflowManager {
 			);
 		}
 
-		if ( ! $this->transitions->is_valid( $from, $to ) ) {
+		if ( ! $this->transitions->is_valid( $from, $to, $post_id ) ) {
 			return new WP_Error(
 				'sit_cwm_invalid_transition',
 				__( 'This workflow transition is not allowed.', 'sapphireit-editorial-workflow' ),
@@ -570,7 +628,14 @@ final class WorkflowManager {
 			);
 		}
 
-		if ( ! $this->permissions->can_change_status( $post_id, $to, $user_id ) ) {
+		$check = $this->permissions->check_change_status( $post_id, $to, $user_id );
+
+		if ( $check instanceof WP_Error && 'sit_cwm_forbidden' !== $check->get_error_code() ) {
+			// An extension's veto with its reason (F3), passed on verbatim.
+			return $check;
+		}
+
+		if ( true !== $check ) {
 			if ( 'approved' === $to && $this->self_approval_hint( $post_id, $from, $user_id ) ) {
 				return new WP_Error(
 					'sit_cwm_self_approval',
@@ -599,8 +664,8 @@ final class WorkflowManager {
 	 */
 	private function self_approval_hint( int $post_id, string $status, int $user_id ): bool {
 		return $user_id > 0
-			&& $this->transitions->is_valid( $status, 'approved' )
-			&& user_can( $user_id, $this->permissions->capability_for_status( 'approved' ) )
+			&& $this->transitions->is_valid( $status, 'approved', $post_id )
+			&& user_can( $user_id, $this->permissions->capability_for_status( 'approved', $post_id ) )
 			&& $this->permissions->is_self_approval_blocked( $post_id, $user_id );
 	}
 

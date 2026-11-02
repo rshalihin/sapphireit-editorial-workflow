@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * enforcement layers ask this service only for the outcome.
  *
  * @since 1.1.0
- * @internal
+ * @api
  */
 final class PublishGate {
 
@@ -34,6 +34,7 @@ final class PublishGate {
 	 * The gate is not evaluated.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const MODE_OFF = 'off';
@@ -42,6 +43,7 @@ final class PublishGate {
 	 * The gate is evaluated and failures are recorded, but nothing is blocked.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const MODE_LOG_ONLY = 'log_only';
@@ -50,6 +52,7 @@ final class PublishGate {
 	 * The gate is evaluated and failures are blocked.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const MODE_ENFORCE = 'enforce';
@@ -58,6 +61,7 @@ final class PublishGate {
 	 * Every gate mode, in settings-screen order.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string[]
 	 */
 	const MODES = array( self::MODE_OFF, self::MODE_LOG_ONLY, self::MODE_ENFORCE );
@@ -66,6 +70,7 @@ final class PublishGate {
 	 * Native post statuses the gate guards entry into.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string[]
 	 */
 	const PUBLISH_STATUSES = array( 'publish', 'future' );
@@ -74,6 +79,7 @@ final class PublishGate {
 	 * Workflow statuses that pass the gate.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string[]
 	 */
 	const PUBLISHABLE_STATUSES = array( 'approved', 'published' );
@@ -106,6 +112,7 @@ final class PublishGate {
 	 * Constructor. Does not touch WordPress.
 	 *
 	 * @since 1.1.0
+	 * @internal
 	 *
 	 * @param Settings          $settings    Plugin settings.
 	 * @param PostRepository    $posts       Workflow meta persistence.
@@ -124,6 +131,7 @@ final class PublishGate {
 	 * unknown (filtered) mode all resolve to `off`.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @param string $post_type Post type slug.
 	 * @param int    $post_id   Post id; `0` when not post-specific.
@@ -161,6 +169,7 @@ final class PublishGate {
 	 * default status, which does not pass.
 	 *
 	 * @since 1.1.0
+	 * @internal
 	 *
 	 * @param int    $post_id Post id; `0` for a post not yet inserted.
 	 * @param string $mode    Gate mode the attempt is judged under.
@@ -198,6 +207,7 @@ final class PublishGate {
 	 * the enforcement layers catch them and fail open (E5).
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @param int    $post_id   Post id; `0` for a post not yet inserted.
 	 * @param string $post_type Post type slug.
@@ -237,6 +247,7 @@ final class PublishGate {
 	 * Pure: never writes, never fires actions.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @param int $post_id Post id.
 	 * @param int $user_id User id.

@@ -22,6 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * merge, validate and sanitize before saving.
  *
  * @since 1.0.0
+ * @api
  */
 final class Settings {
 
@@ -29,6 +30,7 @@ final class Settings {
 	 * Option name.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 * @var string
 	 */
 	const OPTION = 'sit_cwm_settings';
@@ -38,6 +40,7 @@ final class Settings {
 	 * post type core uses internally (blocks, templates, navigation, …).
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 * @var string[]
 	 */
 	const EXCLUDED_POST_TYPES = array( 'attachment', 'revision', 'nav_menu_item' );
@@ -50,6 +53,7 @@ final class Settings {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Added `publish_gate`, `notifications` and `prevent_self_approval`.
+	 * @internal
 	 *
 	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool}
 	 */
@@ -67,6 +71,7 @@ final class Settings {
 	 * All settings: stored values merged over defaults, known keys only.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool}
 	 */
@@ -85,6 +90,7 @@ final class Settings {
 	 * A single setting.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param string $key           Setting key.
 	 * @param mixed  $default_value Returned when the key is unknown.
@@ -110,6 +116,7 @@ final class Settings {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Accepts `publish_gate`, `notifications` and `prevent_self_approval`.
+	 * @internal
 	 *
 	 * @param mixed $partial Partial settings, e.g. `[ 'post_types' => [ 'post' ] ]`.
 	 * @return bool True when the settings are valid and stored.
@@ -173,6 +180,7 @@ final class Settings {
 	 * with `alloptions` instead of costing its own query.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @return void
 	 */
@@ -188,6 +196,7 @@ final class Settings {
 	 * the enabled-type check are applied by `PublishGate`, not here.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @return array<string, string> Post type => mode.
 	 */
@@ -207,6 +216,7 @@ final class Settings {
 	 * Whether email for a notification event is turned on.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @param string $event Event key, one of `NotificationEvents::all()`.
 	 * @return bool False for unknown events.
@@ -224,6 +234,7 @@ final class Settings {
 	 * per post by `PermissionManager`, not here.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @return bool
 	 */
@@ -235,6 +246,7 @@ final class Settings {
 	 * Post types the workflow applies to.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @return string[]
 	 */
@@ -257,6 +269,7 @@ final class Settings {
 	 * Whether the workflow applies to a post type.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param string $post_type Post type slug.
 	 * @return bool
@@ -274,6 +287,7 @@ final class Settings {
 	 * `editor` support, so they are not offered.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @return array<string, string> Slug => slug, in registration order.
 	 */
@@ -323,6 +337,7 @@ final class Settings {
 	 * Shared by `update()` and the settings screen, so both accept the same list.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @return array<string, string> Slug => slug; available types first.
 	 */
@@ -340,6 +355,7 @@ final class Settings {
 	 * Enabled post types that `available_post_types()` no longer offers.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @return string[] Registered, non-internal slugs.
 	 */

@@ -14,6 +14,7 @@ use Sit_Cwm\Core\Container;
 use Sit_Cwm\Core\Database;
 use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
+use Sit_Cwm\Tests\Traits\PerPostWorkflow;
 use Sit_Cwm\Workflow\Capabilities;
 use Sit_Cwm\Workflow\PermissionManager;
 use Sit_Cwm\Workflow\StatusManager;
@@ -34,6 +35,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @covers \Sit_Cwm\Workflow\WorkflowManager
  */
 final class WorkflowManagerTest extends WP_UnitTestCase {
+
+	use PerPostWorkflow;
 
 	/**
 	 * Actions a mutation may fire.
@@ -122,6 +125,130 @@ final class WorkflowManagerTest extends WP_UnitTestCase {
 				5
 			);
 		}
+	}
+
+	/**
+	 * Removes the per-post workflow filters.
+	 *
+	 * @return void
+	 */
+	public function tear_down() {
+		$this->remove_per_post_workflow();
+
+		parent::tear_down();
+	}
+
+	/**
+	 * A status registered for one post is offered, reachable and labelled on
+	 * that post, and refused on another post (F2).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_post_specific_status_is_reachable_only_on_that_post() {
+		$author = $this->make_user( 'author' );
+		$editor = $this->make_user( 'editor' );
+		$legal  = $this->make_post( $author );
+		$plain  = $this->make_post( $author );
+
+		$this->enable_legal_review_for( $legal );
+
+		foreach ( array( $legal, $plain ) as $id ) {
+			$this->posts->set_status( $id, 'review' );
+		}
+
+		$this->assertSame( array( 'legal_review' ), wp_list_pluck( $this->workflow->get_available_transitions( $legal, $editor ), 'slug' ) );
+		$this->assertSame( array( 'approved', 'needs_changes' ), wp_list_pluck( $this->workflow->get_available_transitions( $plain, $editor ), 'slug' ) );
+
+		$this->assertTrue( $this->workflow->transition( $legal, 'review', 'legal_review', $editor ) );
+		$this->assertSame( 'legal_review', $this->workflow->get_status( $legal ) );
+
+		$state = $this->workflow->get_workflow( $legal, $editor );
+		$this->assertSame( 'Legal Review', $state['status_label'] );
+		$this->assertFalse( $state['status_is_unknown'] );
+
+		$this->assert_error( $this->workflow->transition( $plain, 'review', 'legal_review', $editor ), 'sit_cwm_invalid_status', 400 );
+	}
+
+	/**
+	 * A `WP_Error` veto is returned as is, and nothing is written (F3).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_transition_returns_the_veto_error_verbatim() {
+		$this->veto_approval_with_error();
+
+		$post   = $this->make_post( $this->make_user( 'author' ), 'review' );
+		$result = $this->workflow->transition( $post, 'review', 'approved', $this->make_user( 'editor' ) );
+
+		$this->assert_error( $result, 'checklist_incomplete', 403 );
+		$this->assertSame( 'The checklist is not complete.', $result->get_error_message() );
+		$this->assertSame( 'review', $this->posts->get_status( $post ) );
+		$this->assertSame( 0, $this->activity->count_for_post( $post ) );
+		$this->assertSame( array(), $this->fired );
+	}
+
+	/**
+	 * `blocked_transitions` lists the vetoed legal targets with their reason,
+	 * and they are not also offered (F3).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_blocked_transitions_list_vetoed_targets_only() {
+		$this->veto_approval_with_error();
+
+		$post  = $this->make_post( $this->make_user( 'author' ), 'review' );
+		$state = $this->workflow->get_workflow( $post, $this->make_user( 'editor' ) );
+
+		$this->assertSame( array( 'needs_changes' ), wp_list_pluck( $state['available_transitions'], 'slug' ) );
+		$this->assertSame(
+			array(
+				array(
+					'slug'    => 'approved',
+					'label'   => 'Approved',
+					'code'    => 'checklist_incomplete',
+					'message' => 'The checklist is not complete.',
+				),
+			),
+			$state['blocked_transitions']
+		);
+	}
+
+	/**
+	 * Ordinary capability denials are not reported as blocked (F3).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_blocked_transitions_empty_for_plain_capability_denials() {
+		$author = $this->make_user( 'author' );
+		$post   = $this->make_post( $author, 'review' );
+
+		$this->veto_approval_with_error();
+
+		$this->assertSame( array(), $this->workflow->get_workflow( $post, $author )['blocked_transitions'] );
+	}
+
+	/**
+	 * The generic refusal still maps to `sit_cwm_self_approval` (E16, F3).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_self_approval_mapping_still_applies() {
+		( new Settings() )->update( array( 'prevent_self_approval' => true ) );
+
+		$editor = $this->make_user( 'editor' );
+		$post   = $this->make_post( $editor, 'review' );
+
+		$this->assert_error( $this->workflow->transition( $post, 'review', 'approved', $editor ), 'sit_cwm_self_approval', 403 );
 	}
 
 	/**
@@ -526,7 +653,7 @@ final class WorkflowManagerTest extends WP_UnitTestCase {
 		$state = $this->workflow->get_workflow( $post );
 
 		$this->assertSame(
-			array( 'post_id', 'post_title', 'post_type', 'post_status', 'edit_link', 'status', 'status_label', 'status_is_unknown', 'reviewer', 'due_date', 'available_transitions', 'capabilities', 'self_approval_blocked' ),
+			array( 'post_id', 'post_title', 'post_type', 'post_status', 'edit_link', 'status', 'status_label', 'status_is_unknown', 'reviewer', 'due_date', 'available_transitions', 'blocked_transitions', 'capabilities', 'self_approval_blocked' ),
 			array_keys( $state )
 		);
 		$this->assertSame( $post, $state['post_id'] );
@@ -540,6 +667,7 @@ final class WorkflowManagerTest extends WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'email', $state['reviewer'] );
 		$this->assertSame( array( 'approved', 'needs_changes' ), array_column( $state['available_transitions'], 'slug' ) );
 		$this->assertSame( array( false, true ), array_column( $state['available_transitions'], 'is_rollback' ) );
+		$this->assertSame( array(), $state['blocked_transitions'] );
 		$this->assertSame(
 			array(
 				'can_change_status'   => true,
@@ -701,6 +829,22 @@ final class WorkflowManagerTest extends WP_UnitTestCase {
 		( new Settings() )->update( array( 'prevent_self_approval' => false ) );
 
 		$this->assertFalse( $this->workflow->get_workflow( $post, $editor )['self_approval_blocked'], 'Setting off.' );
+	}
+
+	/**
+	 * Vetoes `approved` with a reason; leaves other targets alone.
+	 *
+	 * @return void
+	 */
+	private function veto_approval_with_error() {
+		add_filter(
+			'sit_cwm_can_transition',
+			static function ( $allowed, $post_id, $from, $to ) {
+				return 'approved' === $to ? new WP_Error( 'checklist_incomplete', 'The checklist is not complete.' ) : $allowed;
+			},
+			10,
+			4
+		);
 	}
 
 	/**

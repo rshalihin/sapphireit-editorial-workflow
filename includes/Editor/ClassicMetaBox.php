@@ -33,6 +33,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * (where the sidebar is used instead).
  *
  * @since 1.0.0
+ * @internal
  */
 final class ClassicMetaBox implements Bootable {
 

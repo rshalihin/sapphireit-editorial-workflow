@@ -8,12 +8,14 @@
 
 namespace Sit_Cwm\Tests\Integration\REST;
 
+use Sit_Cwm\Content\PostRepository;
 use Sit_Cwm\Core\Container;
 use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
 use Sit_Cwm\REST\BatchController;
 use Sit_Cwm\Tests\TestCase;
 use Sit_Cwm\Tests\Traits\CreatesWorkflowPosts;
+use Sit_Cwm\Tests\Traits\PerPostWorkflow;
 use Sit_Cwm\Workflow\BulkProcessor;
 use WP_REST_Response;
 
@@ -34,6 +36,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class BatchControllerTest extends TestCase {
 
 	use CreatesWorkflowPosts;
+	use PerPostWorkflow;
 
 	/**
 	 * Route under test.
@@ -41,6 +44,45 @@ final class BatchControllerTest extends TestCase {
 	 * @var string
 	 */
 	const ROUTE = '/sit-cwm/v1/posts/batch';
+
+	/**
+	 * Removes the per-post workflow filters.
+	 *
+	 * @return void
+	 */
+	public function tear_down() {
+		$this->remove_per_post_workflow();
+
+		parent::tear_down();
+	}
+
+	/**
+	 * One bulk request applies each post's own transition map (F2).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_bulk_transition_uses_each_posts_map() {
+		$author = self::fixture_user( 'author' );
+		$legal  = $this->create_managed_post( array( 'post_author' => $author ) );
+		$plain  = $this->create_managed_post( array( 'post_author' => $author ) );
+
+		$this->enable_legal_review_for( $legal );
+		update_post_meta( $legal, PostRepository::META_STATUS, 'review' );
+		update_post_meta( $plain, PostRepository::META_STATUS, 'review' );
+
+		wp_set_current_user( self::fixture_user( 'editor' ) );
+
+		$data = $this->batch( array( $legal, $plain ), 'change_status', array( 'status' => 'approved' ) )->get_data();
+
+		// `review → approved` is not an edge in the legal post's map.
+		$this->assertSame( array( $plain ), $data['succeeded'] );
+		$this->assertSame( array( $legal ), array_column( $data['failed'], 'post_id' ) );
+		$this->assertSame( 'sit_cwm_invalid_transition', $data['failed'][0]['code'] );
+		$this->assert_status( $legal, 'review' );
+		$this->assert_status( $plain, 'approved' );
+	}
 
 	/**
 	 * Logged-out requests are 401 and change nothing.

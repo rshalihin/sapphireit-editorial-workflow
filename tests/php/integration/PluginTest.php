@@ -27,6 +27,8 @@ use Sit_Cwm\Publishing\PublicationLogger;
 use Sit_Cwm\Publishing\PublishGate;
 use Sit_Cwm\Publishing\RefusalNotices;
 use Sit_Cwm\Workflow\Capabilities;
+use Sit_Cwm\Workflow\WorkflowManager;
+use ReflectionProperty;
 use WP_UnitTestCase;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -43,6 +45,103 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @covers \Sit_Cwm\Core\Deactivator
  */
 final class PluginTest extends WP_UnitTestCase {
+
+	/**
+	 * The plugin instance the test bootstrap booted, restored after each test.
+	 *
+	 * @since 1.2.0
+	 * @var Plugin|null
+	 */
+	private $booted_instance;
+
+	/**
+	 * Remembers the bootstrap's plugin instance.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		$this->booted_instance = Plugin::instance();
+	}
+
+	/**
+	 * Restores the bootstrap's plugin instance, so tests that boot their own
+	 * plugin do not leak it into other tests.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function tear_down() {
+		$property = new ReflectionProperty( Plugin::class, 'instance' );
+		$property->setAccessible( true );
+		$property->setValue( null, $this->booted_instance );
+
+		parent::tear_down();
+	}
+
+	/**
+	 * `sit_cwm_loaded` fires once, with the plugin, after the core services
+	 * are registered.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_loaded_fires_once_with_the_plugin_after_core_services_are_registered() {
+		$received = array();
+		add_action(
+			'sit_cwm_loaded',
+			function ( $plugin ) use ( &$received ) {
+				$received[] = $plugin;
+				// Core services are usable from inside the action.
+				$this->assertInstanceOf( WorkflowManager::class, $plugin->container()->get( 'workflow_manager' ) );
+			}
+		);
+
+		$plugin = new Plugin( new Container() );
+		$plugin->boot();
+		$plugin->boot(); // Second boot is a no-op.
+
+		$this->assertCount( 1, $received );
+		$this->assertSame( $plugin, $received[0] );
+	}
+
+	/**
+	 * `Plugin::instance()` and `sit_cwm_container()` return the booted plugin
+	 * and its container.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_instance_and_container_accessor_return_the_booted_plugin() {
+		$plugin = new Plugin( new Container() );
+		$plugin->boot();
+
+		$this->assertSame( $plugin, Plugin::instance() );
+		$this->assertSame( $plugin->container(), sit_cwm_container() );
+		$this->assertSame( sit_cwm_container()->get( 'workflow_manager' ), $plugin->container()->get( 'workflow_manager' ) );
+	}
+
+	/**
+	 * F5: the frozen service ids resolve.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_frozen_service_ids_are_registered() {
+		$plugin = new Plugin( new Container() );
+		$plugin->boot();
+
+		foreach ( array( 'settings', 'status_manager', 'transition_manager', 'permission_manager', 'post_repository', 'activity_logger', 'workflow_manager', 'publish_gate' ) as $id ) {
+			$this->assertTrue( $plugin->container()->has( $id ), $id );
+		}
+	}
 
 	/**
 	 * The main plugin file boots the plugin on `plugins_loaded`.

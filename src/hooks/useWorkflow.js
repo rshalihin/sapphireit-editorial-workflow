@@ -44,7 +44,9 @@ const GONE = { code: 'sit_cwm_gone', message: '', status: 404 };
  *
  * A status change sends `{ from, status }` with the status the user saw. On a
  * 409 the hook refetches and reports that the post changed elsewhere rather
- * than retrying. A 403 also refetches, so revoked permissions stop being offered.
+ * than retrying. Any other refusal (4xx but 401 and 404) keeps the server's
+ * message and also refetches, so revoked permissions stop being offered and an
+ * extension's veto shows up in `blocked_transitions`.
  * A 404 after the workflow loaded (post deleted, or its type disabled) sets
  * `isGone`, and every later mutation is refused without a request.
  *
@@ -200,7 +202,15 @@ export default function useWorkflow( postId ) {
 							'sapphireit-editorial-workflow'
 						),
 					};
-				} else if ( err.status === 403 ) {
+				} else if (
+					err.status >= 400 &&
+					err.status < 500 &&
+					err.status !== 401 &&
+					err.status !== 404
+				) {
+					// Refused (403, or an extension's veto with any 4xx and its
+					// own message, shown as is): refetch so the offered and
+					// blocked transitions reflect the server again.
 					await refresh();
 				}
 

@@ -25,6 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * check survives a translated menu title (which changes the settings screen id).
  *
  * @since 1.1.0
+ * @internal
  */
 final class AdminFooter implements Bootable {
 

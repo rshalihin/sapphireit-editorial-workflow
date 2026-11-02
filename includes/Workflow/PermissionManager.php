@@ -10,6 +10,7 @@ namespace Sit_Cwm\Workflow;
 
 use Sit_Cwm\Content\PostRepository;
 use Sit_Cwm\Core\Settings;
+use WP_Error;
 use WP_Post;
 use WP_User;
 
@@ -35,6 +36,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * `sit_cwm_can_transition` so extensions can tighten or deliberately widen it.
  *
  * @since 1.0.0
+ * @api
  */
 final class PermissionManager {
 
@@ -58,6 +60,7 @@ final class PermissionManager {
 	 * Constructor.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param PostRepository $posts    Workflow meta persistence.
 	 * @param Settings       $settings Plugin settings.
@@ -71,6 +74,7 @@ final class PermissionManager {
 	 * Whether a user may manage the plugin (settings, bulk actions).
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int|null $user_id User id; null for the current user.
 	 * @return bool
@@ -88,6 +92,7 @@ final class PermissionManager {
 	 * Multisite super admins pass implicitly (core behaviour).
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @param int|null $user_id User id; null for the current user.
 	 * @return bool
@@ -105,6 +110,7 @@ final class PermissionManager {
 	 * individually, by WorkflowManager.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int|null $user_id User id; null for the current user.
 	 * @return bool
@@ -120,6 +126,7 @@ final class PermissionManager {
 	 * `sit_cwm_review_content`.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int $reviewer_id Candidate reviewer user id.
 	 * @return bool
@@ -137,6 +144,7 @@ final class PermissionManager {
 	 * anything, since every action is re-checked server-side.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int|null $user_id User id; null for the current user.
 	 * @return array<string, bool> Capability name => held. All false for
@@ -160,6 +168,7 @@ final class PermissionManager {
 	 * who manage the plugin or can edit content.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int|null $user_id User id; null for the current user.
 	 * @return bool
@@ -174,6 +183,7 @@ final class PermissionManager {
 	 * Workflow-enabled post types whose content a user may edit.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int|null $user_id User id; null for the current user.
 	 * @return string[] Post type slugs; empty for logged-out users.
@@ -203,6 +213,7 @@ final class PermissionManager {
 	 * they can edit content of at least one workflow-enabled post type.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int|null $user_id User id; null for the current user.
 	 * @return bool
@@ -216,6 +227,7 @@ final class PermissionManager {
 	 * `sit_cwm_view_activity` and can list workflow content.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int|null $user_id User id; null for the current user.
 	 * @return bool
@@ -234,6 +246,7 @@ final class PermissionManager {
 	 * as strictly as its most restricted type.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param string[] $post_types Post type slugs.
 	 * @param int|null $user_id    User id; null for the current user.
@@ -266,6 +279,7 @@ final class PermissionManager {
 	 * enumerate users.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int      $post_id Post id; `0` for no specific post.
 	 * @param int|null $user_id User id; null for the current user.
@@ -290,6 +304,7 @@ final class PermissionManager {
 	 * the list holds only users who can actually open that post.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int $post_id Post id; `0` for no specific post.
 	 * @return string[] Capabilities that must all be held.
@@ -318,6 +333,7 @@ final class PermissionManager {
 	 * Whether a user may read a post's activity history and comments.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param int|null $user_id User id; null for the current user.
@@ -334,6 +350,7 @@ final class PermissionManager {
 	 * so a 403 never confirms that a hidden post exists.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param int|null $user_id User id; null for the current user.
@@ -355,6 +372,7 @@ final class PermissionManager {
 	 * Whether a user may work on a managed post at all (e.g. see the sidebar).
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param int|null $user_id User id; null for the current user.
@@ -368,6 +386,7 @@ final class PermissionManager {
 	 * Whether a user may set or clear a post's reviewer.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param int|null $user_id User id; null for the current user.
@@ -383,6 +402,7 @@ final class PermissionManager {
 	 * Same capability as reviewer assignment (D5).
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param int|null $user_id User id; null for the current user.
@@ -399,6 +419,7 @@ final class PermissionManager {
 	 * able to read that history.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param int|null $user_id User id; null for the current user.
@@ -422,6 +443,8 @@ final class PermissionManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Refuses `approved` to the post's author when self-approval is prevented.
+	 * @since 1.2.0 Delegates to `check_change_status()`.
+	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param string   $to      Target status slug.
@@ -429,20 +452,41 @@ final class PermissionManager {
 	 * @return bool
 	 */
 	public function can_change_status( int $post_id, string $to, ?int $user_id = null ): bool {
+		return true === $this->check_change_status( $post_id, $to, $user_id );
+	}
+
+	/**
+	 * Whether a user may move a post to a workflow status, with the reason
+	 * when not (F3).
+	 *
+	 * Runs the checks described on `can_change_status()`. A refusal is the
+	 * generic `sit_cwm_forbidden`, except that a `WP_Error` returned by
+	 * `sit_cwm_can_transition` comes back as is (its status forced into
+	 * 400–499) when the capability checks passed.
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @param int      $post_id Post id.
+	 * @param string   $to      Target status slug.
+	 * @param int|null $user_id User id; null for the current user.
+	 * @return true|WP_Error
+	 */
+	public function check_change_status( int $post_id, string $to, ?int $user_id = null ) {
 		$user = $this->resolve_user( $user_id );
 
 		if ( null === $user ) {
-			return false;
+			return $this->forbidden_error();
 		}
 
 		$post = $this->resolve_post( $post_id );
 
 		if ( null === $post ) {
-			return false;
+			return $this->forbidden_error();
 		}
 
 		$allowed = user_can( $user, 'edit_post', $post->ID )
-			&& user_can( $user, $this->capability_for_status( $to ) )
+			&& user_can( $user, $this->capability_for_status( $to, $post->ID ) )
 			&& ( 'published' !== $to || user_can( $user, 'publish_post', $post->ID ) )
 			&& ! ( 'approved' === $to && $this->is_self_approval_blocked( $post->ID, $user->ID ) );
 
@@ -450,23 +494,37 @@ final class PermissionManager {
 		 * Filters whether a user may move a post to a workflow status.
 		 *
 		 * Runs only for an existing user on a managed post, after the
-		 * capability checks. Return false to veto; returning true grants the
-		 * move even when capabilities would deny it, so widen deliberately.
-		 * Structural validity of `$from → $to` is enforced separately by
-		 * WorkflowManager and cannot be bypassed here. Anything other than
-		 * boolean true denies.
+		 * capability checks. Return false to veto, or a WP_Error to veto with
+		 * a reason the user sees; returning true grants the move even when
+		 * capabilities would deny it, so widen deliberately. Structural
+		 * validity of `$from → $to` is enforced separately by WorkflowManager
+		 * and cannot be bypassed here.
+		 *
+		 * Only boolean true allows; a WP_Error is shown to the user only when
+		 * the capability checks passed. Its message is plain text, and its
+		 * `status` becomes 403 unless it is already in 400–499.
 		 *
 		 * @since 1.0.0
+		 * @since 1.2.0 May return a WP_Error to deny with a reason.
 		 *
 		 * @param bool   $allowed Result of the capability checks.
 		 * @param int    $post_id Post id.
 		 * @param string $from    Current workflow status.
 		 * @param string $to      Target workflow status.
 		 * @param int    $user_id Acting user id.
+		 * @return bool|WP_Error
 		 */
 		$filtered = apply_filters( 'sit_cwm_can_transition', $allowed, $post->ID, $this->current_status( $post->ID ), $to, $user->ID );
 
-		return true === $filtered;
+		if ( true === $filtered ) {
+			return true;
+		}
+
+		if ( $allowed && $filtered instanceof WP_Error ) {
+			return $this->with_client_status( $filtered );
+		}
+
+		return $this->forbidden_error();
 	}
 
 	/**
@@ -476,6 +534,7 @@ final class PermissionManager {
 	 * "Authored" means the post's `post_author`. Applies to administrators too.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @param int      $post_id Post id.
 	 * @param int|null $user_id User id; null for the current user.
@@ -516,6 +575,7 @@ final class PermissionManager {
 	 * author while self-approval is prevented (E16).
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @param int $post_id Post id.
 	 * @return int[] User ids; empty for a missing or unmanaged post.
@@ -545,11 +605,14 @@ final class PermissionManager {
 	 * `publish_post`, which `can_change_status()` checks on the post.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
+	 * @api
 	 *
-	 * @param string $to Target status slug.
+	 * @param string $to      Target status slug.
+	 * @param int    $post_id Post whose workflow applies; 0 for the site-wide context.
 	 * @return string Capability name.
 	 */
-	public function capability_for_status( string $to ): string {
+	public function capability_for_status( string $to, int $post_id = 0 ): string {
 		$core = array(
 			'draft'         => Capabilities::CHANGE_WORKFLOW,
 			'writing'       => Capabilities::CHANGE_WORKFLOW,
@@ -562,11 +625,16 @@ final class PermissionManager {
 		/**
 		 * Filters the capability required to reach each workflow status.
 		 *
-		 * @since 1.0.0
+		 * Called with `$post_id = 0` when there is no post; an extension that
+		 * varies the map per post must then cover every status any post can have.
 		 *
-		 * @param array<string, string> $map Status slug => capability name.
+		 * @since 1.0.0
+		 * @since 1.2.0 Added $post_id.
+		 *
+		 * @param array<string, string> $map     Status slug => capability name.
+		 * @param int                   $post_id Post whose workflow applies; 0 for the site-wide context.
 		 */
-		$map = apply_filters( 'sit_cwm_status_capability_map', $core );
+		$map = apply_filters( 'sit_cwm_status_capability_map', $core, $post_id );
 
 		if ( ! is_array( $map ) ) {
 			$map = $core;
@@ -604,6 +672,44 @@ final class PermissionManager {
 		}
 
 		return null === $capability || user_can( $user, $capability );
+	}
+
+	/**
+	 * The generic workflow refusal, identical to WorkflowManager's.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return WP_Error
+	 */
+	private function forbidden_error(): WP_Error {
+		return new WP_Error(
+			'sit_cwm_forbidden',
+			__( 'You are not allowed to perform this workflow action.', 'sapphireit-editorial-workflow' ),
+			array( 'status' => 403 )
+		);
+	}
+
+	/**
+	 * An extension's veto with its HTTP status kept in 400–499 (F3).
+	 *
+	 * Keeps the code, message and other data; a missing or out-of-range
+	 * `status` becomes 403.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param WP_Error $error Veto from `sit_cwm_can_transition`.
+	 * @return WP_Error
+	 */
+	private function with_client_status( WP_Error $error ): WP_Error {
+		$data   = $error->get_error_data();
+		$data   = is_array( $data ) ? $data : array();
+		$status = $data['status'] ?? null;
+
+		if ( ! is_int( $status ) || $status < 400 || $status > 499 ) {
+			$data['status'] = 403;
+		}
+
+		return new WP_Error( $error->get_error_code(), $error->get_error_message(), $data );
 	}
 
 	/**

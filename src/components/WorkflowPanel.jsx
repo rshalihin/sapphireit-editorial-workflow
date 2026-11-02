@@ -27,6 +27,7 @@ import StatusControl from '../sidebar/components/StatusControl';
 import TransitionActions from '../sidebar/components/TransitionActions';
 import { getStatusDefinition } from '../utils/format';
 import ActivityTimeline from './ActivityTimeline';
+import BlockedTransitions from './BlockedTransitions';
 import PublishGateNotice from './PublishGateNotice';
 
 /**
@@ -284,6 +285,7 @@ function WorkflowPanel( {
 					isSaving={ isSaving }
 					isDisabled={ isGone }
 				/>
+				<BlockedTransitions blocked={ workflow.blocked_transitions } />
 				{ /* The server sets this only when the rule is the reason Approve is missing. */ }
 				{ workflow.self_approval_blocked === true && (
 					<p className="sit-cwm-self-approval-note">

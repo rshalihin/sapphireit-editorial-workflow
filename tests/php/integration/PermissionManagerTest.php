@@ -15,6 +15,7 @@ use Sit_Cwm\Core\Settings;
 use Sit_Cwm\Workflow\Capabilities;
 use Sit_Cwm\Workflow\PermissionManager;
 use Sit_Cwm\Workflow\StatusManager;
+use WP_Error;
 use WP_UnitTestCase;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -280,6 +281,36 @@ final class PermissionManagerTest extends WP_UnitTestCase {
 		add_filter( 'sit_cwm_status_capability_map', '__return_null', 20 );
 
 		$this->assertSame( Capabilities::CHANGE_WORKFLOW, $this->permissions->capability_for_status( 'review' ) );
+	}
+
+	/**
+	 * The capability map filter receives the post id from a per-post check,
+	 * and 0 when asked without a post (F2).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_capability_map_filter_receives_post_id() {
+		$seen = array();
+		add_filter(
+			'sit_cwm_status_capability_map',
+			static function ( $map, $post_id ) use ( &$seen ) {
+				$seen[] = $post_id;
+				return $map;
+			},
+			10,
+			2
+		);
+
+		$author = $this->make_user( 'author' );
+		$post   = $this->make_post( $author );
+
+		$this->permissions->can_change_status( $post, 'review', $author );
+		$this->assertContains( $post, $seen );
+
+		$this->permissions->capability_for_status( 'review' );
+		$this->assertSame( 0, end( $seen ) );
 	}
 
 	/**
@@ -715,6 +746,155 @@ final class PermissionManagerTest extends WP_UnitTestCase {
 		add_filter( 'sit_cwm_prevent_self_approval', '__return_empty_string' );
 
 		$this->assertTrue( $this->permissions->can_change_status( $post, 'approved', $editor ), 'Only boolean true prevents.' );
+	}
+
+	/**
+	 * F3, `WP_Error` with passing capabilities: that error comes back, with
+	 * status 403 when it has none.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_wp_error_veto_is_returned_with_default_403() {
+		$this->veto_approval_with_error();
+
+		$editor = $this->make_user( 'editor' );
+		$post   = $this->make_post( $this->make_user( 'author' ) );
+		$result = $this->permissions->check_change_status( $post, 'approved', $editor );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'checklist_incomplete', $result->get_error_code() );
+		$this->assertSame( 'The checklist is not complete.', $result->get_error_message() );
+		$this->assertSame( 403, $result->get_error_data()['status'] );
+		$this->assertFalse( $this->permissions->can_change_status( $post, 'approved', $editor ) );
+	}
+
+	/**
+	 * F3: a veto keeps its own 4xx status.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_wp_error_veto_keeps_its_own_4xx_status() {
+		add_filter(
+			'sit_cwm_can_transition',
+			static function () {
+				return new WP_Error( 'x', 'X', array( 'status' => 422 ) );
+			}
+		);
+
+		$author = $this->make_user( 'author' );
+		$post   = $this->make_post( $author );
+
+		$this->assertSame( 422, $this->permissions->check_change_status( $post, 'review', $author )->get_error_data()['status'] );
+	}
+
+	/**
+	 * F3: a veto status outside 400–499 becomes 403.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_wp_error_veto_with_non_4xx_status_is_forced_to_403() {
+		add_filter(
+			'sit_cwm_can_transition',
+			static function () {
+				return new WP_Error( 'x', 'X', array( 'status' => 200 ) );
+			}
+		);
+
+		$author = $this->make_user( 'author' );
+		$post   = $this->make_post( $author );
+
+		$this->assertSame( 403, $this->permissions->check_change_status( $post, 'review', $author )->get_error_data()['status'] );
+	}
+
+	/**
+	 * F3, `WP_Error` with failing capabilities: the generic refusal, so a
+	 * user who could not act anyway learns nothing about extension rules.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_veto_error_hidden_from_user_without_capability() {
+		$this->veto_approval_with_error();
+
+		$author = $this->make_user( 'author' );
+		$post   = $this->make_post( $author );
+
+		$this->assertSame( 'sit_cwm_forbidden', $this->permissions->check_change_status( $post, 'approved', $author )->get_error_code() );
+	}
+
+	/**
+	 * The hard gates refuse without calling the filter.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_hard_gates_do_not_call_the_filter() {
+		$called = false;
+		add_filter(
+			'sit_cwm_can_transition',
+			static function ( $allowed ) use ( &$called ) {
+				$called = true;
+				return $allowed;
+			}
+		);
+
+		$admin = $this->make_user( 'administrator' );
+
+		$this->assertSame( 'sit_cwm_forbidden', $this->permissions->check_change_status( 999999, 'review', $admin )->get_error_code() );
+		$this->assertSame( 'sit_cwm_forbidden', $this->permissions->check_change_status( $this->make_post( $admin ), 'review', 999999 )->get_error_code() );
+		$this->assertFalse( $called );
+	}
+
+	/**
+	 * F3: boolean true allows regardless of capabilities; anything else that
+	 * is not a `WP_Error` refuses with the generic error.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_true_still_allows_and_anything_else_denies() {
+		$author = $this->make_user( 'author' );
+		$post   = $this->make_post( $author );
+
+		add_filter( 'sit_cwm_can_transition', '__return_true' );
+		$this->assertTrue( $this->permissions->check_change_status( $post, 'approved', $author ) );
+
+		add_filter( 'sit_cwm_can_transition', '__return_false', 20 );
+		$this->assertSame( 'sit_cwm_forbidden', $this->permissions->check_change_status( $post, 'review', $author )->get_error_code() );
+
+		add_filter(
+			'sit_cwm_can_transition',
+			static function () {
+				return 1; // Truthy, but not boolean true.
+			},
+			30
+		);
+		$this->assertSame( 'sit_cwm_forbidden', $this->permissions->check_change_status( $post, 'review', $author )->get_error_code() );
+	}
+
+	/**
+	 * Vetoes `approved` with a reason; leaves other targets alone.
+	 *
+	 * @return void
+	 */
+	private function veto_approval_with_error() {
+		add_filter(
+			'sit_cwm_can_transition',
+			static function ( $allowed, $post_id, $from, $to ) {
+				return 'approved' === $to ? new WP_Error( 'checklist_incomplete', 'The checklist is not complete.' ) : $allowed;
+			},
+			10,
+			4
+		);
 	}
 
 	/**

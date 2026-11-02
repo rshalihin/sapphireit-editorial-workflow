@@ -14,6 +14,7 @@ use Sit_Cwm\Core\Container;
 use Sit_Cwm\Core\Database;
 use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
+use Sit_Cwm\Tests\Traits\PerPostWorkflow;
 use Sit_Cwm\REST\PostsController;
 use Sit_Cwm\Workflow\Capabilities;
 use Sit_Cwm\Workflow\StatusManager;
@@ -39,6 +40,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @covers \Sit_Cwm\Content\PostRepository::status_order_sql
  */
 final class PostsControllerTest extends WP_UnitTestCase {
+
+	use PerPostWorkflow;
 
 	/**
 	 * Workflow meta persistence, for arranging state.
@@ -89,6 +92,8 @@ final class PostsControllerTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function tear_down() {
+		$this->remove_per_post_workflow();
+
 		$GLOBALS['wp_rest_server'] = null; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Core's REST server global.
 
 		parent::tear_down();
@@ -313,6 +318,28 @@ final class PostsControllerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A row's status label comes from that post's registry (F2).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_row_label_uses_post_registry() {
+		$admin = $this->make_user( 'administrator' );
+		$post  = $this->make_post( $admin, 'legalrowprobe' );
+
+		$this->enable_legal_review_for( $post );
+		update_post_meta( $post, PostRepository::META_STATUS, 'legal_review' );
+
+		wp_set_current_user( $admin );
+
+		$row = $this->find_row( $this->get_posts( array( 'search' => 'legalrowprobe' ) ), $post );
+
+		$this->assertSame( 'Legal Review', $row['status_label'] );
+		$this->assertFalse( $row['status_is_unknown'] );
+	}
+
+	/**
 	 * A row carries the documented fields, derived server-side.
 	 *
 	 * @return void
@@ -418,6 +445,136 @@ final class PostsControllerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * `sit_cwm_posts_query_args` receives the args, the request and the user,
+	 * and can narrow the collection with a request parameter of its own (F4).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_filter_receives_args_request_and_user_and_can_narrow() {
+		$admin = $this->make_user( 'administrator' );
+		$keep  = $this->make_post( $admin, 'seamprobe' );
+		$drop  = $this->make_post( $admin, 'seamprobe' );
+		$seen  = null;
+
+		add_filter(
+			'sit_cwm_posts_query_args',
+			static function ( $args, $request, $user_id ) use ( &$seen, $keep ) {
+				$seen = array( $request->get_param( 'view' ), $user_id, $args['search'] );
+
+				if ( 'mine' === $request->get_param( 'view' ) ) {
+					$args['post__in'] = array( $keep );
+				}
+
+				return $args;
+			},
+			10,
+			3
+		);
+
+		wp_set_current_user( $admin );
+
+		$this->assertEqualsCanonicalizing( array( $keep, $drop ), $this->ids( array( 'search' => 'seamprobe' ) ) );
+		$this->assertSame(
+			array( $keep ),
+			$this->ids(
+				array(
+					'search' => 'seamprobe',
+					'view'   => 'mine',
+				)
+			)
+		);
+		$this->assertSame( array( 'mine', $admin, 'seamprobe' ), $seen );
+	}
+
+	/**
+	 * The filter can neither add post types nor lift visibility scoping.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_filter_cannot_widen_post_types_or_visibility() {
+		$contributor = $this->make_user( 'contributor' );
+		$own         = $this->make_post( $contributor, 'widenprobe' );
+		$others      = self::factory()->post->create(
+			array(
+				'post_author' => $this->make_user( 'editor' ),
+				'post_status' => 'publish',
+				'post_title'  => 'widenprobe published',
+			)
+		);
+
+		register_post_type(
+			'sit_hidden',
+			array(
+				'public'  => true,
+				'show_ui' => true,
+			)
+		);
+
+		$hidden = self::factory()->post->create(
+			array(
+				'post_type'   => 'sit_hidden',
+				'post_author' => $contributor,
+				'post_title'  => 'widenprobe hidden',
+			)
+		);
+
+		// Workflow-enabled, so only the clamp keeps it out of a `post_type=post` request.
+		add_filter(
+			'sit_cwm_enabled_post_types',
+			static function ( $types ) {
+				$types[] = 'sit_hidden';
+
+				return $types;
+			}
+		);
+		add_filter(
+			'sit_cwm_posts_query_args',
+			static function ( $args ) {
+				$args['post_types'][] = 'sit_hidden';
+				$args['visible_to']   = 0;
+
+				return $args;
+			}
+		);
+
+		wp_set_current_user( $contributor );
+
+		$ids = $this->ids(
+			array(
+				'search'    => 'widenprobe',
+				'post_type' => 'post',
+			)
+		);
+
+		_unregister_post_type( 'sit_hidden' );
+
+		$this->assertSame( array( $own ), $ids );
+		$this->assertNotContains( $others, $ids );
+		$this->assertNotContains( $hidden, $ids );
+	}
+
+	/**
+	 * A filter that returns a non-array leaves the original arguments.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_non_array_filter_result_keeps_original_args() {
+		$admin = $this->make_user( 'administrator' );
+		$post  = $this->make_post( $admin, 'nullprobe' );
+
+		add_filter( 'sit_cwm_posts_query_args', '__return_null' );
+		wp_set_current_user( $admin );
+
+		$this->assertSame( array( $post ), $this->ids( array( 'search' => 'nullprobe' ) ) );
+	}
+
+	/**
 	 * Queries run by one cold-cache collection request.
 	 *
 	 * Options and the current user are loaded before counting, as WordPress
@@ -453,6 +610,25 @@ final class PostsControllerTest extends WP_UnitTestCase {
 		$this->assertSame( 200, $response->get_status() );
 
 		return array_column( $response->get_data(), 'post_id' );
+	}
+
+	/**
+	 * The row for one post out of a collection response.
+	 *
+	 * @param WP_REST_Response $response Collection response.
+	 * @param int              $post_id  Post id.
+	 * @return array
+	 */
+	private function find_row( WP_REST_Response $response, int $post_id ): array {
+		$this->assertSame( 200, $response->get_status() );
+
+		foreach ( $response->get_data() as $row ) {
+			if ( $post_id === $row['post_id'] ) {
+				return $row;
+			}
+		}
+
+		$this->fail( "No row for post {$post_id}." );
 	}
 
 	/**

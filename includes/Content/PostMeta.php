@@ -30,6 +30,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * `view` context of published posts.
  *
  * @since 1.0.0
+ * @internal
  */
 final class PostMeta implements Bootable {
 

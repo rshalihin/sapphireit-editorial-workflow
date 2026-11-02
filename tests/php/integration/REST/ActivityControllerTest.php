@@ -14,6 +14,7 @@ use Sit_Cwm\Core\Container;
 use Sit_Cwm\Core\Database;
 use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
+use Sit_Cwm\Tests\Traits\PerPostWorkflow;
 use Sit_Cwm\REST\ActivityController;
 use Sit_Cwm\Workflow\Capabilities;
 use Sit_Cwm\Workflow\StatusManager;
@@ -35,6 +36,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @covers \Sit_Cwm\REST\UserSummaries
  */
 final class ActivityControllerTest extends WP_UnitTestCase {
+
+	use PerPostWorkflow;
 
 	/**
 	 * Workflow meta persistence, for arranging state.
@@ -85,6 +88,8 @@ final class ActivityControllerTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function tear_down() {
+		$this->remove_per_post_workflow();
+
 		$GLOBALS['wp_rest_server'] = null; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Core's REST server global.
 
 		parent::tear_down();
@@ -185,6 +190,27 @@ final class ActivityControllerTest extends WP_UnitTestCase {
 
 		$this->assert_error_response( $this->get_activity( $post, array( 'per_page' => 101 ) ), 'rest_invalid_param', 400 );
 		$this->assert_error_response( $this->get_activity( $post, array( 'page' => 0 ) ), 'rest_invalid_param', 400 );
+	}
+
+	/**
+	 * Status labels on activity items come from the entry's post registry (F2).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_activity_status_labels_use_post_registry() {
+		$post = $this->make_post( $this->make_user( 'author' ) );
+
+		$this->enable_legal_review_for( $post );
+		$this->activity->log_status_change( $post, 'review', 'legal_review', $this->make_user( 'editor' ) );
+
+		wp_set_current_user( $this->make_user( 'administrator' ) );
+
+		$item = $this->get_activity( $post )->get_data()[0];
+
+		$this->assertSame( 'Review', $item['old_label'] );
+		$this->assertSame( 'Legal Review', $item['new_label'] );
 	}
 
 	/**

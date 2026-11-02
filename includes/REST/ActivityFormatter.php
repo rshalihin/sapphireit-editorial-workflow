@@ -26,6 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * them once with UserSummaries, and pass the map to `format()`.
  *
  * @since 1.0.0
+ * @internal
  */
 final class ActivityFormatter {
 
@@ -116,15 +117,16 @@ final class ActivityFormatter {
 		$message         = $entry->get_message();
 		$created         = DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', $entry->get_created_at(), new DateTimeZone( 'UTC' ) );
 		$workflow_status = $this->context_string( $entry, 'workflow_status' );
+		$post_id         = $entry->get_post_id();
 
 		return array(
 			'id'                    => $entry->get_id(),
 			'action'                => $action,
 			'action_label'          => $this->action_label( $action ),
 			'old_value'             => $entry->get_old_value(),
-			'old_label'             => $this->value_label( $action, $entry->get_old_value(), $users ),
+			'old_label'             => $this->value_label( $action, $entry->get_old_value(), $users, $post_id ),
 			'new_value'             => $entry->get_new_value(),
-			'new_label'             => $this->value_label( $action, $entry->get_new_value(), $users ),
+			'new_label'             => $this->value_label( $action, $entry->get_new_value(), $users, $post_id ),
 			// Stored already sanitized; filtered again so a tampered row cannot inject markup.
 			'message'               => null === $message ? '' : wp_kses_post( $message ),
 			'created_at'            => false === $created ? '' : $created->format( DATE_ATOM ),
@@ -138,7 +140,7 @@ final class ActivityFormatter {
 			'user'                  => $user_id > 0 && isset( $users[ $user_id ] ) ? $users[ $user_id ] : null,
 			// The workflow status at the time of a publication event (E7); null for other entries.
 			'workflow_status'       => $workflow_status,
-			'workflow_status_label' => null === $workflow_status ? null : $this->statuses->label( $workflow_status ),
+			'workflow_status_label' => null === $workflow_status ? null : $this->statuses->label( $workflow_status, $post_id ),
 			'gate_reason'           => $this->context_string( $entry, 'reason' ),
 		);
 	}
@@ -186,19 +188,21 @@ final class ActivityFormatter {
 	 * Label for an old/new value, depending on the action.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
 	 *
-	 * @param string      $action Action slug.
-	 * @param string|null $value  Stored value.
-	 * @param array       $users  User id => summary.
+	 * @param string      $action  Action slug.
+	 * @param string|null $value   Stored value.
+	 * @param array       $users   User id => summary.
+	 * @param int         $post_id Post the entry belongs to; its status registry applies.
 	 * @return string|null Null when there is no value.
 	 */
-	private function value_label( string $action, ?string $value, array $users ): ?string {
+	private function value_label( string $action, ?string $value, array $users, int $post_id ): ?string {
 		if ( null === $value || '' === $value ) {
 			return null;
 		}
 
 		if ( 'status_changed' === $action ) {
-			return $this->statuses->label( $value );
+			return $this->statuses->label( $value, $post_id );
 		}
 
 		if ( in_array( $action, self::REVIEWER_ACTIONS, true ) ) {

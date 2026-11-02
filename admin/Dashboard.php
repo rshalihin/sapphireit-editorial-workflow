@@ -26,6 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * only.
  *
  * @since 1.0.0
+ * @internal
  */
 final class Dashboard implements Bootable {
 
@@ -134,6 +135,7 @@ final class Dashboard implements Bootable {
 		 * Filters the position of the Editorial Workflow top-level admin menu.
 		 *
 		 * @since 1.2.0
+		 * @api
 		 *
 		 * @param int|float $position Menu position. Default 26 (after Comments). A
 		 *                            non-numeric value falls back to the default.

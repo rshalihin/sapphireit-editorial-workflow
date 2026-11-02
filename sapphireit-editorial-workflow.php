@@ -95,6 +95,18 @@ function sit_cwm_boot() {
 }
 
 /**
+ * Returns the booted plugin's service container, for add-ons.
+ *
+ * @since 1.2.0
+ *
+ * @return \Sit_Cwm\Core\Container|null Null before the plugin has booted (plugins_loaded, priority 10).
+ */
+function sit_cwm_container() {
+	$plugin = \Sit_Cwm\Core\Plugin::instance();
+	return null === $plugin ? null : $plugin->container();
+}
+
+/**
  * Renders the "PHP too old" admin notice.
  *
  * @since 1.0.0

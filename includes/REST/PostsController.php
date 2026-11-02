@@ -37,6 +37,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * assigned to review; that scope is part of the SQL query.
  *
  * @since 1.0.0
+ * @internal
  */
 class PostsController extends AbstractController {
 
@@ -183,6 +184,7 @@ class PostsController extends AbstractController {
 					'type'              => 'array',
 					'items'             => array(
 						'type' => 'string',
+						// Site-wide context (F2).
 						'enum' => $this->statuses->slugs(),
 					),
 					'validate_callback' => 'rest_validate_request_arg',
@@ -285,23 +287,46 @@ class PostsController extends AbstractController {
 			$post_types = array_values( array_intersect( $post_types, array( (string) $request->get_param( 'post_type' ) ) ) );
 		}
 
-		$result = $this->posts->query_posts(
-			array(
-				'post_types'  => $post_types,
-				'search'      => (string) $request->get_param( 'search' ),
-				'statuses'    => $request->has_param( 'status' ) ? (array) $request->get_param( 'status' ) : array(),
-				'reviewer_id' => $request->has_param( 'reviewer_id' ) ? absint( $request->get_param( 'reviewer_id' ) ) : null,
-				'author'      => absint( $request->get_param( 'author' ) ),
-				'due_before'  => (string) $request->get_param( 'due_before' ),
-				'due_after'   => (string) $request->get_param( 'due_after' ),
-				'overdue'     => true === rest_sanitize_boolean( $request->get_param( 'overdue' ) ),
-				'orderby'     => (string) $request->get_param( 'orderby' ),
-				'order'       => (string) $request->get_param( 'order' ),
-				'page'        => (int) $request->get_param( 'page' ),
-				'per_page'    => $per_page,
-				'visible_to'  => $this->permissions->can_see_all_posts( $post_types, $user_id ) ? 0 : $user_id,
-			)
+		$original = array(
+			'post_types'  => $post_types,
+			'search'      => (string) $request->get_param( 'search' ),
+			'statuses'    => $request->has_param( 'status' ) ? (array) $request->get_param( 'status' ) : array(),
+			'reviewer_id' => $request->has_param( 'reviewer_id' ) ? absint( $request->get_param( 'reviewer_id' ) ) : null,
+			'author'      => absint( $request->get_param( 'author' ) ),
+			'due_before'  => (string) $request->get_param( 'due_before' ),
+			'due_after'   => (string) $request->get_param( 'due_after' ),
+			'overdue'     => true === rest_sanitize_boolean( $request->get_param( 'overdue' ) ),
+			'orderby'     => (string) $request->get_param( 'orderby' ),
+			'order'       => (string) $request->get_param( 'order' ),
+			'page'        => (int) $request->get_param( 'page' ),
+			'per_page'    => $per_page,
+			'visible_to'  => $this->permissions->can_see_all_posts( $post_types, $user_id ) ? 0 : $user_id,
 		);
+
+		/**
+		 * Filters the dashboard collection query, for saved views and other
+		 * extensions that restrict it by `meta_query`, `tax_query`,
+		 * `date_query` or `post__in`.
+		 *
+		 * Narrowing only: post types can be removed but not added, and
+		 * visibility scoping is always restored.
+		 *
+		 * @since 1.2.0
+		 *
+		 * @param array           $args    Arguments of `PostRepository::query_posts()`.
+		 * @param WP_REST_Request $request Collection request.
+		 * @param int             $user_id Current user id.
+		 */
+		$filtered = apply_filters( 'sit_cwm_posts_query_args', $original, $request, $user_id );
+		$args     = $original;
+
+		if ( is_array( $filtered ) ) {
+			$args               = $filtered;
+			$args['post_types'] = array_values( array_intersect( (array) ( $args['post_types'] ?? array() ), $original['post_types'] ) );
+			$args['visible_to'] = $original['visible_to'];
+		}
+
+		$result = $this->posts->query_posts( $args );
 
 		return $this->collection_response( $this->prepare_rows( $result['ids'], $user_id ), $result['total'], $per_page );
 	}
@@ -368,6 +393,7 @@ class PostsController extends AbstractController {
 				'status'                => array(
 					'description' => __( 'Workflow status.', 'sapphireit-editorial-workflow' ),
 					'type'        => 'string',
+					// Site-wide context (F2).
 					'enum'        => $this->statuses->slugs(),
 					'readonly'    => true,
 				),
@@ -505,11 +531,11 @@ class PostsController extends AbstractController {
 				'name' => isset( $users[ $author_id ] ) ? $users[ $author_id ]['name'] : '',
 			),
 			'status'                => $status,
-			'status_label'          => $this->statuses->label( $status ),
+			'status_label'          => $this->statuses->label( $status, $post->ID ),
 			'status_is_unknown'     => $this->posts->has_unknown_status( $post->ID ),
 			'reviewer'              => $reviewer_id > 0 && isset( $users[ $reviewer_id ] ) ? $users[ $reviewer_id ] : null,
 			'due_date'              => $due_date,
-			'is_overdue'            => '' !== $due_date && $due_date < $today && ! $this->statuses->is_final( $status ),
+			'is_overdue'            => '' !== $due_date && $due_date < $today && ! $this->statuses->is_final( $status, $post->ID ),
 			'last_activity'         => isset( $activity[ $post->ID ][0] ) ? $this->formatter->format( $activity[ $post->ID ][0], $users ) : null,
 			'edit_link'             => (string) get_edit_post_link( $post->ID, 'raw' ),
 			'available_transitions' => $transitions,

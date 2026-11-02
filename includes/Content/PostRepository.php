@@ -34,6 +34,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * methods.
  *
  * @since 1.0.0
+ * @api
  */
 final class PostRepository implements Bootable {
 
@@ -41,6 +42,7 @@ final class PostRepository implements Bootable {
 	 * Workflow status meta key.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 * @var string
 	 */
 	const META_STATUS = '_sit_cwm_status';
@@ -49,6 +51,7 @@ final class PostRepository implements Bootable {
 	 * Reviewer user id meta key.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 * @var string
 	 */
 	const META_REVIEWER = '_sit_cwm_reviewer_id';
@@ -57,6 +60,7 @@ final class PostRepository implements Bootable {
 	 * Due date (`Y-m-d`) meta key.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 * @var string
 	 */
 	const META_DUE_DATE = '_sit_cwm_due_date';
@@ -66,6 +70,7 @@ final class PostRepository implements Bootable {
 	 * capability (E8). Written only by `GateRecorder`.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const META_PUBLISH_BYPASS = '_sit_cwm_publish_bypass_by';
@@ -74,6 +79,7 @@ final class PostRepository implements Bootable {
 	 * Posts cleared per query when a deleted user was a reviewer.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 * @var int
 	 */
 	const CLEAR_BATCH_SIZE = 100;
@@ -82,6 +88,7 @@ final class PostRepository implements Bootable {
 	 * Largest page size of `query_posts()`.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 * @var int
 	 */
 	const QUERY_MAX_PER_PAGE = 100;
@@ -114,6 +121,7 @@ final class PostRepository implements Bootable {
 	 * Constructor. Does not touch WordPress.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param StatusManager       $statuses Status registry.
 	 * @param Settings            $settings Plugin settings.
@@ -130,6 +138,7 @@ final class PostRepository implements Bootable {
 	 * Attaches the user-deletion cleanup.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @return void
 	 */
@@ -141,13 +150,14 @@ final class PostRepository implements Bootable {
 	 * Workflow status of a post.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int $post_id Post id.
 	 * @return string A registered status slug; the default when unset or no
 	 *                longer registered.
 	 */
 	public function get_status( int $post_id ): string {
-		return $this->status_from_raw( $this->read( $post_id, self::META_STATUS ) );
+		return $this->status_from_raw( $this->read( $post_id, self::META_STATUS ), $post_id );
 	}
 
 	/**
@@ -155,6 +165,7 @@ final class PostRepository implements Bootable {
 	 * Pro filter removed it). `get_status()` then reports the default status.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int $post_id Post id.
 	 * @return bool False when the status is unset or registered.
@@ -166,7 +177,7 @@ final class PostRepository implements Bootable {
 			return false;
 		}
 
-		return ! is_string( $raw ) || ! $this->statuses->exists( trim( $raw ) );
+		return ! is_string( $raw ) || ! $this->statuses->exists( trim( $raw ), $post_id );
 	}
 
 	/**
@@ -183,7 +194,7 @@ final class PostRepository implements Bootable {
 	 * @return bool True when the stored status now equals `$status`.
 	 */
 	public function set_status( int $post_id, string $status ): bool {
-		if ( $post_id <= 0 || ! $this->statuses->exists( $status ) ) {
+		if ( $post_id <= 0 || ! $this->statuses->exists( $status, $post_id ) ) {
 			return false;
 		}
 
@@ -196,6 +207,7 @@ final class PostRepository implements Bootable {
 	 * Reviewer user id of a post.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int $post_id Post id.
 	 * @return int User id, `0` when none.
@@ -235,6 +247,7 @@ final class PostRepository implements Bootable {
 	 * Due date of a post.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int $post_id Post id.
 	 * @return string `Y-m-d`, or `''` when none.
@@ -277,6 +290,7 @@ final class PostRepository implements Bootable {
 	 * added by WorkflowManager.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int $post_id Post id.
 	 * @return array{post_id: int, post_title: string, post_type: string, post_status: string, post_author: int, status: string, reviewer_id: int, due_date: string}|array{}
@@ -305,6 +319,7 @@ final class PostRepository implements Bootable {
 	 * Whether a post exists and its type is workflow-enabled.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int $post_id Post id.
 	 * @return bool
@@ -319,6 +334,7 @@ final class PostRepository implements Bootable {
 	 * Does not check whether each post is managed (that would load every post).
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param int[] $post_ids Post ids.
 	 * @return array<int, string> Post id => status slug, in input order, unique
@@ -341,6 +357,7 @@ final class PostRepository implements Bootable {
 	 * `cache_users( array_filter( $result ) )`.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param int[] $post_ids Post ids.
 	 * @return array<int, int> Post id => reviewer id (`0` when none), in input
@@ -369,6 +386,8 @@ final class PostRepository implements Bootable {
 	 * `visible_to` through PermissionManager.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Accepts meta_query, tax_query, date_query and post__in.
+	 * @internal
 	 *
 	 * @param array $args {
 	 *     Query arguments.
@@ -386,6 +405,10 @@ final class PostRepository implements Bootable {
 	 *     @type int      $page        1-based page; default 1.
 	 *     @type int      $per_page    Posts per page; default 20, max 100.
 	 *     @type int      $visible_to  When positive, only posts this user authors or reviews.
+	 *     @type array    $meta_query  Extra `WP_Query` meta clauses, ANDed with the workflow clauses as one group.
+	 *     @type array    $tax_query   `WP_Query` taxonomy clauses.
+	 *     @type array    $date_query  `WP_Query` date clauses.
+	 *     @type int[]    $post__in    Restrict to these ids; non-positive ids are dropped, and none left matches nothing.
 	 * }
 	 * @return array{ids: int[], total: int} Empty when no post type remains or
 	 *                                       a filter value is invalid.
@@ -408,6 +431,31 @@ final class PostRepository implements Bootable {
 
 		if ( array() === $post_types || null === $meta_query ) {
 			return $empty;
+		}
+
+		$post__in = null;
+
+		if ( isset( $args['post__in'] ) && is_array( $args['post__in'] ) ) {
+			$post__in = array_values(
+				array_unique(
+					array_filter(
+						array_map( 'intval', array_filter( $args['post__in'], 'is_numeric' ) ),
+						static function ( $id ) {
+							return $id > 0;
+						}
+					)
+				)
+			);
+
+			// An empty `post__in` means "no restriction" to WP_Query: refuse it instead.
+			if ( array() === $post__in ) {
+				return $empty;
+			}
+		}
+
+		// Nested as one group so the extension's own `relation` cannot loosen the workflow clauses.
+		if ( isset( $args['meta_query'] ) && is_array( $args['meta_query'] ) && array() !== $args['meta_query'] ) {
+			$meta_query[] = $args['meta_query'];
 		}
 
 		$orderby    = isset( $args['orderby'] ) && in_array( $args['orderby'], array( 'title', 'date', 'due_date', 'status' ), true ) ? $args['orderby'] : 'date';
@@ -449,6 +497,18 @@ final class PostRepository implements Bootable {
 
 		if ( array() !== $meta_query ) {
 			$query_args['meta_query'] = array_merge( array( 'relation' => 'AND' ), $meta_query ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Workflow filters live in post meta; an index table is a documented Pro-scale follow-up.
+		}
+
+		if ( isset( $args['tax_query'] ) && is_array( $args['tax_query'] ) ) {
+			$query_args['tax_query'] = $args['tax_query']; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- Extension-supplied view filter (F4).
+		}
+
+		if ( isset( $args['date_query'] ) && is_array( $args['date_query'] ) ) {
+			$query_args['date_query'] = $args['date_query'];
+		}
+
+		if ( null !== $post__in ) {
+			$query_args['post__in'] = $post__in;
 		}
 
 		$query   = new WP_Query();
@@ -513,6 +573,7 @@ final class PostRepository implements Bootable {
 	 * `absint()`, which could otherwise point at a real user.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param mixed $value Raw value.
 	 * @return int Existing user id, or `0`.
@@ -539,6 +600,7 @@ final class PostRepository implements Bootable {
 	 * `2026-02-31` (PHP would roll it to March 3rd).
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param mixed $value Raw value.
 	 * @return string `Y-m-d`, or `''` when empty or invalid.
@@ -571,6 +633,7 @@ final class PostRepository implements Bootable {
 	 * with reviewer `0` for each cleared post.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param int $user_id Deleted user id.
 	 * @return int[] Ids of the posts whose reviewer was cleared.
@@ -678,6 +741,7 @@ final class PostRepository implements Bootable {
 		$requested = isset( $args['statuses'] ) ? array_filter( (array) $args['statuses'], 'is_string' ) : array();
 
 		if ( array() !== $requested ) {
+			// Site-wide context (F2).
 			$statuses = array_values( array_intersect( $this->statuses->slugs(), $requested ) );
 
 			if ( array() === $statuses ) {
@@ -759,6 +823,7 @@ final class PostRepository implements Bootable {
 	private function unfinished_status_clause(): ?array {
 		$final = array();
 
+		// Site-wide context (F2).
 		foreach ( $this->statuses->slugs() as $slug ) {
 			if ( $this->statuses->is_final( $slug ) ) {
 				$final[] = $slug;
@@ -803,6 +868,7 @@ final class PostRepository implements Bootable {
 	private function status_order_sql( string $order ): string {
 		global $wpdb;
 
+		// Site-wide context (F2).
 		$order        = 'ASC' === $order ? 'ASC' : 'DESC';
 		$slugs        = $this->statuses->slugs();
 		$placeholders = implode( ', ', array_fill( 0, count( $slugs ), '%s' ) );
@@ -870,16 +936,18 @@ final class PostRepository implements Bootable {
 	 * Resolves a raw stored status to a registered slug.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $post_id.
 	 *
-	 * @param mixed $raw Stored value.
+	 * @param mixed $raw     Stored value.
+	 * @param int   $post_id Post whose status registry applies.
 	 * @return string
 	 */
-	private function status_from_raw( $raw ): string {
+	private function status_from_raw( $raw, int $post_id ): string {
 		if ( null === $raw || '' === $raw ) {
 			return $this->statuses->default_status();
 		}
 
-		return $this->statuses->sanitize( $raw );
+		return $this->statuses->sanitize( $raw, $post_id );
 	}
 
 	/**

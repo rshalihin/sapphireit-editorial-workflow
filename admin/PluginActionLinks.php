@@ -22,6 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * keeps working wherever the page sits in the admin menu.
  *
  * @since 1.1.0
+ * @internal
  */
 final class PluginActionLinks implements Bootable {
 

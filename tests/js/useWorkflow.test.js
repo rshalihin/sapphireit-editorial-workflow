@@ -197,6 +197,57 @@ describe( 'useWorkflow', () => {
 		expect( result.current.activityVersion ).toBe( 0 );
 	} );
 
+	it( 'reports an extension veto verbatim and refetches', async () => {
+		const blocked = {
+			slug: 'approved',
+			label: 'Approved',
+			code: 'checklist_incomplete',
+			message: 'The checklist is not complete.',
+		};
+
+		apiFetch
+			.mockResolvedValueOnce( workflow() )
+			.mockRejectedValueOnce(
+				restError(
+					'checklist_incomplete',
+					'The checklist is not complete.',
+					422
+				)
+			)
+			.mockResolvedValueOnce(
+				workflow( {
+					available_transitions: [],
+					blocked_transitions: [ blocked ],
+				} )
+			);
+
+		const { result } = renderHook( () => useWorkflow( 42 ) );
+
+		await waitFor( () => expect( result.current.workflow ).not.toBeNull() );
+
+		let error;
+
+		await act( async () => {
+			error = await result.current.updateStatus( 'approved' );
+		} );
+
+		expect( apiFetch ).toHaveBeenCalledTimes( 3 );
+		expect( apiFetch.mock.calls[ 2 ][ 0 ] ).toEqual(
+			expect.objectContaining( { path: '/sit-cwm/v1/posts/42/workflow' } )
+		);
+		expect( apiFetch.mock.calls[ 2 ][ 0 ].method ).toBeUndefined();
+		expect( error ).toEqual( {
+			code: 'checklist_incomplete',
+			message: 'The checklist is not complete.',
+			status: 422,
+		} );
+		expect( result.current.error ).toEqual( error );
+		expect( result.current.workflow.blocked_transitions ).toEqual( [
+			blocked,
+		] );
+		expect( result.current.workflow.status ).toBe( 'review' );
+	} );
+
 	it( 'returns comment errors without setting the hook error', async () => {
 		apiFetch
 			.mockResolvedValueOnce( workflow() )

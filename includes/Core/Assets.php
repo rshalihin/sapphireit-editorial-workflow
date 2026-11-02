@@ -27,6 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * meta box, dashboard) decide when to call it.
  *
  * @since 1.0.0
+ * @internal
  */
 final class Assets {
 
@@ -210,6 +211,7 @@ final class Assets {
 
 		return array(
 			'restNamespace' => self::REST_NAMESPACE,
+			// Site-wide context (F2).
 			'statuses'      => array_values( $this->statuses->all() ),
 			'capabilities'  => $this->permissions->capability_flags(),
 			'postTypes'     => $post_types,

@@ -29,6 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * must sit behind this read API so its signatures stay stable.
  *
  * @since 1.0.0
+ * @api
  */
 final class ActivityLogger implements Bootable {
 
@@ -37,6 +38,7 @@ final class ActivityLogger implements Bootable {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Adds the publication actions.
+	 * @api
 	 * @var string[]
 	 */
 	const ACTIONS = array(
@@ -55,6 +57,7 @@ final class ActivityLogger implements Bootable {
 	 * native post statuses, not workflow statuses.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string[]
 	 */
 	const PUBLICATION_ACTIONS = array(
@@ -68,6 +71,7 @@ final class ActivityLogger implements Bootable {
 	 * Context keys `log_publication_event()` keeps (E7).
 	 *
 	 * @since 1.1.0
+	 * @internal
 	 * @var string[]
 	 */
 	const CONTEXT_KEYS = array( 'workflow_status', 'gate_mode', 'layer', 'source', 'reason' );
@@ -76,6 +80,7 @@ final class ActivityLogger implements Bootable {
 	 * Default page size for reads.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 * @var int
 	 */
 	const DEFAULT_PER_PAGE = 20;
@@ -84,6 +89,7 @@ final class ActivityLogger implements Bootable {
 	 * Largest page size for reads.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 * @var int
 	 */
 	const MAX_PER_PAGE = 100;
@@ -92,6 +98,7 @@ final class ActivityLogger implements Bootable {
 	 * Width of the `action` column.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 * @var int
 	 */
 	const ACTION_MAX_LENGTH = 50;
@@ -100,6 +107,7 @@ final class ActivityLogger implements Bootable {
 	 * Width of the `old_value` / `new_value` columns.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 * @var int
 	 */
 	const VALUE_MAX_LENGTH = 191;
@@ -116,6 +124,7 @@ final class ActivityLogger implements Bootable {
 	 * Constructor. Does not touch WordPress.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param Database $database Schema owner.
 	 */
@@ -127,6 +136,7 @@ final class ActivityLogger implements Bootable {
 	 * Attaches the post-deletion cleanup.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @return void
 	 */
@@ -138,6 +148,7 @@ final class ActivityLogger implements Bootable {
 	 * Action slugs `log()` accepts.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @return string[]
 	 */
@@ -173,6 +184,7 @@ final class ActivityLogger implements Bootable {
 	 * Whether an action slug may be logged.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param string $action Action slug.
 	 * @return bool
@@ -185,7 +197,7 @@ final class ActivityLogger implements Bootable {
 	 * Appends one activity entry.
 	 *
 	 * @since 1.0.0
-	 * @internal Callers must authorize first.
+	 * @api Callers must authorize first.
 	 *
 	 * @param int    $post_id Post id.
 	 * @param string $action  Registered action slug.
@@ -402,6 +414,7 @@ final class ActivityLogger implements Bootable {
 	 * A single activity entry.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int $id Activity id.
 	 * @return ActivityEntry|null Null when no such entry exists.
@@ -424,6 +437,7 @@ final class ActivityLogger implements Bootable {
 	 * One page of a post's activity.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int   $post_id Post id.
 	 * @param array $args    {
@@ -485,6 +499,7 @@ final class ActivityLogger implements Bootable {
 	 * Number of activity entries for a post.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int   $post_id Post id.
 	 * @param array $args    Optional. Honours `action`, as in `get_for_post()`.
@@ -522,6 +537,7 @@ final class ActivityLogger implements Bootable {
 	 * on every MySQL/MariaDB version WordPress supports.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param int[] $post_ids Post ids.
 	 * @param int   $per_post Entries per post, newest first; 1 to 100.
@@ -567,6 +583,7 @@ final class ActivityLogger implements Bootable {
 	 * Deletes every activity entry of a post.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param int $post_id Post id.
 	 * @return int Rows deleted.
@@ -591,6 +608,7 @@ final class ActivityLogger implements Bootable {
 	 * trashed, so trashed posts keep their history.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param int $post_id Post id.
 	 * @return void

@@ -16,6 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * One row of the activity table (D8), immutable once built.
  *
  * @since 1.0.0
+ * @api
  */
 final class ActivityEntry {
 
@@ -95,6 +96,7 @@ final class ActivityEntry {
 	 * Constructor.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param int         $id         Row id.
 	 * @param int         $post_id    Post id.
@@ -135,6 +137,7 @@ final class ActivityEntry {
 	 * unserialized and reads as an empty array.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param object $row Row as returned by `$wpdb->get_results()`.
 	 * @return self
@@ -164,6 +167,7 @@ final class ActivityEntry {
 	 * Plain array form, for REST responses and hook consumers.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @return array{id: int, post_id: int, user_id: int, action: string, old_value: string|null, new_value: string|null, message: string|null, context: array, created_at: string}
 	 */
@@ -185,6 +189,7 @@ final class ActivityEntry {
 	 * Row id.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @return int
 	 */
@@ -196,6 +201,7 @@ final class ActivityEntry {
 	 * Post id.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @return int
 	 */
@@ -207,6 +213,7 @@ final class ActivityEntry {
 	 * Acting user id; `0` for the system.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @return int
 	 */
@@ -218,6 +225,7 @@ final class ActivityEntry {
 	 * Action slug.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @return string
 	 */
@@ -229,6 +237,7 @@ final class ActivityEntry {
 	 * Previous value.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @return string|null
 	 */
@@ -240,6 +249,7 @@ final class ActivityEntry {
 	 * New value.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @return string|null
 	 */
@@ -251,6 +261,7 @@ final class ActivityEntry {
 	 * Message (comment body). Escape or `wp_kses_post()` again at render time.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @return string|null
 	 */
@@ -262,6 +273,7 @@ final class ActivityEntry {
 	 * Extra structured data.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @return array
 	 */
@@ -273,6 +285,7 @@ final class ActivityEntry {
 	 * Creation time, UTC, `Y-m-d H:i:s`. Localize only at render time.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @return string
 	 */

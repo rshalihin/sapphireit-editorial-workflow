@@ -27,6 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * avatar only, and search never matches logins or email addresses.
  *
  * @since 1.0.0
+ * @internal
  */
 class UserController extends AbstractController {
 

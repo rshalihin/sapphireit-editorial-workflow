@@ -20,6 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * in unit tests without WordPress loaded.
  *
  * @since 1.0.0
+ * @internal
  */
 interface Bootable {
 

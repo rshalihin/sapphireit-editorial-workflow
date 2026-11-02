@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * The table name is built only by `table_name()`; every consumer calls it.
  *
  * @since 1.0.0
+ * @internal
  */
 final class Database {
 

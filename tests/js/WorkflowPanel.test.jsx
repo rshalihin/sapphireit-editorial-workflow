@@ -135,6 +135,71 @@ describe( 'WorkflowPanel self-approval note', () => {
 	} );
 } );
 
+describe( 'WorkflowPanel blocked transitions', () => {
+	const CHECKLIST = 'The checklist is not complete.';
+
+	const reviewStage = ( overrides = {} ) =>
+		makeWorkflow( {
+			status: 'review',
+			status_label: 'Review',
+			available_transitions: [
+				{
+					slug: 'needs_changes',
+					label: 'Needs Changes',
+					is_forward: false,
+					is_rollback: true,
+				},
+			],
+			...overrides,
+		} );
+
+	it.each( [
+		[ 'block editor', () => <WorkflowPanel postId={ 42 } /> ],
+		[ 'classic', () => <ClassicPanel postId={ 42 } postType="post" /> ],
+	] )(
+		'shows the vetoed move disabled, with its reason, in the %s panel',
+		( name, panel ) => {
+			mockWorkflow(
+				reviewStage( {
+					blocked_transitions: [
+						{
+							slug: 'approved',
+							label: 'Approved',
+							code: 'checklist_incomplete',
+							message: CHECKLIST,
+						},
+					],
+				} )
+			);
+
+			render( panel() );
+
+			const offered = screen.getByRole( 'button', {
+				name: 'Move to Needs Changes',
+			} );
+			const blocked = screen.getByRole( 'button', {
+				name: 'Move to Approved',
+			} );
+
+			expect( offered.getAttribute( 'aria-disabled' ) ).toBeNull();
+			expect( offered.disabled ).toBe( false );
+			expect( blocked.getAttribute( 'aria-disabled' ) ).toBe( 'true' );
+			expect( screen.getByText( CHECKLIST ) ).toBeTruthy();
+		}
+	);
+
+	it( 'shows no blocked section when an older server sends none', () => {
+		mockWorkflow( reviewStage() );
+
+		const { container } = render( <WorkflowPanel postId={ 42 } /> );
+
+		expect(
+			screen.getByRole( 'button', { name: 'Move to Needs Changes' } )
+		).toBeTruthy();
+		expect( container.querySelector( '.sit-cwm-blocked' ) ).toBeNull();
+	} );
+} );
+
 describe( 'WorkflowPanel onStatusChanged', () => {
 	it( 'is called once after a successful transition', async () => {
 		const onStatusChanged = jest.fn();

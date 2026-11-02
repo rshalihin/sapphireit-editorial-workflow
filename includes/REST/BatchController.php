@@ -35,6 +35,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * action, missing payload) is a 400.
  *
  * @since 1.0.0
+ * @internal
  */
 class BatchController extends AbstractController {
 
@@ -140,6 +141,7 @@ class BatchController extends AbstractController {
 				'properties'           => array(
 					'status'      => array(
 						'type' => 'string',
+						// Site-wide context (F2).
 						'enum' => $this->statuses->slugs(),
 					),
 					'reviewer_id' => array(

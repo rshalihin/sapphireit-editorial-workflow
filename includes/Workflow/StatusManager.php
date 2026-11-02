@@ -21,6 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * result is validated so a misbehaving extension cannot corrupt core.
  *
  * @since 1.0.0
+ * @api
  */
 final class StatusManager {
 
@@ -28,6 +29,7 @@ final class StatusManager {
 	 * Slug assigned to managed posts that have no workflow status yet.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 * @var string
 	 */
 	const DEFAULT_STATUS = 'draft';
@@ -36,6 +38,7 @@ final class StatusManager {
 	 * Colour used when a filtered status omits a valid one.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 * @var string
 	 */
 	const FALLBACK_COLOR = '#757575';
@@ -44,6 +47,7 @@ final class StatusManager {
 	 * Order used when a filtered status omits a valid one (sorts last).
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 * @var int
 	 */
 	const FALLBACK_ORDER = 1000;
@@ -54,6 +58,7 @@ final class StatusManager {
 	 * Bounds memory in long loops (export, batch) without an LRU.
 	 *
 	 * @since 1.2.0
+	 * @internal
 	 * @var int
 	 */
 	const MEMO_LIMIT = 256;
@@ -72,6 +77,7 @@ final class StatusManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Added $post_id.
+	 * @api
 	 *
 	 * @param int $post_id Post id; 0 when the question is not about one post.
 	 * @return array<string, array{slug: string, label: string, description: string, color: string, order: int, is_final: bool}>
@@ -102,6 +108,7 @@ final class StatusManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Added $post_id.
+	 * @api
 	 *
 	 * @param int $post_id Post id; 0 when the question is not about one post.
 	 * @return string[]
@@ -115,6 +122,7 @@ final class StatusManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Added $post_id.
+	 * @api
 	 *
 	 * @param string $slug    Status slug.
 	 * @param int    $post_id Post id; 0 when the question is not about one post.
@@ -131,6 +139,7 @@ final class StatusManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Added $post_id.
+	 * @api
 	 *
 	 * @param string $slug    Status slug.
 	 * @param int    $post_id Post id; 0 when the question is not about one post.
@@ -145,6 +154,7 @@ final class StatusManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Added $post_id.
+	 * @api
 	 *
 	 * @param string $slug    Status slug.
 	 * @param int    $post_id Post id; 0 when the question is not about one post.
@@ -160,6 +170,7 @@ final class StatusManager {
 	 * Slug assigned to managed posts that have no workflow status yet.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @return string
 	 */
@@ -172,6 +183,7 @@ final class StatusManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Added $post_id.
+	 * @api
 	 *
 	 * @param string $slug    Status slug.
 	 * @param int    $post_id Post id; 0 when the question is not about one post.
@@ -196,6 +208,7 @@ final class StatusManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Added $post_id.
+	 * @api
 	 *
 	 * @param mixed $value   Raw value.
 	 * @param mixed $post_id Post id whose registry applies; 0 or any non-int for the site-wide one.
@@ -226,6 +239,7 @@ final class StatusManager {
 	 * before writing.
 	 *
 	 * @since 1.2.0
+	 * @internal
 	 *
 	 * @param mixed $value Raw value.
 	 * @return string A canonical slug, or the default status.
@@ -249,6 +263,7 @@ final class StatusManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Empties every post's entry.
+	 * @api
 	 *
 	 * @return void
 	 */

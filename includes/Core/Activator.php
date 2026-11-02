@@ -19,6 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Runs on plugin activation. Idempotent: safe on every reactivation.
  *
  * @since 1.0.0
+ * @internal
  */
 final class Activator {
 

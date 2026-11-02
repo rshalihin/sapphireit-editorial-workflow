@@ -14,7 +14,8 @@ the code.
 - [Structure vs. authorization](#structure-vs-authorization)
 - [Publishing](#publishing) *(publish gate and publication log)*
 - [Notifications](#notifications)
-- [Hooks added in 1.1](#hooks-added-in-11)
+- [Public API (frozen in 1.2.0)](#public-api-frozen-in-120)
+- [Hooks](#hooks)
 - [Data model](#data-model)
 - [Known trade-offs](#known-trade-offs)
 - [Authorization](#authorization-sit_cwmworkflowpermissionmanager) *(detail)*
@@ -507,25 +508,275 @@ reviewer `0`, which resolves to nobody.
 
 ---
 
-## Hooks added in 1.1
+## Public API (frozen in 1.2.0)
 
-The full 1.0 list is in the [README](README.md#extensibility). Every new 1.1
-class is `@internal`; these hooks are the public surface.
+What an add-on (Pro included) may call from PHP. Every class under
+`includes/` and `admin/` carries exactly one of `@api` or `@internal` in its
+class docblock. Inside an `@api` class, every public method and constant says
+which it is; constructors are always `@internal`, because add-ons get
+instances from the container rather than building them.
+`tests/php/integration/ApiSurfaceTest.php` fails when code and this section
+drift apart: an untagged class, an `@api` method missing below, or a method
+listed below that no longer exists.
 
-| Kind | Name | Args |
-|---|---|---|
-| filter | `sit_cwm_publish_gate_mode` | `string $mode, string $post_type, int $post_id` (`0` when not about one post). A value outside `PublishGate::MODES` resolves to `off` |
-| filter | `sit_cwm_publish_gate_passes` | `bool $passes, int $post_id, string $workflow_status, string $mode`; return `bool\|WP_Error`. Only `true` passes; a `WP_Error` is treated as `false` and its message is not shown yet |
-| action | `sit_cwm_publish_gate_refused` | `int $post_id, GateDecision $decision, int $user_id, string $layer` |
-| action | `sit_cwm_publish_gate_bypassed` | `int $post_id, GateDecision $decision, int $user_id, string $layer` (reason `log_only` or `capability`) |
-| action | `sit_cwm_publish_gate_failed` | `string $layer, Throwable $error, int $post_id` |
-| filter | `sit_cwm_notification_recipients` | `int[] $user_ids, string $event, int $post_id, int $actor_id` |
-| filter | `sit_cwm_notification_message` | `array{subject: string, body: string} $message, string $event, int $post_id, int $recipient_id` |
-| action | `sit_cwm_notification_sent` | `string $event, int $post_id, int $recipient_id, bool $sent` |
-| filter | `sit_cwm_prevent_self_approval` | `bool $prevent, int $post_id`. Defaults to the "Prevent people from approving their own content" setting; only `true` prevents (E16) |
+Get services from the booted plugin, either on the `sit_cwm_loaded` action
+(`$plugin->container()`) or through `sit_cwm_container()` at any time after
+`plugins_loaded` priority 10, when it stops returning `null`.
 
-`$layer` is one of `rest`, `save`, `schedule`, `backstop`. Publication rows fire
-the existing `sit_cwm_activity_logged`; there is no separate publication action.
+### Stability rule
+
+- Breaking an `@api` signature or documented behaviour requires a **major** version (2.0.0).
+- Adding an optional trailing parameter, a new method, or a new key in a returned array is a minor change.
+- Every `sit_cwm_*` hook in the [Hooks](#hooks) table is covered by the same rule.
+
+Everything tagged `@internal` (every REST controller, enforcement layer, admin
+screen and notification class among them) may change in any release. Reach
+that behaviour through hooks and REST, not PHP calls.
+
+### Classes and methods
+
+Signatures are written as they appear in code; "Returns" is the docblock type
+where the code cannot declare it (`true|WP_Error`). "Since" lists the version
+that added the method, then each version that changed it.
+
+Global functions: `sit_cwm_container(): ?\Sit_Cwm\Core\Container` (1.2.0), null
+before the plugin has booted.
+
+#### `Core\Plugin`
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Core\Plugin::instance(` | `static instance(): ?Plugin` | `Plugin\|null` | 1.2.0 |
+| `Core\Plugin::container(` | `container(): Container` | `Container` | 1.0.0 |
+
+#### `Core\Container`
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Core\Container::get(` | `get( string $id )` | `mixed` | 1.0.0 |
+| `Core\Container::has(` | `has( string $id ): bool` | `bool` | 1.0.0 |
+
+#### `Core\Settings`
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Core\Settings::all(` | `all(): array` | `array{post_types:` | 1.0.0 |
+| `Core\Settings::get(` | `get( string $key, $default_value = null )` | `mixed` | 1.0.0 |
+| `Core\Settings::gate_modes(` | `gate_modes(): array` | `array<string,` | 1.1.0 |
+| `Core\Settings::is_notification_enabled(` | `is_notification_enabled( string $event ): bool` | `bool` | 1.1.0 |
+| `Core\Settings::prevents_self_approval(` | `prevents_self_approval(): bool` | `bool` | 1.1.0 |
+| `Core\Settings::enabled_post_types(` | `enabled_post_types(): array` | `string[]` | 1.0.0 |
+| `Core\Settings::is_post_type_enabled(` | `is_post_type_enabled( string $post_type ): bool` | `bool` | 1.0.0 |
+
+#### `Workflow\StatusManager`
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Workflow\StatusManager::all(` | `all( int $post_id = 0 ): array` | `array<string,` | 1.0.0; 1.2.0: Added $post_id |
+| `Workflow\StatusManager::slugs(` | `slugs( int $post_id = 0 ): array` | `string[]` | 1.0.0; 1.2.0: Added $post_id |
+| `Workflow\StatusManager::get(` | `get( string $slug, int $post_id = 0 ): ?array` | `array\|null` | 1.0.0; 1.2.0: Added $post_id |
+| `Workflow\StatusManager::exists(` | `exists( string $slug, int $post_id = 0 ): bool` | `bool` | 1.0.0; 1.2.0: Added $post_id |
+| `Workflow\StatusManager::label(` | `label( string $slug, int $post_id = 0 ): string` | `string` | 1.0.0; 1.2.0: Added $post_id |
+| `Workflow\StatusManager::default_status(` | `default_status(): string` | `string` | 1.0.0 |
+| `Workflow\StatusManager::is_final(` | `is_final( string $slug, int $post_id = 0 ): bool` | `bool` | 1.0.0; 1.2.0: Added $post_id |
+| `Workflow\StatusManager::sanitize(` | `sanitize( $value, $post_id = 0 ): string` | `string` | 1.0.0; 1.2.0: Added $post_id |
+| `Workflow\StatusManager::flush(` | `flush(): void` | `void` | 1.0.0; 1.2.0: Empties every post's entry |
+
+#### `Workflow\TransitionManager`
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Workflow\TransitionManager::map(` | `map( int $post_id = 0 ): array` | `array<string,` | 1.0.0; 1.2.0: Added $post_id |
+| `Workflow\TransitionManager::targets_for(` | `targets_for( string $from, int $post_id = 0 ): array` | `string[]` | 1.0.0; 1.2.0: Added $post_id |
+| `Workflow\TransitionManager::is_valid(` | `is_valid( string $from, string $to, int $post_id = 0 ): bool` | `bool` | 1.0.0; 1.2.0: Added $post_id |
+| `Workflow\TransitionManager::describe(` | `describe( string $from, string $to, int $post_id = 0 ): array` | `array{slug:` | 1.0.0; 1.2.0: Added $post_id |
+| `Workflow\TransitionManager::flush(` | `flush(): void` | `void` | 1.0.0; 1.2.0: Empties every post's entry |
+
+#### `Workflow\PermissionManager`
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Workflow\PermissionManager::can_manage(` | `can_manage( ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::can_bypass_publish_gate(` | `can_bypass_publish_gate( ?int $user_id = null ): bool` | `bool` | 1.1.0 |
+| `Workflow\PermissionManager::can_attempt_batch(` | `can_attempt_batch( ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::can_be_reviewer(` | `can_be_reviewer( int $reviewer_id ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::capability_flags(` | `capability_flags( ?int $user_id = null ): array` | `array<string,` | 1.0.0 |
+| `Workflow\PermissionManager::can_view_statuses(` | `can_view_statuses( ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::dashboard_post_types(` | `dashboard_post_types( ?int $user_id = null ): array` | `string[]` | 1.0.0 |
+| `Workflow\PermissionManager::can_view_dashboard(` | `can_view_dashboard( ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::can_access_dashboard(` | `can_access_dashboard( ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::can_see_all_posts(` | `can_see_all_posts( array $post_types, ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::can_list_reviewers(` | `can_list_reviewers( int $post_id = 0, ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::reviewer_capabilities(` | `reviewer_capabilities( int $post_id = 0 ): array` | `string[]` | 1.0.0 |
+| `Workflow\PermissionManager::can_view_activity(` | `can_view_activity( int $post_id, ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::can_read_post(` | `can_read_post( int $post_id, ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::can_edit_post(` | `can_edit_post( int $post_id, ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::can_assign_reviewer(` | `can_assign_reviewer( int $post_id, ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::can_set_due_date(` | `can_set_due_date( int $post_id, ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::can_comment(` | `can_comment( int $post_id, ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::can_change_status(` | `can_change_status( int $post_id, string $to, ?int $user_id = null ): bool` | `bool` | 1.0.0; 1.1.0: Refuses `approved` to the post's author when self-approval is prevented; 1.2.0: Delegates to `check_change_status()` |
+| `Workflow\PermissionManager::check_change_status(` | `check_change_status( int $post_id, string $to, ?int $user_id = null )` | `true\|WP_Error` | 1.2.0 |
+| `Workflow\PermissionManager::is_self_approval_blocked(` | `is_self_approval_blocked( int $post_id, ?int $user_id = null ): bool` | `bool` | 1.1.0 |
+| `Workflow\PermissionManager::excluded_reviewers(` | `excluded_reviewers( int $post_id ): array` | `int[]` | 1.1.0 |
+| `Workflow\PermissionManager::capability_for_status(` | `capability_for_status( string $to, int $post_id = 0 ): string` | `string` | 1.0.0; 1.2.0: Added $post_id |
+
+#### `Workflow\WorkflowManager`
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Workflow\WorkflowManager::get_status(` | `get_status( int $post_id ): string` | `string` | 1.0.0 |
+| `Workflow\WorkflowManager::get_workflow(` | `get_workflow( int $post_id, ?int $user_id = null ): array` | `array` | 1.0.0; 1.2.0: Adds `blocked_transitions` |
+| `Workflow\WorkflowManager::get_capability_hints(` | `get_capability_hints( int $post_id, array $transitions, ?int $user_id = null ): array` | `array{can_change_status:` | 1.0.0 |
+| `Workflow\WorkflowManager::get_available_transitions(` | `get_available_transitions( int $post_id, ?int $user_id = null ): array` | `array<int,` | 1.0.0 |
+| `Workflow\WorkflowManager::get_blocked_transitions(` | `get_blocked_transitions( int $post_id, ?int $user_id = null ): array` | `array<int,` | 1.2.0 |
+| `Workflow\WorkflowManager::can_transition(` | `can_transition( int $post_id, string $from, string $to, ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\WorkflowManager::check_transition(` | `check_transition( int $post_id, string $from, string $to, ?int $user_id = null )` | `true\|WP_Error` | 1.0.0 |
+| `Workflow\WorkflowManager::transition(` | `transition( int $post_id, string $from, string $to, ?int $user_id = null )` | `true\|WP_Error` | 1.0.0 |
+| `Workflow\WorkflowManager::assign_reviewer(` | `assign_reviewer( int $post_id, int $reviewer_id, ?int $user_id = null )` | `true\|WP_Error` | 1.0.0; 1.1.0: Refuses the post's author while self-approval is prevented |
+| `Workflow\WorkflowManager::set_due_date(` | `set_due_date( int $post_id, string $date, ?int $user_id = null )` | `true\|WP_Error` | 1.0.0 |
+| `Workflow\WorkflowManager::add_comment(` | `add_comment( int $post_id, string $message, ?int $user_id = null )` | `int\|WP_Error` | 1.0.0 |
+
+#### `Workflow\Capabilities`
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Workflow\Capabilities::all(` | `static all(): array` | `string[]` | 1.0.0 |
+
+Constants (`@api`): `MANAGE_WORKFLOWS`, `CHANGE_WORKFLOW`, `ASSIGN_REVIEWER`, `REVIEW_CONTENT`, `APPROVE_CONTENT`, `VIEW_ACTIVITY`, `BYPASS_PUBLISH_GATE`, `REVISION`, `REVISION_OPTION`.
+
+#### `Content\PostRepository`
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Content\PostRepository::get_status(` | `get_status( int $post_id ): string` | `string` | 1.0.0 |
+| `Content\PostRepository::has_unknown_status(` | `has_unknown_status( int $post_id ): bool` | `bool` | 1.0.0 |
+| `Content\PostRepository::get_reviewer_id(` | `get_reviewer_id( int $post_id ): int` | `int` | 1.0.0 |
+| `Content\PostRepository::get_due_date(` | `get_due_date( int $post_id ): string` | `string` | 1.0.0 |
+| `Content\PostRepository::get_workflow(` | `get_workflow( int $post_id ): array` | `array{post_id:` | 1.0.0 |
+| `Content\PostRepository::is_managed(` | `is_managed( int $post_id ): bool` | `bool` | 1.0.0 |
+
+Constants (`@api`): `META_STATUS`, `META_REVIEWER`, `META_DUE_DATE`, `META_PUBLISH_BYPASS`.
+
+#### `Activity\ActivityLogger`
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Activity\ActivityLogger::get_actions(` | `get_actions(): array` | `string[]` | 1.0.0 |
+| `Activity\ActivityLogger::is_valid_action(` | `is_valid_action( string $action ): bool` | `bool` | 1.0.0 |
+| `Activity\ActivityLogger::log(` | `log( int $post_id, string $action, array $args = array() ): int` | `int` | 1.0.0 |
+| `Activity\ActivityLogger::get(` | `get( int $id ): ?ActivityEntry` | `ActivityEntry\|null` | 1.0.0 |
+| `Activity\ActivityLogger::get_for_post(` | `get_for_post( int $post_id, array $args = array() ): array` | `ActivityEntry[]` | 1.0.0 |
+| `Activity\ActivityLogger::count_for_post(` | `count_for_post( int $post_id, array $args = array() ): int` | `int` | 1.0.0 |
+| `Activity\ActivityLogger::get_for_posts(` | `get_for_posts( array $post_ids, int $per_post = 1 ): array` | `array<int,` | 1.0.0 |
+
+Constants (`@api`): `ACTIONS`, `PUBLICATION_ACTIONS`.
+
+#### `Activity\ActivityEntry`
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Activity\ActivityEntry::get_id(` | `get_id(): int` | `int` | 1.0.0 |
+| `Activity\ActivityEntry::get_post_id(` | `get_post_id(): int` | `int` | 1.0.0 |
+| `Activity\ActivityEntry::get_user_id(` | `get_user_id(): int` | `int` | 1.0.0 |
+| `Activity\ActivityEntry::get_action(` | `get_action(): string` | `string` | 1.0.0 |
+| `Activity\ActivityEntry::get_old_value(` | `get_old_value(): ?string` | `string\|null` | 1.0.0 |
+| `Activity\ActivityEntry::get_new_value(` | `get_new_value(): ?string` | `string\|null` | 1.0.0 |
+| `Activity\ActivityEntry::get_message(` | `get_message(): ?string` | `string\|null` | 1.0.0 |
+| `Activity\ActivityEntry::get_context(` | `get_context(): array` | `array` | 1.0.0 |
+| `Activity\ActivityEntry::get_created_at(` | `get_created_at(): string` | `string` | 1.0.0 |
+
+#### `Publishing\PublishGate`
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Publishing\PublishGate::mode_for(` | `mode_for( string $post_type, int $post_id = 0 ): string` | `string` | 1.1.0 |
+| `Publishing\PublishGate::evaluate(` | `evaluate( int $post_id, string $post_type, int $user_id ): GateDecision` | `GateDecision` | 1.1.0 |
+| `Publishing\PublishGate::describe(` | `describe( int $post_id, int $user_id ): array` | `array{mode:` | 1.1.0 |
+
+Constants (`@api`): `MODE_OFF`, `MODE_LOG_ONLY`, `MODE_ENFORCE`, `MODES`, `PUBLISH_STATUSES`, `PUBLISHABLE_STATUSES`.
+
+#### `Publishing\GateDecision`
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Publishing\GateDecision::not_applicable(` | `static not_applicable( string $mode ): self` | `self` | 1.1.0 |
+| `Publishing\GateDecision::failed_open(` | `static failed_open( string $mode, string $workflow_status ): self` | `self` | 1.1.0 |
+| `Publishing\GateDecision::outcome(` | `outcome(): string` | `string` | 1.1.0 |
+| `Publishing\GateDecision::mode(` | `mode(): string` | `string` | 1.1.0 |
+| `Publishing\GateDecision::workflow_status(` | `workflow_status(): string` | `string` | 1.1.0 |
+| `Publishing\GateDecision::reason(` | `reason(): string` | `string` | 1.1.0 |
+| `Publishing\GateDecision::is_refused(` | `is_refused(): bool` | `bool` | 1.1.0 |
+| `Publishing\GateDecision::is_bypassed(` | `is_bypassed(): bool` | `bool` | 1.1.0 |
+| `Publishing\GateDecision::applies(` | `applies(): bool` | `bool` | 1.1.0 |
+
+Constants (`@api`): `OUTCOME_NOT_APPLICABLE`, `OUTCOME_ALLOWED`, `OUTCOME_BYPASSED`, `OUTCOME_REFUSED`, `OUTCOMES`, `REASON_NONE`, `REASON_APPROVED`, `REASON_LOG_ONLY`, `REASON_CAPABILITY`, `REASON_ERROR`.
+
+### Service ids
+
+`$container->get( $id )` returns the same shared instance every time. These
+ids are frozen; every other id is `@internal`.
+
+- `settings`: `Core\Settings`
+- `status_manager`: `Workflow\StatusManager`
+- `transition_manager`: `Workflow\TransitionManager`
+- `permission_manager`: `Workflow\PermissionManager`
+- `post_repository`: `Content\PostRepository`
+- `activity_logger`: `Activity\ActivityLogger`
+- `workflow_manager`: `Workflow\WorkflowManager`
+- `publish_gate`: `Publishing\PublishGate`
+
+### Site-wide context contract
+
+Every registry read takes a trailing `int $post_id = 0`, and the four registry
+filters receive it. Some callers ask without a post (`$post_id = 0`): the
+dashboard status filter and its SQL ordering and "unfinished" clauses, the
+editor bootstrap data, `GET /sit-cwm/v1/statuses` and the batch route's
+`status` enum. An extension that varies statuses per post **must return, for
+`$post_id = 0`, every status any post can have** (a superset). Free core does
+not compute that union itself, because it would have to evaluate the filter
+for every post.
+
+---
+
+## Hooks
+
+Every `sit_cwm_*` hook, covered by the [stability rule](#stability-rule).
+"Since" is the version of the current signature. The
+[README](README.md#extensibility) explains the 1.0 hooks in prose.
+
+| Kind | Name | Args | Since |
+|---|---|---|---|
+| action | `sit_cwm_loaded` | `Plugin $plugin`. Fires once per request, at the end of `boot()`, after the core (and, in wp-admin, admin) services are registered. REST controllers register later, on `rest_api_init` | 1.2.0 |
+| action | `sit_cwm_status_changed` | `int $post_id, string $from, string $to, int $user_id` | 1.0.0 |
+| action | `sit_cwm_reviewer_assigned` | `int $post_id, int $reviewer_id, int $previous_id, int $user_id` | 1.0.0 |
+| action | `sit_cwm_due_date_changed` | `int $post_id, string $date, string $previous, int $user_id` | 1.0.0 |
+| action | `sit_cwm_comment_added` | `int $post_id, int $activity_id, string $message, int $user_id` | 1.0.0 |
+| action | `sit_cwm_activity_logged` | `int $activity_id, ActivityEntry $entry`. Publication rows fire it too; there is no separate publication action | 1.0.0 |
+| action | `sit_cwm_db_upgraded` | `string $from_version, string $to_version` | 1.0.0 |
+| filter | `sit_cwm_statuses` | `array $statuses, int $post_id`. **Signature changed in 1.2.0** (added `$post_id`; see the [site-wide context contract](#site-wide-context-contract)) | 1.2.0 |
+| filter | `sit_cwm_transition_map` | `array $map, int $post_id`. **Signature changed in 1.2.0** | 1.2.0 |
+| filter | `sit_cwm_rollback_transitions` | `array $rollbacks, int $post_id`. **Signature changed in 1.2.0** | 1.2.0 |
+| filter | `sit_cwm_status_capability_map` | `array $map, int $post_id`. **Signature changed in 1.2.0** | 1.2.0 |
+| filter | `sit_cwm_can_transition` | `bool $allowed, int $post_id, string $from, string $to, int $user_id`; return `bool\|WP_Error`. **Signature changed in 1.2.0**: a `WP_Error` denies with its own code and message, but only when the capability checks passed (see [the contract](#the-sit_cwm_can_transition-contract)) | 1.2.0 |
+| filter | `sit_cwm_available_transitions` | `array $transitions, int $post_id, string $from, int $user_id` | 1.0.0 |
+| filter | `sit_cwm_enabled_post_types` | `string[] $post_types` | 1.0.0 |
+| filter | `sit_cwm_available_post_types` | `array $post_types` | 1.0.0 |
+| filter | `sit_cwm_activity_actions` | `string[] $actions` | 1.0.0 |
+| filter | `sit_cwm_activity_action_labels` | `array $labels` | 1.0.0 |
+| filter | `sit_cwm_assignable_reviewers` | `array $query, int $post_id, int $user_id` | 1.0.0 |
+| filter | `sit_cwm_publish_gate_mode` | `string $mode, string $post_type, int $post_id` (`0` when not about one post). A value outside `PublishGate::MODES` resolves to `off` | 1.1.0 |
+| filter | `sit_cwm_publish_gate_passes` | `bool $passes, int $post_id, string $workflow_status, string $mode`; return `bool\|WP_Error`. Only `true` passes; a `WP_Error` is treated as `false` and its message is not shown yet | 1.1.0 |
+| action | `sit_cwm_publish_gate_refused` | `int $post_id, GateDecision $decision, int $user_id, string $layer` | 1.1.0 |
+| action | `sit_cwm_publish_gate_bypassed` | `int $post_id, GateDecision $decision, int $user_id, string $layer` (reason `log_only` or `capability`) | 1.1.0 |
+| action | `sit_cwm_publish_gate_failed` | `string $layer, Throwable $error, int $post_id` | 1.1.0 |
+| filter | `sit_cwm_notification_recipients` | `int[] $user_ids, string $event, int $post_id, int $actor_id` | 1.1.0 |
+| filter | `sit_cwm_notification_message` | `array{subject: string, body: string} $message, string $event, int $post_id, int $recipient_id` | 1.1.0 |
+| action | `sit_cwm_notification_sent` | `string $event, int $post_id, int $recipient_id, bool $sent` | 1.1.0 |
+| filter | `sit_cwm_prevent_self_approval` | `bool $prevent, int $post_id`. Defaults to the "Prevent people from approving their own content" setting; only `true` prevents (E16) | 1.1.0 |
+| filter | `sit_cwm_posts_query_args` | `array $args, WP_REST_Request $request, int $user_id`. May add `meta_query`, `tax_query`, `date_query` and `post__in`; `post_types` can only narrow, and `visible_to` is always reset | 1.2.0 |
+| filter | `sit_cwm_admin_menu_position` | `int\|float $position`. Default `Dashboard::MENU_POSITION` (26, after Comments); a non-numeric value falls back to it | 1.2.0 |
+
+`$layer` is one of `rest`, `save`, `schedule`, `backstop`.
 
 ---
 

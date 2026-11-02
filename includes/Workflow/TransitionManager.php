@@ -23,6 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * self-transition.
  *
  * @since 1.0.0
+ * @api
  */
 final class TransitionManager {
 
@@ -30,6 +31,7 @@ final class TransitionManager {
 	 * Core transition map (D4): source slug => ordered list of target slugs.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 * @var array<string, string[]>
 	 */
 	const MAP = array(
@@ -45,6 +47,7 @@ final class TransitionManager {
 	 * Core transitions that send content backwards in the workflow.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 * @var array<string, string[]>
 	 */
 	const ROLLBACKS = array(
@@ -59,6 +62,7 @@ final class TransitionManager {
 	 * Bounds memory in long loops (export, batch) without an LRU.
 	 *
 	 * @since 1.2.0
+	 * @internal
 	 * @var int
 	 */
 	const MEMO_LIMIT = 256;
@@ -93,6 +97,7 @@ final class TransitionManager {
 	 * Constructor.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param StatusManager $statuses Status registry.
 	 */
@@ -108,6 +113,7 @@ final class TransitionManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Added $post_id.
+	 * @api
 	 *
 	 * @param int $post_id Post id; 0 when the question is not about one post.
 	 * @return array<string, string[]> Source slug => ordered target slugs.
@@ -154,6 +160,7 @@ final class TransitionManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Added $post_id.
+	 * @api
 	 *
 	 * @param string $from    Current status slug.
 	 * @param int    $post_id Post id; 0 when the question is not about one post.
@@ -172,6 +179,7 @@ final class TransitionManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Added $post_id.
+	 * @api
 	 *
 	 * @param string $from    Current status slug.
 	 * @param string $to      Target status slug.
@@ -190,6 +198,7 @@ final class TransitionManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Added $post_id.
+	 * @api
 	 *
 	 * @param string $from    Current status slug.
 	 * @param string $to      Target status slug.
@@ -214,6 +223,7 @@ final class TransitionManager {
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Empties every post's entry.
+	 * @api
 	 *
 	 * @return void
 	 */

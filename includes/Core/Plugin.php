@@ -52,6 +52,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Wires services into the container and registers them at the right time.
  *
  * @since 1.0.0
+ * @api
  */
 final class Plugin {
 
@@ -69,6 +70,7 @@ final class Plugin {
 	 * before its class lands. Services that are not `Bootable` are skipped too.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 * @var array<string, string[]>
 	 */
 	const BOOT_PHASES = array(
@@ -106,6 +108,14 @@ final class Plugin {
 	);
 
 	/**
+	 * The booted plugin, or null before `boot()` runs.
+	 *
+	 * @since 1.2.0
+	 * @var Plugin|null
+	 */
+	private static $instance = null;
+
+	/**
 	 * Service container.
 	 *
 	 * @since 1.0.0
@@ -125,6 +135,7 @@ final class Plugin {
 	 * Constructor. Does not touch WordPress.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param Container $container Service container.
 	 */
@@ -136,6 +147,7 @@ final class Plugin {
 	 * Registers services and attaches plugin-level hooks. Runs once.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @return void
 	 */
@@ -144,7 +156,8 @@ final class Plugin {
 			return;
 		}
 
-		$this->booted = true;
+		$this->booted   = true;
+		self::$instance = $this;
 
 		$this->register_services();
 
@@ -161,12 +174,36 @@ final class Plugin {
 		if ( is_admin() ) {
 			$this->register_phase( 'admin' );
 		}
+
+		/**
+		 * Fires once Free has registered its services and booted its core
+		 * (and, in wp-admin, admin) components. Add-ons fetch services from
+		 * `$plugin->container()` here instead of instantiating their own.
+		 *
+		 * @since 1.2.0
+		 *
+		 * @param Plugin $plugin The booted plugin.
+		 */
+		do_action( 'sit_cwm_loaded', $this );
+	}
+
+	/**
+	 * Returns the booted plugin.
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @return Plugin|null Null before the plugin has booted (plugins_loaded, priority 10).
+	 */
+	public static function instance(): ?Plugin {
+		return self::$instance;
 	}
 
 	/**
 	 * Returns the service container.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @return Container
 	 */
@@ -179,6 +216,7 @@ final class Plugin {
 	 * exists (step 04).
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @return void
 	 */
@@ -192,6 +230,7 @@ final class Plugin {
 	 * Registers the REST controllers.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @return void
 	 */

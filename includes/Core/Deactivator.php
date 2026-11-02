@@ -19,6 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * `uninstall.php` only.
  *
  * @since 1.0.0
+ * @internal
  */
 final class Deactivator {
 

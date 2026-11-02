@@ -31,6 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * hidden post exists.
  *
  * @since 1.0.0
+ * @internal
  */
 final class BulkProcessor {
 

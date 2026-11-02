@@ -29,6 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * WorkflowManager::add_comment(), which re-checks everything.
  *
  * @since 1.0.0
+ * @internal
  */
 class ActivityController extends AbstractController {
 

@@ -17,6 +17,7 @@ use Sit_Cwm\Core\Settings;
 use Sit_Cwm\REST\WorkflowController;
 use Sit_Cwm\Workflow\Capabilities;
 use Sit_Cwm\Workflow\StatusManager;
+use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_UnitTestCase;
@@ -87,6 +88,47 @@ final class WorkflowControllerTest extends WP_UnitTestCase {
 		$GLOBALS['wp_rest_server'] = null; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Core's REST server global.
 
 		parent::tear_down();
+	}
+
+	/**
+	 * A `WP_Error` veto reaches the client with its code, message and status,
+	 * nothing is written, and GET reports it ahead of time (F3).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_rest_status_change_returns_veto_message_and_status() {
+		add_filter(
+			'sit_cwm_can_transition',
+			static function ( $allowed, $post_id, $from, $to ) {
+				return 'approved' === $to ? new WP_Error( 'checklist_incomplete', 'The checklist is not complete.', array( 'status' => 422 ) ) : $allowed;
+			},
+			10,
+			4
+		);
+
+		$post = $this->make_post( $this->make_user( 'author' ), 'review' );
+
+		wp_set_current_user( $this->make_user( 'editor' ) );
+
+		$response = $this->post(
+			$post,
+			array(
+				'from'   => 'review',
+				'status' => 'approved',
+			)
+		);
+
+		$this->assert_error_response( $response, 'checklist_incomplete', 422 );
+		$this->assertSame( 'The checklist is not complete.', $response->get_data()['message'] );
+		$this->assertSame( 'review', $this->posts->get_status( $post ) );
+		$this->assertSame( 0, $this->activity->count_for_post( $post ) );
+
+		$blocked = $this->get( $post )->get_data()['blocked_transitions'];
+
+		$this->assertSame( array( 'approved' ), array_column( $blocked, 'slug' ) );
+		$this->assertSame( 'The checklist is not complete.', $blocked[0]['message'] );
 	}
 
 	/**

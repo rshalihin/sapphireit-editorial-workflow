@@ -22,6 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * later `get()` calls return the same instance.
  *
  * @since 1.0.0
+ * @api
  */
 final class Container {
 
@@ -47,6 +48,7 @@ final class Container {
 	 * Replacing a factory discards any instance already built from the old one.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @param string   $id      Service id, e.g. `workflow_manager`.
 	 * @param callable $factory Receives this container, returns the service.
@@ -61,6 +63,7 @@ final class Container {
 	 * Returns a service, building it on first access.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param string $id Service id.
 	 * @return mixed The service instance.
@@ -87,6 +90,7 @@ final class Container {
 	 * Whether a factory is registered for a service id.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @param string $id Service id.
 	 * @return bool

@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * and why (E1, E2, E5).
  *
  * @since 1.1.0
- * @internal
+ * @api
  */
 final class GateDecision {
 
@@ -28,6 +28,7 @@ final class GateDecision {
 	 * The gate does not apply (mode `off`).
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const OUTCOME_NOT_APPLICABLE = 'not_applicable';
@@ -36,6 +37,7 @@ final class GateDecision {
 	 * The attempt passes the rule.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const OUTCOME_ALLOWED = 'allowed';
@@ -44,6 +46,7 @@ final class GateDecision {
 	 * The attempt fails the rule but goes ahead; see the reason.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const OUTCOME_BYPASSED = 'bypassed';
@@ -52,6 +55,7 @@ final class GateDecision {
 	 * The attempt fails the rule and is blocked.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const OUTCOME_REFUSED = 'refused';
@@ -60,6 +64,7 @@ final class GateDecision {
 	 * Every outcome.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string[]
 	 */
 	const OUTCOMES = array( self::OUTCOME_NOT_APPLICABLE, self::OUTCOME_ALLOWED, self::OUTCOME_BYPASSED, self::OUTCOME_REFUSED );
@@ -68,6 +73,7 @@ final class GateDecision {
 	 * No reason (not applicable, or refused).
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const REASON_NONE = '';
@@ -76,6 +82,7 @@ final class GateDecision {
 	 * Allowed because the workflow status is publishable.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const REASON_APPROVED = 'approved';
@@ -84,6 +91,7 @@ final class GateDecision {
 	 * Bypassed because the mode is `log_only`.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const REASON_LOG_ONLY = 'log_only';
@@ -92,6 +100,7 @@ final class GateDecision {
 	 * Bypassed because the actor holds the bypass capability.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const REASON_CAPABILITY = 'capability';
@@ -100,6 +109,7 @@ final class GateDecision {
 	 * Bypassed because the gate itself failed and failed open (E5).
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const REASON_ERROR = 'error';
@@ -140,6 +150,7 @@ final class GateDecision {
 	 * Constructor.
 	 *
 	 * @since 1.1.0
+	 * @internal
 	 *
 	 * @param string $outcome         One of the `OUTCOME_*` constants.
 	 * @param string $mode            Gate mode.
@@ -165,6 +176,7 @@ final class GateDecision {
 	 * A decision for an attempt the gate does not apply to.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @param string $mode Gate mode.
 	 * @return self
@@ -178,6 +190,7 @@ final class GateDecision {
 	 * recorded as a bypass for reason `error` (E5).
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @param string $mode            Gate mode.
 	 * @param string $workflow_status Workflow status, `''` when unknown.
@@ -191,6 +204,7 @@ final class GateDecision {
 	 * Outcome.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @return string One of the `OUTCOME_*` constants.
 	 */
@@ -202,6 +216,7 @@ final class GateDecision {
 	 * Gate mode the attempt was judged under.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @return string
 	 */
@@ -213,6 +228,7 @@ final class GateDecision {
 	 * Workflow status the attempt was judged on.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @return string
 	 */
@@ -224,6 +240,7 @@ final class GateDecision {
 	 * Reason.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @return string One of the `REASON_*` constants.
 	 */
@@ -235,6 +252,7 @@ final class GateDecision {
 	 * Whether the attempt is blocked.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @return bool
 	 */
@@ -246,6 +264,7 @@ final class GateDecision {
 	 * Whether the attempt fails the rule but goes ahead.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @return bool
 	 */
@@ -257,6 +276,7 @@ final class GateDecision {
 	 * Whether the gate applies at all.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @return bool
 	 */

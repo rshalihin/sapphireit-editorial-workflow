@@ -25,6 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * never enqueued.
  *
  * @since 1.0.0
+ * @internal
  */
 final class SidebarAssets implements Bootable {
 

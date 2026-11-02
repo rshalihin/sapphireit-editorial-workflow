@@ -35,6 +35,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * capability-checked exactly the same way.
  *
  * @since 1.0.0
+ * @internal
  */
 abstract class AbstractController extends WP_REST_Controller implements Bootable {
 

@@ -23,6 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * where role names appear.
  *
  * @since 1.0.0
+ * @api
  */
 final class Capabilities {
 
@@ -30,6 +31,7 @@ final class Capabilities {
 	 * Settings page and bulk actions across posts.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 * @var string
 	 */
 	const MANAGE_WORKFLOWS = 'sit_cwm_manage_workflows';
@@ -38,6 +40,7 @@ final class Capabilities {
 	 * Move content through the author-side statuses.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 * @var string
 	 */
 	const CHANGE_WORKFLOW = 'sit_cwm_change_workflow';
@@ -46,6 +49,7 @@ final class Capabilities {
 	 * Set or clear the reviewer and due date.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 * @var string
 	 */
 	const ASSIGN_REVIEWER = 'sit_cwm_assign_reviewer';
@@ -54,6 +58,7 @@ final class Capabilities {
 	 * Send content back for changes.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 * @var string
 	 */
 	const REVIEW_CONTENT = 'sit_cwm_review_content';
@@ -62,6 +67,7 @@ final class Capabilities {
 	 * Approve (and mark published) content.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 * @var string
 	 */
 	const APPROVE_CONTENT = 'sit_cwm_approve_content';
@@ -70,6 +76,7 @@ final class Capabilities {
 	 * Read activity history and workflow comments.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 * @var string
 	 */
 	const VIEW_ACTIVITY = 'sit_cwm_view_activity';
@@ -79,6 +86,7 @@ final class Capabilities {
 	 * on. Every use is recorded.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const BYPASS_PUBLISH_GATE = 'sit_cwm_bypass_publish_gate';
@@ -87,6 +95,7 @@ final class Capabilities {
 	 * Current revision of the default grants. 1.0.0 is revision 1.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var int
 	 */
 	const REVISION = 2;
@@ -95,6 +104,7 @@ final class Capabilities {
 	 * Option holding the grant revision a site has received (not autoloaded).
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const REVISION_OPTION = 'sit_cwm_caps_revision';
@@ -103,6 +113,7 @@ final class Capabilities {
 	 * All plugin capabilities.
 	 *
 	 * @since 1.0.0
+	 * @api
 	 *
 	 * @return string[]
 	 */
@@ -126,6 +137,7 @@ final class Capabilities {
 	 * site at revision 1 already received it at activation.
 	 *
 	 * @since 1.1.0
+	 * @internal
 	 *
 	 * @return array<int, array<string, string[]>>
 	 */
@@ -143,6 +155,7 @@ final class Capabilities {
 	 * Roles not listed (e.g. subscriber) receive nothing.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @return array<string, string[]>
 	 */
@@ -174,6 +187,7 @@ final class Capabilities {
 	 * writes nothing. Missing roles (removed by another plugin) are skipped.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @return void
 	 */
@@ -200,6 +214,7 @@ final class Capabilities {
 	 * custom roles are cleaned up too. Called from `uninstall.php` only.
 	 *
 	 * @since 1.0.0
+	 * @internal
 	 *
 	 * @return void
 	 */
@@ -229,6 +244,7 @@ final class Capabilities {
 	 * revision 1, because 1.0.0 never wrote it.
 	 *
 	 * @since 1.1.0
+	 * @internal
 	 *
 	 * @return void
 	 */
@@ -272,6 +288,7 @@ final class Capabilities {
 	 * every revision.
 	 *
 	 * @since 1.1.0
+	 * @internal
 	 *
 	 * @return void
 	 */

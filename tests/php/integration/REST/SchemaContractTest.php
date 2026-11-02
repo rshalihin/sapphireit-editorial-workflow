@@ -128,6 +128,32 @@ final class SchemaContractTest extends TestCase {
 	}
 
 	/**
+	 * The workflow schema declares `blocked_transitions` as read-only objects
+	 * of exactly four strings (F3).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_workflow_schema_declares_blocked_transitions() {
+		$field = $this->schema( $this->route( 'workflow' ) )['properties']['blocked_transitions'] ?? null;
+
+		$this->assertIsArray( $field, 'blocked_transitions is not declared.' );
+		$this->assertSame( 'array', $field['type'] );
+		$this->assertTrue( $field['readonly'] );
+		$this->assertSame( 'object', $field['items']['type'] );
+		$this->assertSame(
+			array(
+				'slug'    => array( 'type' => 'string' ),
+				'label'   => array( 'type' => 'string' ),
+				'code'    => array( 'type' => 'string' ),
+				'message' => array( 'type' => 'string' ),
+			),
+			$field['items']['properties']
+		);
+	}
+
+	/**
 	 * Activity items of publication actions match the item schema, which
 	 * declares their three extra fields as nullable strings.
 	 *

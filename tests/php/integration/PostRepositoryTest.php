@@ -12,6 +12,7 @@ use Sit_Cwm\Activity\ActivityLogger;
 use Sit_Cwm\Content\PostRepository;
 use Sit_Cwm\Core\Database;
 use Sit_Cwm\Core\Settings;
+use Sit_Cwm\Tests\Traits\PerPostWorkflow;
 use Sit_Cwm\Workflow\StatusManager;
 use WP_UnitTestCase;
 
@@ -27,6 +28,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @covers \Sit_Cwm\Content\PostRepository
  */
 final class PostRepositoryTest extends WP_UnitTestCase {
+
+	use PerPostWorkflow;
 
 	/**
 	 * Status registry used by the repository.
@@ -54,6 +57,39 @@ final class PostRepositoryTest extends WP_UnitTestCase {
 
 		$this->statuses = new StatusManager();
 		$this->posts    = new PostRepository( $this->statuses, new Settings() );
+	}
+
+	/**
+	 * Removes the per-post workflow filters.
+	 *
+	 * @return void
+	 */
+	public function tear_down() {
+		$this->remove_per_post_workflow();
+
+		parent::tear_down();
+	}
+
+	/**
+	 * A status registered for one post is stored and read back on that post,
+	 * and refused on another (F2).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_status_round_trips_through_a_post_specific_registry() {
+		$post = self::factory()->post->create();
+
+		$this->enable_legal_review_for( $post );
+
+		$this->assertTrue( $this->posts->set_status( $post, 'legal_review' ) );
+		$this->assertSame( 'legal_review', $this->posts->get_status( $post ) );
+		$this->assertFalse( $this->posts->has_unknown_status( $post ) );
+
+		$other = self::factory()->post->create();
+
+		$this->assertFalse( $this->posts->set_status( $other, 'legal_review' ) );
 	}
 
 	/**
@@ -365,6 +401,150 @@ final class PostRepositoryTest extends WP_UnitTestCase {
 		$this->assertSame( 0, $cleared[0]->get_user_id() );
 		$this->assertSame( (string) $doomed, $cleared[0]->get_old_value() );
 		$this->assertNull( $cleared[0]->get_new_value() );
+	}
+
+	/**
+	 * An extension `meta_query` is ANDed with the core workflow clauses, and
+	 * its own `relation` cannot loosen them (F4).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_extra_meta_query_is_anded_with_core_clauses() {
+		$flagged = self::factory()->post->create();
+		$plain   = self::factory()->post->create();
+		$writing = self::factory()->post->create();
+
+		update_post_meta( $flagged, '_probe_flag', '1' );
+		$this->posts->set_status( $flagged, 'review' );
+		$this->posts->set_status( $plain, 'review' );
+		$this->posts->set_status( $writing, 'writing' );
+
+		$result = $this->posts->query_posts(
+			array(
+				'post_types' => array( 'post' ),
+				'statuses'   => array( 'review' ),
+				'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Test input.
+					array(
+						'key'     => '_probe_flag',
+						'compare' => 'NOT EXISTS',
+					),
+				),
+			)
+		);
+
+		$this->assertSame( array( $plain ), $result['ids'] );
+
+		$result = $this->posts->query_posts(
+			array(
+				'post_types' => array( 'post' ),
+				'statuses'   => array( 'review' ),
+				'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Test input.
+					'relation' => 'OR',
+					array(
+						'key'     => '_probe_flag',
+						'compare' => 'EXISTS',
+					),
+					array(
+						'key'   => '_probe_flag',
+						'value' => 'never',
+					),
+				),
+			)
+		);
+
+		$this->assertSame( array( $flagged ), $result['ids'], 'An OR relation in the extra clauses must not widen the status filter.' );
+	}
+
+	/**
+	 * `post__in` keeps positive integer ids only; when none remain nothing
+	 * matches, rather than everything.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_post__in_is_cleaned_and_empty_means_no_results() {
+		$post = self::factory()->post->create();
+
+		$this->assertSame(
+			array( $post ),
+			$this->posts->query_posts(
+				array(
+					'post_types' => array( 'post' ),
+					'post__in'   => array( $post, (string) $post, -4, 'x' ),
+				)
+			)['ids']
+		);
+		$this->assertSame(
+			array(
+				'ids'   => array(),
+				'total' => 0,
+			),
+			$this->posts->query_posts(
+				array(
+					'post_types' => array( 'post' ),
+					'post__in'   => array( -4 ),
+				)
+			)
+		);
+	}
+
+	/**
+	 * Extension query keys that are not arrays are ignored.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_non_array_extras_are_ignored() {
+		$post = self::factory()->post->create();
+
+		$this->assertContains(
+			$post,
+			$this->posts->query_posts(
+				array(
+					'post_types' => array( 'post' ),
+					'meta_query' => 'DROP TABLE', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Test input.
+					'tax_query'  => 5, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- Test input.
+					'date_query' => 'yesterday',
+					'post__in'   => 'all',
+				)
+			)['ids']
+		);
+	}
+
+	/**
+	 * `tax_query` and `date_query` narrow the result.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_tax_and_date_query_narrow_the_result() {
+		$term   = self::factory()->category->create();
+		$tagged = self::factory()->post->create( array( 'post_date' => '2026-03-10 10:00:00' ) );
+		$older  = self::factory()->post->create( array( 'post_date' => '2025-03-10 10:00:00' ) );
+
+		wp_set_post_categories( $tagged, array( $term ) );
+		wp_set_post_categories( $older, array( $term ) );
+
+		$this->assertSame(
+			array( $tagged ),
+			$this->posts->query_posts(
+				array(
+					'post_types' => array( 'post' ),
+					'tax_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- Test input.
+						array(
+							'taxonomy' => 'category',
+							'terms'    => array( $term ),
+						),
+					),
+					'date_query' => array( array( 'year' => 2026 ) ),
+				)
+			)['ids']
+		);
 	}
 
 	/**
