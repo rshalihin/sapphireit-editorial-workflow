@@ -15,6 +15,7 @@ use Sit_Cwm\Core\Database;
 use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
 use Sit_Cwm\REST\WorkflowController;
+use Sit_Cwm\Tests\Traits\RestoresPluginInstance;
 use Sit_Cwm\Workflow\Capabilities;
 use Sit_Cwm\Workflow\StatusManager;
 use WP_Error;
@@ -35,6 +36,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @covers \Sit_Cwm\REST\AbstractController
  */
 final class WorkflowControllerTest extends WP_UnitTestCase {
+
+	use RestoresPluginInstance;
 
 	/**
 	 * Workflow meta persistence, for arranging and asserting state.
@@ -69,6 +72,8 @@ final class WorkflowControllerTest extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
+		$this->remember_plugin_instance();
+
 		delete_option( Settings::OPTION );
 		Capabilities::add_caps();
 
@@ -86,6 +91,8 @@ final class WorkflowControllerTest extends WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		$GLOBALS['wp_rest_server'] = null; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Core's REST server global.
+
+		$this->restore_plugin_instance();
 
 		parent::tear_down();
 	}

@@ -8,14 +8,19 @@
 
 namespace Sit_Cwm\Tests\Integration\Admin;
 
+use Sit_Cwm\Admin\ActivityExport;
 use Sit_Cwm\Admin\AdminFooter;
 use Sit_Cwm\Admin\Dashboard;
 use Sit_Cwm\Admin\Settings as SettingsPage;
+use Sit_Cwm\Audit\ActivityExporter;
 use Sit_Cwm\Core\Assets;
 use Sit_Cwm\Core\Container;
 use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
+use Sit_Cwm\REST\ActivityFormatter;
+use Sit_Cwm\REST\UserSummaries;
 use Sit_Cwm\Tests\TestCase;
+use Sit_Cwm\Tests\Traits\RestoresPluginInstance;
 use Sit_Cwm\Workflow\PermissionManager;
 use Sit_Cwm\Workflow\StatusManager;
 
@@ -32,6 +37,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @covers \Sit_Cwm\Admin\AdminFooter
  */
 final class AdminFooterTest extends TestCase {
+
+	use RestoresPluginInstance;
 
 	/**
 	 * Dashboard screen.
@@ -65,6 +72,7 @@ final class AdminFooterTest extends TestCase {
 		require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		require_once ABSPATH . 'wp-admin/includes/screen.php';
 
+		$this->remember_plugin_instance();
 		$this->reset_admin_state();
 
 		$statuses    = new StatusManager();
@@ -78,7 +86,7 @@ final class AdminFooterTest extends TestCase {
 			'/languages'
 		);
 
-		$this->dashboard = new Dashboard( $assets, $permissions );
+		$this->dashboard = new Dashboard( $assets, $permissions, $this->export_form( $permissions ) );
 		$this->page      = new SettingsPage( $settings, $permissions );
 		$this->footer    = new AdminFooter( $this->dashboard, $this->page );
 
@@ -94,6 +102,7 @@ final class AdminFooterTest extends TestCase {
 	 */
 	public function tear_down() {
 		$this->reset_admin_state();
+		$this->restore_plugin_instance();
 
 		parent::tear_down();
 	}
@@ -178,7 +187,7 @@ final class AdminFooterTest extends TestCase {
 
 		$settings    = new Settings();
 		$permissions = new PermissionManager( $this->posts, $settings );
-		$dashboard   = new Dashboard( new Assets( new StatusManager(), $permissions, '', '', '' ), $permissions );
+		$dashboard   = new Dashboard( new Assets( new StatusManager(), $permissions, '', '', '' ), $permissions, $this->export_form( $permissions ) );
 		$page        = new SettingsPage( $settings, $permissions );
 		$footer      = new AdminFooter( $dashboard, $page );
 
@@ -206,6 +215,16 @@ final class AdminFooterTest extends TestCase {
 
 		$this->assertInstanceOf( AdminFooter::class, $plugin->container()->get( 'admin.footer' ) );
 		$this->assertContains( 'admin.footer', Plugin::BOOT_PHASES['admin'] );
+	}
+
+	/**
+	 * The activity export form the dashboard prints.
+	 *
+	 * @param PermissionManager $permissions Workflow authorization.
+	 * @return ActivityExport
+	 */
+	private function export_form( PermissionManager $permissions ): ActivityExport {
+		return new ActivityExport( $permissions, new ActivityExporter( $this->activity, new ActivityFormatter( new StatusManager() ), new UserSummaries() ) );
 	}
 
 	/**

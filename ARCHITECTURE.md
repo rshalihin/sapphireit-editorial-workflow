@@ -172,7 +172,7 @@ never moves the workflow.
 
 | Class | Responsibility |
 |---|---|
-| `PostMeta` | `register_post_meta()` for the plugin's keys, with `type`, `sanitize_callback`, `auth_callback`, `show_in_rest` and `context: [ 'edit' ]`. Also locks `_sit_cwm_status` and `_sit_cwm_publish_bypass_by` (`LOCKED_META_KEYS`) against direct meta writes via `map_meta_cap`, so neither the state machine nor the gate can be bypassed through core's meta endpoint. |
+| `PostMeta` | `register_post_meta()` for the plugin's keys, with `type`, `sanitize_callback`, `auth_callback`, `show_in_rest` and `context: [ 'edit' ]`. Also locks `_sit_cwm_status`, `_sit_cwm_publish_bypass_by` and `_sit_cwm_ai_origin` (`LOCKED_META_KEYS`) against direct meta writes via `map_meta_cap`, so neither the state machine, the gate nor the logged AI-use declaration can be bypassed through core's meta endpoint. |
 | `PostRepository` | All meta reads and writes, the due-date sanitizer, `is_managed()`, and the dashboard's `WP_Query`. The only place that knows the meta keys are strings. |
 
 ### `includes/Activity/`
@@ -181,6 +181,19 @@ never moves the workflow.
 |---|---|
 | `ActivityEntry` | An immutable value object for one row. |
 | `ActivityLogger` | Writes and reads the activity table. `get_for_posts()` batch-loads the last entry of many posts in one query (the dashboard's N+1 fix). Fires `sit_cwm_activity_logged`. |
+
+### `includes/Governance/`
+
+| Class | Responsibility |
+|---|---|
+| `AiOrigin` | The closed set of declared AI-origin values (`human`, `ai_assisted`, `ai_generated`), their labels and the strict sanitizer. Declared, never detected: nothing inspects content. |
+
+### `includes/Audit/`
+
+| Class | Responsibility |
+|---|---|
+| `ActivityExporter` | Streams the whole activity log as CSV in keyset batches (`ActivityLogger::get_batch()`), priming posts and users once per batch, so memory follows the batch size. |
+| `CsvWriter` | Writes CSV rows, prefixing any cell that starts with `=`, `+`, `-`, `@`, tab or CR with `'` so spreadsheets never run it as a formula. |
 
 ### `includes/REST/`
 
@@ -199,7 +212,8 @@ never moves the workflow.
 
 | Class | Responsibility |
 |---|---|
-| `Dashboard` | Registers the top-level menu and prints an empty React root. |
+| `Dashboard` | Registers the top-level menu and prints an empty React root (plus, for auditors, the activity export form above it). |
+| `ActivityExport` | The "Export activity log (CSV)" form and its `admin_post_sit_cwm_export_activity` handler: nonce, then `can_audit()`, then the stream. |
 | `Settings` | The settings screen, via the Settings API only — `options.php` handles the nonce, and `option_page_capability_sit_cwm_settings_group` makes it require `sit_cwm_manage_workflows` instead of `manage_options`. |
 
 ---
@@ -565,6 +579,7 @@ before the plugin has booted.
 | `Core\Settings::gate_modes(` | `gate_modes(): array` | `array<string,` | 1.1.0 |
 | `Core\Settings::is_notification_enabled(` | `is_notification_enabled( string $event ): bool` | `bool` | 1.1.0 |
 | `Core\Settings::prevents_self_approval(` | `prevents_self_approval(): bool` | `bool` | 1.1.0 |
+| `Core\Settings::ai_origin_default(` | `ai_origin_default( string $post_type ): string` | `string` | 1.2.0 |
 | `Core\Settings::enabled_post_types(` | `enabled_post_types(): array` | `string[]` | 1.0.0 |
 | `Core\Settings::is_post_type_enabled(` | `is_post_type_enabled( string $post_type ): bool` | `bool` | 1.0.0 |
 
@@ -597,6 +612,7 @@ before the plugin has booted.
 | Method | Signature | Returns | Since |
 |---|---|---|---|
 | `Workflow\PermissionManager::can_manage(` | `can_manage( ?int $user_id = null ): bool` | `bool` | 1.0.0 |
+| `Workflow\PermissionManager::can_audit(` | `can_audit( ?int $user_id = null ): bool` | `bool` | 1.2.0 |
 | `Workflow\PermissionManager::can_bypass_publish_gate(` | `can_bypass_publish_gate( ?int $user_id = null ): bool` | `bool` | 1.1.0 |
 | `Workflow\PermissionManager::can_attempt_batch(` | `can_attempt_batch( ?int $user_id = null ): bool` | `bool` | 1.0.0 |
 | `Workflow\PermissionManager::can_be_reviewer(` | `can_be_reviewer( int $reviewer_id ): bool` | `bool` | 1.0.0 |
@@ -654,8 +670,9 @@ Constants (`@api`): `MANAGE_WORKFLOWS`, `CHANGE_WORKFLOW`, `ASSIGN_REVIEWER`, `R
 | `Content\PostRepository::get_due_date(` | `get_due_date( int $post_id ): string` | `string` | 1.0.0 |
 | `Content\PostRepository::get_workflow(` | `get_workflow( int $post_id ): array` | `array{post_id:` | 1.0.0 |
 | `Content\PostRepository::is_managed(` | `is_managed( int $post_id ): bool` | `bool` | 1.0.0 |
+| `Content\PostRepository::get_ai_origin(` | `get_ai_origin( int $post_id ): string` | `string` | 1.2.0 |
 
-Constants (`@api`): `META_STATUS`, `META_REVIEWER`, `META_DUE_DATE`, `META_PUBLISH_BYPASS`.
+Constants (`@api`): `META_STATUS`, `META_REVIEWER`, `META_DUE_DATE`, `META_PUBLISH_BYPASS`, `META_AI_ORIGIN`.
 
 #### `Activity\ActivityLogger`
 
@@ -668,6 +685,7 @@ Constants (`@api`): `META_STATUS`, `META_REVIEWER`, `META_DUE_DATE`, `META_PUBLI
 | `Activity\ActivityLogger::get_for_post(` | `get_for_post( int $post_id, array $args = array() ): array` | `ActivityEntry[]` | 1.0.0 |
 | `Activity\ActivityLogger::count_for_post(` | `count_for_post( int $post_id, array $args = array() ): int` | `int` | 1.0.0 |
 | `Activity\ActivityLogger::get_for_posts(` | `get_for_posts( array $post_ids, int $per_post = 1 ): array` | `array<int,` | 1.0.0 |
+| `Activity\ActivityLogger::get_batch(` | `get_batch( array $args = array() ): array` | `ActivityEntry[]` | 1.2.0 |
 
 Constants (`@api`): `ACTIONS`, `PUBLICATION_ACTIONS`.
 
@@ -684,6 +702,16 @@ Constants (`@api`): `ACTIONS`, `PUBLICATION_ACTIONS`.
 | `Activity\ActivityEntry::get_message(` | `get_message(): ?string` | `string\|null` | 1.0.0 |
 | `Activity\ActivityEntry::get_context(` | `get_context(): array` | `array` | 1.0.0 |
 | `Activity\ActivityEntry::get_created_at(` | `get_created_at(): string` | `string` | 1.0.0 |
+
+#### `Governance\AiOrigin`
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Governance\AiOrigin::label(` | `static label( string $value ): string` | `string` | 1.2.0 |
+| `Governance\AiOrigin::sanitize(` | `static sanitize( $value ): string` | `string` | 1.2.0 |
+| `Governance\AiOrigin::options(` | `static options(): array` | `array<string,` | 1.2.0 |
+
+Constants (`@api`): `HUMAN`, `AI_ASSISTED`, `AI_GENERATED`, `NOT_DECLARED`, `VALUES`.
 
 #### `Publishing\PublishGate`
 
@@ -790,6 +818,7 @@ Every `sit_cwm_*` hook, covered by the [stability rule](#stability-rule).
 | `_sit_cwm_reviewer_id` | integer | `0` | `absint`, existing user, must hold `sit_cwm_review_content`. Negative IDs are rejected, not flipped |
 | `_sit_cwm_due_date` | string | `''` | Round-trip `Y-m-d` parse; `''` clears |
 | `_sit_cwm_publish_bypass_by` | integer | — | `absint`. User id that scheduled a failing post under the bypass capability (1.1). `show_in_rest => false`, `auth_callback` always false, locked like `_sit_cwm_status` |
+| `_sit_cwm_ai_origin` | string | `''` | `AiOrigin::sanitize()`: exactly `human`, `ai_assisted` or `ai_generated`, else `''`. Declared AI use (1.2); unset reads as "Not declared" and existing posts are not migrated. REST schema `enum [ '', …VALUES ]`, `context: [ 'edit' ]`, `auth_callback` always false, locked like `_sit_cwm_status`. `PostRepository::set_ai_origin()` refuses `''`, so a declaration can change but not be withdrawn |
 
 The first three are registered with `register_post_meta()`, `single => true`,
 `show_in_rest => true` with `context: [ 'edit' ]` — so a reviewer ID or due date
@@ -811,7 +840,7 @@ that the status can only change by going through the state machine.
 | `id` | `bigint(20) unsigned` | `AUTO_INCREMENT`, primary key |
 | `post_id` | `bigint(20) unsigned` | |
 | `user_id` | `bigint(20) unsigned` | `0` = system |
-| `action` | `varchar(50)` | Closed set: `status_changed`, `reviewer_assigned`, `reviewer_cleared`, `due_date_set`, `due_date_cleared`, `comment_added`, and since 1.1 `post_published`, `post_unpublished`, `publish_gate_refused`, `publish_gate_bypassed` (`ActivityLogger::PUBLICATION_ACTIONS`; no schema change) |
+| `action` | `varchar(50)` | Closed set: `status_changed`, `reviewer_assigned`, `reviewer_cleared`, `due_date_set`, `due_date_cleared`, `comment_added`, since 1.1 `post_published`, `post_unpublished`, `publish_gate_refused`, `publish_gate_bypassed` (`ActivityLogger::PUBLICATION_ACTIONS`), and since 1.2 `ai_origin_changed` (old value `null` when nothing was declared, `context.via` one of `workflow`, `post_api`, `default`). No schema change |
 | `old_value` | `varchar(191)` NULL | Status slug or user ID, as text |
 | `new_value` | `varchar(191)` NULL | |
 | `message` | `text` NULL | Comment body, `wp_kses_post()` |
@@ -839,7 +868,7 @@ compared on `plugins_loaded`, so an upgrade runs without reactivation.
 
 | Option | Autoloaded | Contents |
 |---|---|---|
-| `sit_cwm_settings` | yes | `{ post_types, delete_data_on_uninstall, publish_gate: { post_type: mode }, notifications: { event: bool } }` — small on purpose. Missing keys are filled from `Settings::defaults()`, so 1.0 sites need no migration |
+| `sit_cwm_settings` | yes | `{ post_types, delete_data_on_uninstall, publish_gate: { post_type: mode }, notifications: { event: bool }, prevent_self_approval, ai_origin_defaults: { post_type: ai_origin } }` — small on purpose. Missing keys are filled from `Settings::defaults()`, so 1.0 sites need no migration |
 | `sit_cwm_db_version` | no | Schema version (still `1.0.0`: 1.1 changes no schema) |
 | `sit_cwm_caps_revision` | no | Capability revision applied (`2` since 1.1) |
 

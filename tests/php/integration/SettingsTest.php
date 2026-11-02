@@ -56,6 +56,7 @@ final class SettingsTest extends WP_UnitTestCase {
 			'publish_gate'             => array(),
 			'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
 			'prevent_self_approval'    => false,
+			'ai_origin_defaults'       => array(),
 		);
 
 		$this->assertSame( $expected, $this->settings->defaults() );
@@ -94,6 +95,7 @@ final class SettingsTest extends WP_UnitTestCase {
 				'publish_gate'             => array(),
 				'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
 				'prevent_self_approval'    => false,
+				'ai_origin_defaults'       => array(),
 			),
 			get_option( Settings::OPTION )
 		);
@@ -350,5 +352,58 @@ final class SettingsTest extends WP_UnitTestCase {
 
 		$this->assertTrue( $settings->update( array( 'prevent_self_approval' => 'false' ) ) );
 		$this->assertFalse( $settings->prevents_self_approval() );
+	}
+
+	/**
+	 * AI-origin defaults keep only selectable types with a declarable value,
+	 * and read as none for a type the workflow no longer covers (F14).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_ai_origin_defaults_sanitized_and_read() {
+		$settings = new Settings();
+
+		$this->assertSame( array(), $settings->all()['ai_origin_defaults'] );
+		$this->assertSame( '', $settings->ai_origin_default( 'post' ) );
+
+		$this->assertTrue(
+			$settings->update(
+				array(
+					'ai_origin_defaults' => array(
+						'post'       => 'human',
+						'page'       => 'robot',
+						'nope'       => 'human',
+						'attachment' => 'ai_assisted',
+						3            => 'human',
+					),
+				)
+			)
+		);
+		$this->assertSame( array( 'post' => 'human' ), $settings->all()['ai_origin_defaults'] );
+		$this->assertSame( 'human', $settings->ai_origin_default( 'post' ) );
+		$this->assertSame( '', $settings->ai_origin_default( 'page' ) );
+
+		$this->assertTrue( $settings->update( array( 'post_types' => array( 'page' ) ) ) );
+		$this->assertSame( '', $settings->ai_origin_default( 'post' ), 'Type no longer enabled.' );
+
+		$this->assertFalse( $settings->update( array( 'ai_origin_defaults' => 'human' ) ), 'A non-array is rejected.' );
+		$this->assertSame( array( 'post' => 'human' ), $settings->all()['ai_origin_defaults'] );
+	}
+
+	/**
+	 * A tampered stored map never yields an invalid default.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_ai_origin_default_ignores_tampered_stored_values() {
+		update_option( Settings::OPTION, array( 'ai_origin_defaults' => array( 'post' => 'robot' ) ) );
+		$this->assertSame( '', ( new Settings() )->ai_origin_default( 'post' ) );
+
+		update_option( Settings::OPTION, array( 'ai_origin_defaults' => 'human' ) );
+		$this->assertSame( '', ( new Settings() )->ai_origin_default( 'post' ) );
 	}
 }

@@ -15,6 +15,7 @@ use Sit_Cwm\Core\Database;
 use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
 use Sit_Cwm\Tests\Traits\PerPostWorkflow;
+use Sit_Cwm\Tests\Traits\RestoresPluginInstance;
 use Sit_Cwm\Workflow\Capabilities;
 use Sit_Cwm\Workflow\PermissionManager;
 use Sit_Cwm\Workflow\StatusManager;
@@ -37,6 +38,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class WorkflowManagerTest extends WP_UnitTestCase {
 
 	use PerPostWorkflow;
+	use RestoresPluginInstance;
 
 	/**
 	 * Actions a mutation may fire.
@@ -98,6 +100,8 @@ final class WorkflowManagerTest extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
+		$this->remember_plugin_instance();
+
 		delete_option( Settings::OPTION );
 		Capabilities::add_caps();
 
@@ -134,6 +138,8 @@ final class WorkflowManagerTest extends WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		$this->remove_per_post_workflow();
+
+		$this->restore_plugin_instance();
 
 		parent::tear_down();
 	}

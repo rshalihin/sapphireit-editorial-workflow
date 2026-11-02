@@ -12,6 +12,7 @@ use DateTimeImmutable;
 use Sit_Cwm\Activity\ActivityLogger;
 use Sit_Cwm\Core\Interfaces\Bootable;
 use Sit_Cwm\Core\Settings;
+use Sit_Cwm\Governance\AiOrigin;
 use Sit_Cwm\Workflow\StatusManager;
 use WP_Post;
 use WP_Query;
@@ -74,6 +75,15 @@ final class PostRepository implements Bootable {
 	 * @var string
 	 */
 	const META_PUBLISH_BYPASS = '_sit_cwm_publish_bypass_by';
+
+	/**
+	 * Declared AI origin meta key (F9). Unset means "Not declared".
+	 *
+	 * @since 1.2.0
+	 * @api
+	 * @var string
+	 */
+	const META_AI_ORIGIN = '_sit_cwm_ai_origin';
 
 	/**
 	 * Posts cleared per query when a deleted user was a reviewer.
@@ -281,6 +291,43 @@ final class PostRepository implements Bootable {
 		}
 
 		return $this->get_due_date( $post_id ) === $date;
+	}
+
+	/**
+	 * Declared AI origin of a post.
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @param int $post_id Post id.
+	 * @return string A value from `AiOrigin::VALUES`, or `''` (not declared)
+	 *                when unset or invalid.
+	 */
+	public function get_ai_origin( int $post_id ): string {
+		return AiOrigin::sanitize( $this->read( $post_id, self::META_AI_ORIGIN ) );
+	}
+
+	/**
+	 * Stores a post's declared AI origin.
+	 *
+	 * A declaration can change but never be withdrawn, so `''` is rejected
+	 * along with every value outside `AiOrigin::VALUES`.
+	 *
+	 * @since 1.2.0
+	 * @internal Callers must authorize first.
+	 *
+	 * @param int    $post_id Post id.
+	 * @param string $origin  A value from `AiOrigin::VALUES`.
+	 * @return bool True when the stored value now equals `$origin`.
+	 */
+	public function set_ai_origin( int $post_id, string $origin ): bool {
+		if ( $post_id <= 0 || ! in_array( $origin, AiOrigin::VALUES, true ) ) {
+			return false;
+		}
+
+		update_post_meta( $post_id, self::META_AI_ORIGIN, $origin );
+
+		return $this->get_ai_origin( $post_id ) === $origin;
 	}
 
 	/**

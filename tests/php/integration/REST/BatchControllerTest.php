@@ -16,6 +16,7 @@ use Sit_Cwm\REST\BatchController;
 use Sit_Cwm\Tests\TestCase;
 use Sit_Cwm\Tests\Traits\CreatesWorkflowPosts;
 use Sit_Cwm\Tests\Traits\PerPostWorkflow;
+use Sit_Cwm\Tests\Traits\RestoresPluginInstance;
 use Sit_Cwm\Workflow\BulkProcessor;
 use WP_REST_Response;
 
@@ -37,6 +38,7 @@ final class BatchControllerTest extends TestCase {
 
 	use CreatesWorkflowPosts;
 	use PerPostWorkflow;
+	use RestoresPluginInstance;
 
 	/**
 	 * Route under test.
@@ -46,12 +48,24 @@ final class BatchControllerTest extends TestCase {
 	const ROUTE = '/sit-cwm/v1/posts/batch';
 
 	/**
-	 * Removes the per-post workflow filters.
+	 * Remembers the bootstrap's plugin instance.
+	 *
+	 * @return void
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		$this->remember_plugin_instance();
+	}
+
+	/**
+	 * Removes the per-post workflow filters and restores the plugin instance.
 	 *
 	 * @return void
 	 */
 	public function tear_down() {
 		$this->remove_per_post_workflow();
+		$this->restore_plugin_instance();
 
 		parent::tear_down();
 	}

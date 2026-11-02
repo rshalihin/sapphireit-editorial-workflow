@@ -10,6 +10,7 @@ namespace Sit_Cwm\Content;
 
 use Sit_Cwm\Core\Interfaces\Bootable;
 use Sit_Cwm\Core\Settings;
+use Sit_Cwm\Governance\AiOrigin;
 use Sit_Cwm\Workflow\PermissionManager;
 use Sit_Cwm\Workflow\StatusManager;
 
@@ -46,9 +47,10 @@ final class PostMeta implements Bootable {
 	 * Meta keys no user may write through the meta API, by any route.
 	 *
 	 * @since 1.1.0
+	 * @since 1.2.0 Adds the AI origin key.
 	 * @var string[]
 	 */
-	const LOCKED_META_KEYS = array( PostRepository::META_STATUS, PostRepository::META_PUBLISH_BYPASS );
+	const LOCKED_META_KEYS = array( PostRepository::META_STATUS, PostRepository::META_PUBLISH_BYPASS, PostRepository::META_AI_ORIGIN );
 
 	/**
 	 * Status registry.
@@ -218,6 +220,29 @@ final class PostMeta implements Bootable {
 				},
 			)
 		);
+
+		register_post_meta(
+			$post_type,
+			PostRepository::META_AI_ORIGIN,
+			array(
+				'type'              => 'string',
+				'description'       => __( 'Declared AI use; empty when not declared.', 'sapphireit-editorial-workflow' ),
+				'single'            => true,
+				'default'           => AiOrigin::NOT_DECLARED,
+				'show_in_rest'      => array(
+					'schema' => array(
+						'enum'    => array_merge( array( AiOrigin::NOT_DECLARED ), AiOrigin::VALUES ),
+						'context' => array( 'edit' ),
+					),
+				),
+				'sanitize_callback' => array( AiOrigin::class, 'sanitize' ),
+				// Always false: a declaration is logged, so it may only change
+				// through WorkflowManager (F9). See also lock_status_meta().
+				'auth_callback'     => static function () {
+					return false;
+				},
+			)
+		);
 	}
 
 	/**
@@ -251,8 +276,9 @@ final class PostMeta implements Bootable {
 	}
 
 	/**
-	 * Denies every meta capability on the locked keys (the workflow status and,
-	 * since 1.1.0, the publish gate bypass marker) to every user.
+	 * Denies every meta capability on the locked keys (the workflow status,
+	 * since 1.1.0 the publish gate bypass marker, and since 1.2.0 the declared
+	 * AI origin) to every user.
 	 *
 	 * `auth_callback => false` alone is not enough: on multisite, super admins
 	 * pass every capability check except `do_not_allow`. Hooked on

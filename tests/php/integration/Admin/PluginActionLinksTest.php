@@ -13,6 +13,7 @@ use Sit_Cwm\Core\Container;
 use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
 use Sit_Cwm\Tests\TestCase;
+use Sit_Cwm\Tests\Traits\RestoresPluginInstance;
 use Sit_Cwm\Workflow\PermissionManager;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -29,6 +30,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class PluginActionLinksTest extends TestCase {
 
+	use RestoresPluginInstance;
+
 	/**
 	 * Service under test.
 	 *
@@ -44,7 +47,19 @@ final class PluginActionLinksTest extends TestCase {
 	public function set_up() {
 		parent::set_up();
 
+		$this->remember_plugin_instance();
 		$this->links = new PluginActionLinks( new PermissionManager( $this->posts, new Settings() ) );
+	}
+
+	/**
+	 * Restores the bootstrap's plugin instance.
+	 *
+	 * @return void
+	 */
+	public function tear_down() {
+		$this->restore_plugin_instance();
+
+		parent::tear_down();
 	}
 
 	/**

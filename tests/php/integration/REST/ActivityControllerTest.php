@@ -16,6 +16,7 @@ use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
 use Sit_Cwm\Tests\Traits\PerPostWorkflow;
 use Sit_Cwm\REST\ActivityController;
+use Sit_Cwm\Tests\Traits\RestoresPluginInstance;
 use Sit_Cwm\Workflow\Capabilities;
 use Sit_Cwm\Workflow\StatusManager;
 use WP_REST_Request;
@@ -38,6 +39,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class ActivityControllerTest extends WP_UnitTestCase {
 
 	use PerPostWorkflow;
+	use RestoresPluginInstance;
 
 	/**
 	 * Workflow meta persistence, for arranging state.
@@ -72,6 +74,8 @@ final class ActivityControllerTest extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
+		$this->remember_plugin_instance();
+
 		delete_option( Settings::OPTION );
 		Capabilities::add_caps();
 
@@ -91,6 +95,8 @@ final class ActivityControllerTest extends WP_UnitTestCase {
 		$this->remove_per_post_workflow();
 
 		$GLOBALS['wp_rest_server'] = null; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Core's REST server global.
+
+		$this->restore_plugin_instance();
 
 		parent::tear_down();
 	}
@@ -211,6 +217,33 @@ final class ActivityControllerTest extends WP_UnitTestCase {
 
 		$this->assertSame( 'Review', $item['old_label'] );
 		$this->assertSame( 'Legal Review', $item['new_label'] );
+	}
+
+	/**
+	 * AI-origin entries carry the F16 action label and value labels; an
+	 * undeclared previous value has no label.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_ai_origin_item_labels() {
+		$post   = $this->make_post( $this->make_user( 'author' ) );
+		$editor = $this->make_user( 'editor' );
+
+		$this->activity->log_ai_origin_changed( $post, 'human', '', 'default', 0 );
+		$this->activity->log_ai_origin_changed( $post, 'ai_assisted', 'human', 'workflow', $editor );
+
+		wp_set_current_user( $this->make_user( 'administrator' ) );
+
+		$data = $this->get_activity( $post, array( 'action' => 'ai_origin_changed' ) )->get_data();
+
+		$this->assertSame(
+			array( 'AI use declared', 'Human-written', 'AI-assisted' ),
+			array( $data[0]['action_label'], $data[0]['old_label'], $data[0]['new_label'] )
+		);
+		$this->assertNull( $data[1]['old_label'] );
+		$this->assertSame( 'Human-written', $data[1]['new_label'] );
 	}
 
 	/**

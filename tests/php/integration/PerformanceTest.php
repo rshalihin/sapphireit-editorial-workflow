@@ -8,9 +8,14 @@
 
 namespace Sit_Cwm\Tests\Integration;
 
+use Sit_Cwm\Audit\ActivityExporter;
+use Sit_Cwm\Core\Database;
 use Sit_Cwm\Core\Settings;
+use Sit_Cwm\REST\ActivityFormatter;
+use Sit_Cwm\REST\UserSummaries;
 use Sit_Cwm\Tests\TestCase;
 use Sit_Cwm\Tests\Traits\CreatesWorkflowPosts;
+use Sit_Cwm\Workflow\StatusManager;
 use WP_REST_Response;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -187,6 +192,49 @@ final class PerformanceTest extends TestCase {
 		$this->assertTrue( $settings->update( array( 'post_types' => array( 'post' ) ) ) );
 		wp_cache_delete( 'alloptions', 'options' );
 		$this->assertArrayHasKey( Settings::OPTION, wp_load_alloptions(), 'Updated settings are not autoloaded.' );
+	}
+
+	/**
+	 * Exporting 3 000 rows in batches of 500 grows peak memory by less than
+	 * 16 MB: rows are streamed, never collected (F8).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @covers \Sit_Cwm\Audit\ActivityExporter
+	 *
+	 * @return void
+	 */
+	public function test_export_memory_is_bounded() {
+		global $wpdb;
+
+		$post    = $this->create_managed_post( array( 'post_status' => 'draft' ) );
+		$user    = self::fixture_user( 'editor' );
+		$created = gmdate( 'Y-m-d H:i:s' );
+		$values  = array();
+
+		for ( $i = 0; $i < 3000; $i++ ) {
+			$values[] = $wpdb->prepare( '(%d, %d, %s, %s, %s)', $post, $user, 'comment_added', str_repeat( "Performance fixture {$i}. ", 10 ), $created );
+		}
+
+		$table = ( new Database() )->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Test fixture; every value tuple is prepared above.
+		$wpdb->query( "INSERT INTO {$table} (post_id, user_id, action, message, created_at) VALUES " . implode( ', ', $values ) );
+		unset( $values );
+
+		$exporter = new ActivityExporter( $this->activity, new ActivityFormatter( new StatusManager() ), new UserSummaries(), 500 );
+		$handle   = fopen( 'php://temp', 'w+' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Spill-to-disk stream.
+
+		if ( function_exists( 'memory_reset_peak_usage' ) ) {
+			memory_reset_peak_usage(); // phpcs:ignore PHPCompatibility.FunctionUse.NewFunctions.memory_reset_peak_usageFound -- Guarded; PHP 8.2+.
+		}
+
+		$baseline = memory_get_peak_usage();
+
+		$this->assertSame( 3000, $exporter->export( $handle ) );
+		$this->assertLessThan( 16 * MB_IN_BYTES, memory_get_peak_usage() - $baseline );
+
+		fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Spill-to-disk stream.
 	}
 
 	/**

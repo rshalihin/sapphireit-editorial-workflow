@@ -328,6 +328,47 @@ final class ActivityLoggerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * An AI-origin change stores the F9 shape: no old value when nothing was
+	 * declared, and the route in `context.via`.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_log_ai_origin_changed_shape() {
+		$author = self::factory()->user->create( array( 'role' => 'author' ) );
+		$entry  = $this->activity->get( $this->activity->log_ai_origin_changed( $this->post, 'ai_generated', '', 'post_api', $author ) );
+
+		$this->assertSame( 'ai_origin_changed', $entry->get_action() );
+		$this->assertSame( $author, $entry->get_user_id() );
+		$this->assertNull( $entry->get_old_value() );
+		$this->assertSame( 'ai_generated', $entry->get_new_value() );
+		$this->assertSame( array( 'via' => 'post_api' ), $entry->get_context() );
+
+		$changed = $this->activity->get( $this->activity->log_ai_origin_changed( $this->post, 'human', 'ai_generated', 'default', 0 ) );
+
+		$this->assertSame( 'ai_generated', $changed->get_old_value() );
+		$this->assertSame( 0, $changed->get_user_id() );
+	}
+
+	/**
+	 * Unknown values or routes log nothing.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_log_ai_origin_changed_rejects_invalid_input() {
+		$before = $this->row_count();
+
+		$this->assertSame( 0, $this->activity->log_ai_origin_changed( $this->post, 'robot', '', 'post_api' ) );
+		$this->assertSame( 0, $this->activity->log_ai_origin_changed( $this->post, '', 'human', 'workflow' ) );
+		$this->assertSame( 0, $this->activity->log_ai_origin_changed( $this->post, 'human', 'robot', 'workflow' ) );
+		$this->assertSame( 0, $this->activity->log_ai_origin_changed( $this->post, 'human', '', 'somewhere' ) );
+		$this->assertSame( $before, $this->row_count() );
+	}
+
+	/**
 	 * Reads paginate, default to newest first, clamp page size and filter by
 	 * action; counts agree.
 	 *
@@ -522,6 +563,44 @@ final class ActivityLoggerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * `get_batch()` pages by id ascending, honours `actions` and `since`, and
+	 * matches nothing for unknown actions.
+	 *
+	 * @return void
+	 */
+	public function test_get_batch_pages_by_id_with_filters() {
+		$user = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$ids  = array();
+
+		for ( $i = 0; $i < 5; $i++ ) {
+			$ids[] = $this->activity->log_comment( $this->post, "c{$i}", $user );
+		}
+
+		$this->activity->log_status_change( $this->post, 'draft', 'writing', $user );
+
+		$first = $this->activity->get_batch( array( 'limit' => 2 ) );
+		$this->assertSame( array_slice( $ids, 0, 2 ), $this->ids( $first ) );
+
+		$next = $this->activity->get_batch(
+			array(
+				'after_id' => $ids[1],
+				'limit'    => 10,
+				'actions'  => array( 'comment_added' ),
+			)
+		);
+		$this->assertSame( array_slice( $ids, 2 ), $this->ids( $next ) );
+
+		$this->assertSame( array(), $this->activity->get_batch( array( 'since' => '2999-01-01 00:00:00' ) ) );
+		$this->assertSame( array(), $this->activity->get_batch( array( 'actions' => array( 'not_an_action' ) ) ) );
+
+		// An invalid `since` means no lower bound, not "now".
+		$this->assertCount( 6, $this->activity->get_batch( array( 'since' => 'yesterday' ) ) );
+
+		// `limit` is clamped to 1..5000.
+		$this->assertCount( 1, $this->activity->get_batch( array( 'limit' => 0 ) ) );
+	}
+
+	/**
 	 * Raw activity row by id.
 	 *
 	 * @param int $id Activity id.
@@ -535,6 +614,21 @@ final class ActivityLoggerTest extends WP_UnitTestCase {
 		$this->assertIsObject( $row, "Activity row {$id}" );
 
 		return $row;
+	}
+
+	/**
+	 * Id of each entry.
+	 *
+	 * @param ActivityEntry[] $entries Entries.
+	 * @return int[]
+	 */
+	private function ids( array $entries ): array {
+		return array_map(
+			static function ( ActivityEntry $entry ) {
+				return $entry->get_id();
+			},
+			$entries
+		);
 	}
 
 	/**

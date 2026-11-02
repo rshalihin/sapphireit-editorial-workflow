@@ -107,6 +107,32 @@ final class PostRepositoryTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * AI origin reads as not declared until set, refuses `''` and unknown
+	 * values, and reads a tampered stored value as not declared (F9).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_ai_origin_get_set() {
+		$post = self::factory()->post->create();
+
+		$this->assertSame( '', $this->posts->get_ai_origin( $post ) );
+		$this->assertTrue( $this->posts->set_ai_origin( $post, 'ai_assisted' ) );
+		$this->assertSame( 'ai_assisted', $this->posts->get_ai_origin( $post ) );
+		$this->assertTrue( $this->posts->set_ai_origin( $post, 'ai_assisted' ), 'Re-saving the same value still succeeds.' );
+
+		$this->assertFalse( $this->posts->set_ai_origin( $post, '' ) );
+		$this->assertFalse( $this->posts->set_ai_origin( $post, 'robot' ) );
+		$this->assertFalse( $this->posts->set_ai_origin( $post, 'Human' ) );
+		$this->assertFalse( $this->posts->set_ai_origin( 0, 'human' ) );
+		$this->assertSame( 'ai_assisted', $this->posts->get_ai_origin( $post ) );
+
+		update_post_meta( $post, PostRepository::META_AI_ORIGIN, 'robot' );
+		$this->assertSame( '', $this->posts->get_ai_origin( $post ) );
+	}
+
+	/**
 	 * Unregistered statuses are rejected, not coerced to the default.
 	 *
 	 * @return void

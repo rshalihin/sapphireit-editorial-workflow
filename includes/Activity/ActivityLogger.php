@@ -11,6 +11,7 @@ namespace Sit_Cwm\Activity;
 use DateTimeImmutable;
 use Sit_Cwm\Core\Database;
 use Sit_Cwm\Core\Interfaces\Bootable;
+use Sit_Cwm\Governance\AiOrigin;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -34,10 +35,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class ActivityLogger implements Bootable {
 
 	/**
-	 * Action slugs accepted in v1.1 (D8 + E7), before `sit_cwm_activity_actions`.
+	 * Action slugs accepted in v1.2 (D8 + E7 + F9), before `sit_cwm_activity_actions`.
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Adds the publication actions.
+	 * @since 1.2.0 Adds `ai_origin_changed`.
 	 * @api
 	 * @var string[]
 	 */
@@ -48,6 +50,7 @@ final class ActivityLogger implements Bootable {
 		'due_date_set',
 		'due_date_cleared',
 		'comment_added',
+		'ai_origin_changed',
 		...self::PUBLICATION_ACTIONS,
 	);
 
@@ -68,13 +71,25 @@ final class ActivityLogger implements Bootable {
 	);
 
 	/**
-	 * Context keys `log_publication_event()` keeps (E7).
+	 * Known context keys (E7, F9, F10). `log_publication_event()` keeps only
+	 * these.
 	 *
 	 * @since 1.1.0
+	 * @since 1.2.0 Adds `via`, `ai_origin`, `attested` and `attestation`.
 	 * @internal
 	 * @var string[]
 	 */
-	const CONTEXT_KEYS = array( 'workflow_status', 'gate_mode', 'layer', 'source', 'reason' );
+	const CONTEXT_KEYS = array( 'workflow_status', 'gate_mode', 'layer', 'source', 'reason', 'via', 'ai_origin', 'attested', 'attestation' );
+
+	/**
+	 * Routes an AI origin change can arrive by, stored as `context.via` (F9):
+	 * the sit-cwm/v1 workflow route, the `wp/v2` field, or the creation stamp.
+	 *
+	 * @since 1.2.0
+	 * @internal
+	 * @var string[]
+	 */
+	const AI_ORIGIN_VIAS = array( 'workflow', 'post_api', 'default' );
 
 	/**
 	 * Default page size for reads.
@@ -93,6 +108,24 @@ final class ActivityLogger implements Bootable {
 	 * @var int
 	 */
 	const MAX_PER_PAGE = 100;
+
+	/**
+	 * Default batch size for `get_batch()`.
+	 *
+	 * @since 1.2.0
+	 * @internal
+	 * @var int
+	 */
+	const DEFAULT_BATCH_SIZE = 500;
+
+	/**
+	 * Largest batch size for `get_batch()`.
+	 *
+	 * @since 1.2.0
+	 * @internal
+	 * @var int
+	 */
+	const MAX_BATCH_SIZE = 5000;
 
 	/**
 	 * Width of the `action` column.
@@ -361,10 +394,49 @@ final class ActivityLogger implements Bootable {
 	}
 
 	/**
+	 * Logs a change of the declared AI origin (F9).
+	 *
+	 * @since 1.2.0
+	 * @internal Callers must authorize first.
+	 *
+	 * @param int      $post_id    Post id.
+	 * @param string   $new_origin New value, one of `AiOrigin::VALUES`.
+	 * @param string   $old_origin Previous value, one of `AiOrigin::VALUES`, or
+	 *                             `''` when nothing was declared (stored as null).
+	 * @param string   $via        One of `AI_ORIGIN_VIAS`.
+	 * @param int|null $user_id    Acting user; `null` for the current user.
+	 * @return int Inserted id, `0` on failure or an invalid value or route.
+	 */
+	public function log_ai_origin_changed( int $post_id, string $new_origin, string $old_origin, string $via, ?int $user_id = null ): int {
+		if (
+			! in_array( $new_origin, AiOrigin::VALUES, true )
+			|| ( AiOrigin::NOT_DECLARED !== $old_origin && ! in_array( $old_origin, AiOrigin::VALUES, true ) )
+			|| ! in_array( $via, self::AI_ORIGIN_VIAS, true )
+		) {
+			return 0;
+		}
+
+		return $this->log(
+			$post_id,
+			'ai_origin_changed',
+			$this->with_user(
+				array(
+					'old_value' => AiOrigin::NOT_DECLARED !== $old_origin ? $old_origin : null,
+					'new_value' => $new_origin,
+					'context'   => array( 'via' => $via ),
+				),
+				$user_id
+			)
+		);
+	}
+
+	/**
 	 * Logs a publication event or publish-gate verdict (E7).
 	 *
 	 * Context keys outside `CONTEXT_KEYS` and non-scalar values are dropped;
-	 * every kept value is reduced to a key with `sanitize_key()`.
+	 * every kept value is reduced to a key with `sanitize_key()`. That suits
+	 * `ai_origin`, but not free text such as `attestation`, which must never
+	 * be passed through here.
 	 *
 	 * @since 1.1.0
 	 * @internal Callers must authorize first.
@@ -580,6 +652,73 @@ final class ActivityLogger implements Bootable {
 	}
 
 	/**
+	 * A keyset page of the whole activity log, oldest first, for exports.
+	 *
+	 * Pass the id of the last entry of one batch as `after_id` to read the
+	 * next; an empty result means the log is exhausted. Each call is one query
+	 * whatever the log's size.
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @param array $args {
+	 *     Optional. Query arguments.
+	 *
+	 *     @type int      $after_id Only entries with a greater id; default 0.
+	 *     @type int      $limit    Entries per batch, 1 to 5000; default 500.
+	 *     @type string[] $actions  Only these actions; default all. Unknown
+	 *                              actions are ignored, and a list naming
+	 *                              none that is known matches nothing.
+	 *     @type string   $since    Only entries created at or after this UTC
+	 *                              `Y-m-d H:i:s`; an invalid value is ignored.
+	 * }
+	 * @return ActivityEntry[] Ordered by id ascending.
+	 */
+	public function get_batch( array $args = array() ): array {
+		global $wpdb;
+
+		$after_id = isset( $args['after_id'] ) && is_numeric( $args['after_id'] ) ? max( 0, (int) $args['after_id'] ) : 0;
+		$limit    = isset( $args['limit'] ) && is_numeric( $args['limit'] ) ? (int) $args['limit'] : self::DEFAULT_BATCH_SIZE;
+		$limit    = max( 1, min( self::MAX_BATCH_SIZE, $limit ) );
+		$actions  = array();
+
+		if ( isset( $args['actions'] ) ) {
+			foreach ( (array) $args['actions'] as $action ) {
+				if ( is_string( $action ) && $this->is_valid_action( $action ) ) {
+					$actions[ $action ] = $action;
+				}
+			}
+
+			if ( array() === $actions ) {
+				return array();
+			}
+		}
+
+		$sql    = 'SELECT * FROM %i WHERE id > %d';
+		$values = array( $this->database->table_name(), $after_id );
+
+		if ( array() !== $actions ) {
+			$sql   .= ' AND action IN (' . implode( ', ', array_fill( 0, count( $actions ), '%s' ) ) . ')';
+			$values = array_merge( $values, array_values( $actions ) );
+		}
+
+		if ( isset( $args['since'] ) && $this->is_utc_datetime( $args['since'] ) ) {
+			$sql     .= ' AND created_at >= %s';
+			$values[] = $args['since'];
+		}
+
+		$sql     .= ' ORDER BY id ASC LIMIT %d';
+		$values[] = $limit;
+
+		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin's own table; a one-off export read.
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql is built from fixed fragments with placeholders only.
+			$wpdb->prepare( $sql, $values )
+		);
+
+		return $this->to_entries( $rows );
+	}
+
+	/**
 	 * Deletes every activity entry of a post.
 	 *
 	 * @since 1.0.0
@@ -772,14 +911,24 @@ final class ActivityLogger implements Bootable {
 	 * @return string
 	 */
 	private function sanitize_created_at( $value ): string {
-		if ( is_string( $value ) ) {
-			$date = DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', $value );
+		return $this->is_utc_datetime( $value ) ? $value : current_time( 'mysql', true );
+	}
 
-			if ( false !== $date && $date->format( 'Y-m-d H:i:s' ) === $value ) {
-				return $value;
-			}
+	/**
+	 * Whether a value is a real `Y-m-d H:i:s` datetime.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param mixed $value Raw value.
+	 * @return bool
+	 */
+	private function is_utc_datetime( $value ): bool {
+		if ( ! is_string( $value ) ) {
+			return false;
 		}
 
-		return current_time( 'mysql', true );
+		$date = DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', $value );
+
+		return false !== $date && $date->format( 'Y-m-d H:i:s' ) === $value;
 	}
 }

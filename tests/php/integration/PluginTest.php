@@ -27,8 +27,8 @@ use Sit_Cwm\Publishing\PublicationLogger;
 use Sit_Cwm\Publishing\PublishGate;
 use Sit_Cwm\Publishing\RefusalNotices;
 use Sit_Cwm\Workflow\Capabilities;
+use Sit_Cwm\Tests\Traits\RestoresPluginInstance;
 use Sit_Cwm\Workflow\WorkflowManager;
-use ReflectionProperty;
 use WP_UnitTestCase;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -46,13 +46,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class PluginTest extends WP_UnitTestCase {
 
-	/**
-	 * The plugin instance the test bootstrap booted, restored after each test.
-	 *
-	 * @since 1.2.0
-	 * @var Plugin|null
-	 */
-	private $booted_instance;
+	use RestoresPluginInstance;
 
 	/**
 	 * Remembers the bootstrap's plugin instance.
@@ -64,7 +58,7 @@ final class PluginTest extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		$this->booted_instance = Plugin::instance();
+		$this->remember_plugin_instance();
 	}
 
 	/**
@@ -76,9 +70,7 @@ final class PluginTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function tear_down() {
-		$property = new ReflectionProperty( Plugin::class, 'instance' );
-		$property->setAccessible( true );
-		$property->setValue( null, $this->booted_instance );
+		$this->restore_plugin_instance();
 
 		parent::tear_down();
 	}

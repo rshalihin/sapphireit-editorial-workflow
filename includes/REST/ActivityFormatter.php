@@ -12,6 +12,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Sit_Cwm\Activity\ActivityEntry;
 use Sit_Cwm\Activity\ActivityLogger;
+use Sit_Cwm\Governance\AiOrigin;
 use Sit_Cwm\Workflow\StatusManager;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -161,6 +162,7 @@ final class ActivityFormatter {
 			'due_date_set'          => __( 'Due date set', 'sapphireit-editorial-workflow' ),
 			'due_date_cleared'      => __( 'Due date removed', 'sapphireit-editorial-workflow' ),
 			'comment_added'         => __( 'Comment added', 'sapphireit-editorial-workflow' ),
+			'ai_origin_changed'     => __( 'AI use declared', 'sapphireit-editorial-workflow' ),
 			'post_published'        => __( 'Published', 'sapphireit-editorial-workflow' ),
 			'post_unpublished'      => __( 'Unpublished', 'sapphireit-editorial-workflow' ),
 			'publish_gate_refused'  => __( 'Publishing blocked', 'sapphireit-editorial-workflow' ),
@@ -188,7 +190,7 @@ final class ActivityFormatter {
 	 * Label for an old/new value, depending on the action.
 	 *
 	 * @since 1.0.0
-	 * @since 1.2.0 Added $post_id.
+	 * @since 1.2.0 Added $post_id; labels AI origin values.
 	 *
 	 * @param string      $action  Action slug.
 	 * @param string|null $value   Stored value.
@@ -203,6 +205,10 @@ final class ActivityFormatter {
 
 		if ( 'status_changed' === $action ) {
 			return $this->statuses->label( $value, $post_id );
+		}
+
+		if ( 'ai_origin_changed' === $action ) {
+			return AiOrigin::label( $value );
 		}
 
 		if ( in_array( $action, self::REVIEWER_ACTIONS, true ) ) {

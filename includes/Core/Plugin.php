@@ -9,10 +9,12 @@
 namespace Sit_Cwm\Core;
 
 use Sit_Cwm\Activity\ActivityLogger;
+use Sit_Cwm\Admin\ActivityExport;
 use Sit_Cwm\Admin\AdminFooter;
 use Sit_Cwm\Admin\Dashboard;
 use Sit_Cwm\Admin\PluginActionLinks;
 use Sit_Cwm\Admin\Settings as SettingsPage;
+use Sit_Cwm\Audit\ActivityExporter;
 use Sit_Cwm\Content\PostMeta;
 use Sit_Cwm\Content\PostRepository;
 use Sit_Cwm\Core\Interfaces\Bootable;
@@ -97,6 +99,7 @@ final class Plugin {
 			'admin.action_links',
 			'editor.sidebar',
 			'editor.classic',
+			'admin.export',
 		),
 		'rest'  => array(
 			'rest.workflow',
@@ -521,7 +524,21 @@ final class Plugin {
 		$this->container->set(
 			'admin.dashboard',
 			static function ( Container $c ) {
-				return new Dashboard( $c->get( 'assets' ), $c->get( 'permission_manager' ) );
+				return new Dashboard( $c->get( 'assets' ), $c->get( 'permission_manager' ), $c->get( 'admin.export' ) );
+			}
+		);
+
+		$this->container->set(
+			'audit.exporter',
+			static function ( Container $c ) {
+				return new ActivityExporter( $c->get( 'activity_logger' ), $c->get( 'activity_formatter' ), $c->get( 'user_summaries' ) );
+			}
+		);
+
+		$this->container->set(
+			'admin.export',
+			static function ( Container $c ) {
+				return new ActivityExport( $c->get( 'permission_manager' ), $c->get( 'audit.exporter' ) );
 			}
 		);
 

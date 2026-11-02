@@ -16,6 +16,7 @@ use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
 use Sit_Cwm\Tests\Traits\PerPostWorkflow;
 use Sit_Cwm\REST\PostsController;
+use Sit_Cwm\Tests\Traits\RestoresPluginInstance;
 use Sit_Cwm\Workflow\Capabilities;
 use Sit_Cwm\Workflow\StatusManager;
 use WP_REST_Request;
@@ -42,6 +43,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class PostsControllerTest extends WP_UnitTestCase {
 
 	use PerPostWorkflow;
+	use RestoresPluginInstance;
 
 	/**
 	 * Workflow meta persistence, for arranging state.
@@ -76,6 +78,8 @@ final class PostsControllerTest extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
+		$this->remember_plugin_instance();
+
 		delete_option( Settings::OPTION );
 		Capabilities::add_caps();
 
@@ -95,6 +99,8 @@ final class PostsControllerTest extends WP_UnitTestCase {
 		$this->remove_per_post_workflow();
 
 		$GLOBALS['wp_rest_server'] = null; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Core's REST server global.
+
+		$this->restore_plugin_instance();
 
 		parent::tear_down();
 	}

@@ -80,6 +80,14 @@ final class Dashboard implements Bootable {
 	private $permissions;
 
 	/**
+	 * Activity log export form.
+	 *
+	 * @since 1.2.0
+	 * @var ActivityExport
+	 */
+	private $export;
+
+	/**
 	 * Hook suffix of the registered page; empty until the menu is added.
 	 *
 	 * @since 1.0.0
@@ -91,13 +99,16 @@ final class Dashboard implements Bootable {
 	 * Constructor.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $export.
 	 *
 	 * @param Assets            $assets      Asset loader.
 	 * @param PermissionManager $permissions Workflow authorization.
+	 * @param ActivityExport    $export      Activity log export form.
 	 */
-	public function __construct( Assets $assets, PermissionManager $permissions ) {
+	public function __construct( Assets $assets, PermissionManager $permissions, ActivityExport $export ) {
 		$this->assets      = $assets;
 		$this->permissions = $permissions;
+		$this->export      = $export;
 	}
 
 	/**
@@ -198,9 +209,11 @@ final class Dashboard implements Bootable {
 	 * Prints the page shell the React app mounts into.
 	 *
 	 * The heading sits outside the React root so it survives mounting, and
-	 * core moves admin notices below the first `.wrap h1`.
+	 * core moves admin notices below the first `.wrap h1`. Auditors also get
+	 * the activity export form above the root (F8).
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Prints the export form for auditors.
 	 *
 	 * @return void
 	 */
@@ -210,8 +223,9 @@ final class Dashboard implements Bootable {
 		}
 
 		printf(
-			'<div class="wrap sit-cwm-dashboard-wrap"><h1 class="screen-reader-text">%1$s</h1><div id="%2$s"></div></div>',
+			'<div class="wrap sit-cwm-dashboard-wrap"><h1 class="screen-reader-text">%1$s</h1>%2$s<div id="%3$s"></div></div>',
 			esc_html__( 'Editorial Workflow', 'sapphireit-editorial-workflow' ),
+			$this->export->render_form(), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- render_form() returns escaped markup.
 			esc_attr( self::ROOT_ID )
 		);
 	}

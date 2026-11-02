@@ -8,13 +8,20 @@
 
 namespace Sit_Cwm\Tests\Integration\Admin;
 
+use Sit_Cwm\Activity\ActivityLogger;
+use Sit_Cwm\Admin\ActivityExport;
 use Sit_Cwm\Admin\Dashboard;
+use Sit_Cwm\Audit\ActivityExporter;
 use Sit_Cwm\Content\PostRepository;
 use Sit_Cwm\Core\Assets;
 use Sit_Cwm\Core\Container;
+use Sit_Cwm\Core\Database;
 use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
+use Sit_Cwm\REST\ActivityFormatter;
+use Sit_Cwm\REST\UserSummaries;
 use Sit_Cwm\Workflow\Capabilities;
+use Sit_Cwm\Tests\Traits\RestoresPluginInstance;
 use Sit_Cwm\Workflow\PermissionManager;
 use Sit_Cwm\Workflow\StatusManager;
 use WP_UnitTestCase;
@@ -33,6 +40,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @covers \Sit_Cwm\Workflow\PermissionManager::can_access_dashboard
  */
 final class DashboardTest extends WP_UnitTestCase {
+
+	use RestoresPluginInstance;
 
 	/**
 	 * Hook suffix core derives for the top-level page.
@@ -58,6 +67,7 @@ final class DashboardTest extends WP_UnitTestCase {
 
 		require_once ABSPATH . 'wp-admin/includes/plugin.php';
 
+		$this->remember_plugin_instance();
 		$this->reset_admin_state();
 		delete_option( Settings::OPTION );
 		Capabilities::add_caps();
@@ -73,7 +83,9 @@ final class DashboardTest extends WP_UnitTestCase {
 			'/languages'
 		);
 
-		$this->dashboard = new Dashboard( $assets, $permissions );
+		$exporter = new ActivityExporter( new ActivityLogger( new Database() ), new ActivityFormatter( $statuses ), new UserSummaries() );
+
+		$this->dashboard = new Dashboard( $assets, $permissions, new ActivityExport( $permissions, $exporter ) );
 	}
 
 	/**
@@ -83,6 +95,7 @@ final class DashboardTest extends WP_UnitTestCase {
 	 */
 	public function tear_down() {
 		$this->reset_admin_state();
+		$this->restore_plugin_instance();
 
 		parent::tear_down();
 	}
@@ -244,6 +257,29 @@ final class DashboardTest extends WP_UnitTestCase {
 			'<div class="wrap sit-cwm-dashboard-wrap"><h1 class="screen-reader-text">Editorial Workflow</h1><div id="sit-cwm-dashboard"></div></div>',
 			$html
 		);
+	}
+
+	/**
+	 * Auditors get the export form inside `.wrap`, before the React root.
+	 *
+	 * @return void
+	 */
+	public function test_render_prints_export_form_for_auditors() {
+		require_once ABSPATH . 'wp-admin/includes/template.php';
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		ob_start();
+		$this->dashboard->render();
+		$html = ob_get_clean();
+
+		$form = strpos( $html, '<form method="post"' );
+		$root = strpos( $html, '<div id="sit-cwm-dashboard"></div>' );
+
+		$this->assertNotFalse( $form );
+		$this->assertNotFalse( $root );
+		$this->assertLessThan( $root, $form );
+		$this->assertStringContainsString( 'value="sit_cwm_export_activity"', $html );
 	}
 
 	/**

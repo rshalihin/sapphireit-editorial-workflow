@@ -86,6 +86,25 @@ final class PermissionManager {
 	}
 
 	/**
+	 * Whether a user may audit the whole activity log: export it, and read
+	 * the governance report (F8). Needs both `sit_cwm_view_activity` and
+	 * `sit_cwm_manage_workflows`, so administrators only by default.
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @param int|null $user_id User id; null for the current user.
+	 * @return bool
+	 */
+	public function can_audit( ?int $user_id = null ): bool {
+		$user = $this->resolve_user( $user_id );
+
+		return null !== $user
+			&& user_can( $user, Capabilities::VIEW_ACTIVITY )
+			&& user_can( $user, Capabilities::MANAGE_WORKFLOWS );
+	}
+
+	/**
 	 * Whether a user may publish managed content that is not approved while a
 	 * publish gate is on (E9).
 	 *

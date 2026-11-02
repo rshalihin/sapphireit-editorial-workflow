@@ -12,6 +12,7 @@ use Sit_Cwm\Core\Container;
 use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
 use Sit_Cwm\REST\UserController;
+use Sit_Cwm\Tests\Traits\RestoresPluginInstance;
 use Sit_Cwm\Workflow\Capabilities;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -31,6 +32,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class UserControllerTest extends WP_UnitTestCase {
 
+	use RestoresPluginInstance;
+
 	/**
 	 * Custom role holding the review capability but no editing capabilities.
 	 *
@@ -45,6 +48,8 @@ final class UserControllerTest extends WP_UnitTestCase {
 	 */
 	public function set_up() {
 		parent::set_up();
+
+		$this->remember_plugin_instance();
 
 		delete_option( Settings::OPTION );
 		Capabilities::add_caps();
@@ -72,6 +77,8 @@ final class UserControllerTest extends WP_UnitTestCase {
 		remove_all_filters( 'sit_cwm_assignable_reviewers' );
 
 		$GLOBALS['wp_rest_server'] = null; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Core's REST server global.
+
+		$this->restore_plugin_instance();
 
 		parent::tear_down();
 	}

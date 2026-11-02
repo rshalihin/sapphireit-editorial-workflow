@@ -917,6 +917,27 @@ final class PermissionManagerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Auditing needs both `sit_cwm_view_activity` and
+	 * `sit_cwm_manage_workflows` (F8): administrators only by default.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_can_audit_requires_view_activity_and_manage() {
+		$manager_only = $this->make_user( 'subscriber' );
+		get_userdata( $manager_only )->add_cap( Capabilities::MANAGE_WORKFLOWS );
+
+		$this->assertTrue( $this->permissions->can_audit( $this->make_user( 'administrator' ) ) );
+		$this->assertFalse( $this->permissions->can_audit( $this->make_user( 'editor' ) ) );
+		$this->assertFalse( $this->permissions->can_audit( $manager_only ) );
+		$this->assertFalse( $this->permissions->can_audit( 0 ) );
+
+		wp_set_current_user( $this->make_user( 'administrator' ) );
+		$this->assertTrue( $this->permissions->can_audit() );
+	}
+
+	/**
 	 * Creates a user with a role.
 	 *
 	 * @param string $role Role slug.

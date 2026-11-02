@@ -43,7 +43,7 @@ final class PostMetaTest extends WP_UnitTestCase {
 	 *
 	 * @var string[]
 	 */
-	const KEYS = array( PostRepository::META_STATUS, PostRepository::META_REVIEWER, PostRepository::META_DUE_DATE );
+	const KEYS = array( PostRepository::META_STATUS, PostRepository::META_REVIEWER, PostRepository::META_DUE_DATE, PostRepository::META_AI_ORIGIN );
 
 	/**
 	 * Service under test.
@@ -155,6 +155,7 @@ final class PostMetaTest extends WP_UnitTestCase {
 		$this->assertSame( 'draft', $meta[ PostRepository::META_STATUS ] );
 		$this->assertSame( 0, $meta[ PostRepository::META_REVIEWER ] );
 		$this->assertSame( '', $meta[ PostRepository::META_DUE_DATE ] );
+		$this->assertSame( '', $meta[ PostRepository::META_AI_ORIGIN ] );
 	}
 
 	/**
@@ -246,6 +247,43 @@ final class PostMetaTest extends WP_UnitTestCase {
 		wp_set_current_user( $admin );
 		$this->assertFalse( current_user_can( 'edit_post_meta', $post, PostRepository::META_PUBLISH_BYPASS ) );
 		$this->assertArrayNotHasKey( PostRepository::META_PUBLISH_BYPASS, $this->get_meta( $post, 'edit' ) );
+	}
+
+	/**
+	 * The AI-origin key is registered with its enum, readable in the edit
+	 * context, and written by nobody through the meta API, administrators
+	 * included (F9).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_ai_origin_meta_is_registered_read_only_and_locked() {
+		$registered = get_registered_meta_keys( 'post', 'post' );
+		$this->assertSame( array( '', 'human', 'ai_assisted', 'ai_generated' ), $registered[ PostRepository::META_AI_ORIGIN ]['show_in_rest']['schema']['enum'] );
+		$this->assertSame( '', $registered[ PostRepository::META_AI_ORIGIN ]['default'] );
+
+		$admin = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$post  = self::factory()->post->create( array( 'post_author' => $admin ) );
+
+		$this->assertContains( PostRepository::META_AI_ORIGIN, PostMeta::LOCKED_META_KEYS );
+		foreach ( PostMeta::STATUS_LOCKED_CAPS as $cap ) {
+			$this->assertContains( 'do_not_allow', map_meta_cap( $cap, $admin, $post, PostRepository::META_AI_ORIGIN ), $cap );
+		}
+		$this->assertFalse( user_can( $admin, 'edit_post_meta', $post, PostRepository::META_AI_ORIGIN ) );
+
+		wp_set_current_user( $admin );
+
+		$response = $this->update_meta( $post, array( PostRepository::META_AI_ORIGIN => 'human' ) );
+		$this->assertGreaterThanOrEqual( 400, $response->get_status() );
+		$this->assertSame( '', $this->posts->get_ai_origin( $post ) );
+
+		$this->posts->set_ai_origin( $post, 'ai_generated' );
+		$this->assertSame( 'ai_generated', $this->get_meta( $post, 'edit' )[ PostRepository::META_AI_ORIGIN ] );
+
+		$response = $this->update_meta( $post, array( PostRepository::META_AI_ORIGIN => null ) );
+		$this->assertGreaterThanOrEqual( 400, $response->get_status() );
+		$this->assertSame( 'ai_generated', $this->posts->get_ai_origin( $post ) );
 	}
 
 	/**

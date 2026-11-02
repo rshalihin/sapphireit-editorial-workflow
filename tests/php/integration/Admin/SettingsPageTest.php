@@ -18,6 +18,7 @@ use Sit_Cwm\Core\Settings;
 use Sit_Cwm\Notifications\NotificationEvents;
 use Sit_Cwm\Tests\TestCase;
 use Sit_Cwm\Tests\Traits\CreatesWorkflowPosts;
+use Sit_Cwm\Tests\Traits\RestoresPluginInstance;
 use Sit_Cwm\Workflow\Capabilities;
 use Sit_Cwm\Workflow\PermissionManager;
 use Sit_Cwm\Workflow\StatusManager;
@@ -39,6 +40,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class SettingsPageTest extends TestCase {
 
 	use CreatesWorkflowPosts;
+	use RestoresPluginInstance;
 
 	/**
 	 * Service under test.
@@ -73,6 +75,7 @@ final class SettingsPageTest extends TestCase {
 		require_once ABSPATH . 'wp-admin/includes/template.php';
 		require_once ABSPATH . 'wp-admin/includes/screen.php';
 
+		$this->remember_plugin_instance();
 		$this->reset_admin_state();
 
 		$this->store       = new Settings();
@@ -91,6 +94,7 @@ final class SettingsPageTest extends TestCase {
 		}
 
 		$this->reset_admin_state();
+		$this->restore_plugin_instance();
 
 		parent::tear_down();
 	}
@@ -202,6 +206,7 @@ final class SettingsPageTest extends TestCase {
 				'publish_gate'             => array(),
 				'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
 				'prevent_self_approval'    => false,
+				'ai_origin_defaults'       => array(),
 			),
 			$clean
 		);
@@ -241,6 +246,7 @@ final class SettingsPageTest extends TestCase {
 				'publish_gate'             => array(),
 				'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
 				'prevent_self_approval'    => false,
+				'ai_origin_defaults'       => array(),
 			),
 			$this->page->sanitize( null )
 		);
@@ -259,7 +265,7 @@ final class SettingsPageTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( array( 'post_types', 'delete_data_on_uninstall', 'publish_gate', 'notifications', 'prevent_self_approval' ), array_keys( $clean ) );
+		$this->assertSame( array( 'post_types', 'delete_data_on_uninstall', 'publish_gate', 'notifications', 'prevent_self_approval', 'ai_origin_defaults' ), array_keys( $clean ) );
 	}
 
 	/**

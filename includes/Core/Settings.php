@@ -8,6 +8,7 @@
 
 namespace Sit_Cwm\Core;
 
+use Sit_Cwm\Governance\AiOrigin;
 use Sit_Cwm\Notifications\NotificationEvents;
 use Sit_Cwm\Publishing\PublishGate;
 
@@ -53,9 +54,10 @@ final class Settings {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Added `publish_gate`, `notifications` and `prevent_self_approval`.
+	 * @since 1.2.0 Added `ai_origin_defaults` (no type has a default, F14).
 	 * @internal
 	 *
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool, ai_origin_defaults: array<string, string>}
 	 */
 	public function defaults(): array {
 		return array(
@@ -64,6 +66,7 @@ final class Settings {
 			'publish_gate'             => array(),
 			'notifications'            => array_fill_keys( NotificationEvents::all(), false ),
 			'prevent_self_approval'    => false,
+			'ai_origin_defaults'       => array(),
 		);
 	}
 
@@ -71,9 +74,10 @@ final class Settings {
 	 * All settings: stored values merged over defaults, known keys only.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Includes `ai_origin_defaults`.
 	 * @api
 	 *
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool, ai_origin_defaults: array<string, string>}
 	 */
 	public function all(): array {
 		$defaults = $this->defaults();
@@ -113,9 +117,12 @@ final class Settings {
 	 * and replaces the stored map, so omitted types go back to off.
 	 * `notifications` must use known event keys and is merged over the stored
 	 * toggles, so omitted events keep their value.
+	 * `ai_origin_defaults` must be an array and replaces the stored map; entries
+	 * for unselectable types or with undeclarable values are dropped (F14).
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Accepts `publish_gate`, `notifications` and `prevent_self_approval`.
+	 * @since 1.2.0 Accepts `ai_origin_defaults`.
 	 * @internal
 	 *
 	 * @param mixed $partial Partial settings, e.g. `[ 'post_types' => [ 'post' ] ]`.
@@ -164,6 +171,16 @@ final class Settings {
 			}
 
 			$settings['notifications'] = array_merge( $this->notification_toggles(), $toggles );
+		}
+
+		if ( array_key_exists( 'ai_origin_defaults', $partial ) ) {
+			$origins = $this->sanitize_ai_origin_defaults( $partial['ai_origin_defaults'] );
+
+			if ( null === $origins ) {
+				return false;
+			}
+
+			$settings['ai_origin_defaults'] = $origins;
 		}
 
 		if ( get_option( self::OPTION ) === $settings ) {
@@ -240,6 +257,26 @@ final class Settings {
 	 */
 	public function prevents_self_approval(): bool {
 		return true === (bool) $this->get( 'prevent_self_approval', false );
+	}
+
+	/**
+	 * AI origin stamped on new content of a post type (F9, F14).
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @param string $post_type Post type slug.
+	 * @return string A value from `AiOrigin::VALUES`, or `''` when the type has
+	 *                no default or is not workflow-enabled.
+	 */
+	public function ai_origin_default( string $post_type ): string {
+		if ( ! $this->is_post_type_enabled( $post_type ) ) {
+			return AiOrigin::NOT_DECLARED;
+		}
+
+		$defaults = $this->get( 'ai_origin_defaults', array() );
+
+		return is_array( $defaults ) && isset( $defaults[ $post_type ] ) ? AiOrigin::sanitize( $defaults[ $post_type ] ) : AiOrigin::NOT_DECLARED;
 	}
 
 	/**
@@ -467,6 +504,39 @@ final class Settings {
 		}
 
 		return $modes;
+	}
+
+	/**
+	 * Filters an AI origin default map down to selectable post types with a
+	 * declarable value. Unlike the gate map, bad entries are dropped rather
+	 * than rejecting the whole update (F14).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param mixed $value Raw value.
+	 * @return array<string, string>|null Post type => value, or null when not an array.
+	 */
+	private function sanitize_ai_origin_defaults( $value ): ?array {
+		if ( ! is_array( $value ) ) {
+			return null;
+		}
+
+		$available = $this->selectable_post_types();
+		$origins   = array();
+
+		foreach ( $value as $post_type => $origin ) {
+			if ( ! is_string( $post_type ) || ! isset( $available[ $post_type ] ) ) {
+				continue;
+			}
+
+			$origin = AiOrigin::sanitize( $origin );
+
+			if ( AiOrigin::NOT_DECLARED !== $origin ) {
+				$origins[ $post_type ] = $origin;
+			}
+		}
+
+		return $origins;
 	}
 
 	/**
