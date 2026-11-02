@@ -1,8 +1,9 @@
 # Dependencies
 /vendor/
 /node_modules/
-# /.claude/
+/.claude-base/
 /.commandcode/
+.claude
 
 # Tooling caches / local config
 .phpunit.result.cache
@@ -38,7 +39,7 @@ yarn-error.log*
 /dist/
 /release/
 
-# Agent/editor scratch state (the committed .claude/.plan/ stays tracked)
+# Agent/editor scratch state (all of .claude/ is ignored above)
 /.claude/settings.local.json
 .idea/
 .vscode/

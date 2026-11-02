@@ -5,6 +5,14 @@ All notable changes to SapphireIT Editorial Workflow are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Changed
+
+- The *Editorial Workflow* admin menu now sits right after *Comments*
+  (position 26) instead of at the bottom of the sidebar. Move it with the new
+  `sit_cwm_admin_menu_position` filter.
+
 ## 1.1.0 - 2026-10-29
 
 "Enforce what it promises." The workflow can now stop unapproved content from

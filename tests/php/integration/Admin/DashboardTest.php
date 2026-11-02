@@ -124,6 +124,51 @@ final class DashboardTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The menu sits at position 26, right after Comments.
+	 *
+	 * @return void
+	 */
+	public function test_menu_registered_after_comments() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$this->dashboard->add_menu();
+
+		$this->assertSame( 26, $this->menu_position() );
+	}
+
+	/**
+	 * The `sit_cwm_admin_menu_position` filter moves the menu; a non-numeric
+	 * value falls back to the default.
+	 *
+	 * @return void
+	 */
+	public function test_menu_position_is_filterable() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$move = static function () {
+			return 6;
+		};
+
+		add_filter( 'sit_cwm_admin_menu_position', $move );
+		$this->dashboard->add_menu();
+		remove_filter( 'sit_cwm_admin_menu_position', $move );
+
+		$this->assertSame( 6, $this->menu_position() );
+
+		$this->reset_admin_state();
+
+		$junk = static function () {
+			return 'top';
+		};
+
+		add_filter( 'sit_cwm_admin_menu_position', $junk );
+		$this->dashboard->add_menu();
+		remove_filter( 'sit_cwm_admin_menu_position', $junk );
+
+		$this->assertSame( 26, $this->menu_position() );
+	}
+
+	/**
 	 * Subscribers and logged-out users get no menu.
 	 *
 	 * @return void
@@ -238,6 +283,23 @@ final class DashboardTest extends WP_UnitTestCase {
 		foreach ( (array) $menu as $item ) {
 			if ( isset( $item[2] ) && Dashboard::MENU_SLUG === $item[2] ) {
 				return $item;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * The `$menu` key the dashboard entry was registered under.
+	 *
+	 * @return int|string|null
+	 */
+	private function menu_position() {
+		global $menu;
+
+		foreach ( (array) $menu as $position => $item ) {
+			if ( isset( $item[2] ) && Dashboard::MENU_SLUG === $item[2] ) {
+				return $position;
 			}
 		}
 

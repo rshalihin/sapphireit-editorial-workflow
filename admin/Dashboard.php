@@ -54,6 +54,15 @@ final class Dashboard implements Bootable {
 	const ROOT_ID = 'sit-cwm-dashboard';
 
 	/**
+	 * Default admin menu position: right after Comments (25), so the core
+	 * content menus stay grouped and the workflow follows them.
+	 *
+	 * @since 1.2.0
+	 * @var int
+	 */
+	const MENU_POSITION = 26;
+
+	/**
 	 * Asset loader.
 	 *
 	 * @since 1.0.0
@@ -121,13 +130,28 @@ final class Dashboard implements Bootable {
 
 		$title = __( 'Editorial Workflow', 'sapphireit-editorial-workflow' );
 
+		/**
+		 * Filters the position of the Editorial Workflow top-level admin menu.
+		 *
+		 * @since 1.2.0
+		 *
+		 * @param int|float $position Menu position. Default 26 (after Comments). A
+		 *                            non-numeric value falls back to the default.
+		 */
+		$position = apply_filters( 'sit_cwm_admin_menu_position', self::MENU_POSITION );
+
+		if ( ! is_numeric( $position ) ) {
+			$position = self::MENU_POSITION;
+		}
+
 		$this->hook_suffix = (string) add_menu_page(
 			$title,
 			$title,
 			Capabilities::VIEW_ACTIVITY,
 			self::MENU_SLUG,
 			array( $this, 'render' ),
-			'dashicons-clipboard'
+			'dashicons-clipboard',
+			$position + 0
 		);
 
 		// Name the first submenu entry explicitly; otherwise core points the
