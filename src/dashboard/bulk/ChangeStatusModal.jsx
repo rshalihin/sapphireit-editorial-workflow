@@ -12,6 +12,8 @@ import { __, _n, sprintf } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
+import AttestationCheckbox from '../../components/AttestationCheckbox';
+import { ATTESTED_STATUS, getSiteAttestation } from '../../utils/attestation';
 import ModalActions from '../modals/ModalActions';
 import {
 	BulkActionContext,
@@ -22,6 +24,9 @@ import {
 } from './shared';
 
 /**
+ * Moving to Approved on a site that requires attestation asks for the
+ * statement first. The server re-checks each post.
+ *
  * @param {Object}   props            Props.
  * @param {Object[]} props.items      Selected rows.
  * @param {Function} props.closeModal Closes the modal.
@@ -32,6 +37,8 @@ export default function ChangeStatusModal( { items, closeModal } ) {
 	const options = useMemo( () => reachableStatuses( items ), [ items ] );
 	const [ to, setTo ] = useState( () => options[ 0 ]?.slug || '' );
 	const [ isConfirming, setIsConfirming ] = useState( false );
+	const [ attested, setAttested ] = useState( false );
+	const attestation = getSiteAttestation();
 
 	const count = items.length;
 	const selected = options.find( ( option ) => option.slug === to );
@@ -59,11 +66,13 @@ export default function ChangeStatusModal( { items, closeModal } ) {
 	}
 
 	const blocked = items.filter( ( item ) => ! canMoveTo( item, to ) ).length;
+	const needsAttestation = attestation.required && to === ATTESTED_STATUS;
+	const canSubmit = ! needsAttestation || attested;
 
 	const submit = async ( event ) => {
 		event.preventDefault();
 
-		if ( isRunning ) {
+		if ( isRunning || ! canSubmit ) {
 			return;
 		}
 
@@ -76,7 +85,12 @@ export default function ChangeStatusModal( { items, closeModal } ) {
 		const { postIds, labels } = toBulkRequest( items );
 
 		// No `from`: the server starts from each post's own current status.
-		await run( 'change_status', { status: to }, postIds, { labels } );
+		await run(
+			'change_status',
+			needsAttestation ? { status: to, attested: true } : { status: to },
+			postIds,
+			{ labels }
+		);
 		closeModal();
 	};
 
@@ -107,9 +121,22 @@ export default function ChangeStatusModal( { items, closeModal } ) {
 				onChange={ ( value ) => {
 					setTo( value );
 					setIsConfirming( false );
+					setAttested( false );
 				} }
 				disabled={ isRunning }
 			/>
+
+			{ needsAttestation && (
+				<AttestationCheckbox
+					statement={ attestation.statement }
+					checked={ attested }
+					onChange={ ( value ) => {
+						setAttested( value );
+						setIsConfirming( false );
+					} }
+					disabled={ isRunning }
+				/>
+			) }
 
 			{ blocked > 0 && (
 				<p className="sit-cwm-bulk-hint">
@@ -160,6 +187,7 @@ export default function ChangeStatusModal( { items, closeModal } ) {
 						: __( 'Apply', 'sapphireit-editorial-workflow' )
 				}
 				isBusy={ isRunning }
+				canSubmit={ canSubmit }
 				isDestructive={ selected.isRollback }
 			/>
 		</form>

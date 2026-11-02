@@ -141,6 +141,126 @@ describe( 'ChangeStatusModal', () => {
 		);
 		await waitFor( () => expect( closeModal ).toHaveBeenCalled() );
 	} );
+
+	describe( 'attestation', () => {
+		const STATEMENT =
+			'I confirm I have reviewed this content and approve it for publication.';
+		const items = [
+			{
+				post_id: 1,
+				title: 'One',
+				available_transitions: [
+					{ slug: 'needs_changes', is_rollback: true },
+					{ slug: 'approved' },
+				],
+			},
+		];
+
+		/**
+		 * Renders the modal with a spy for the batch run.
+		 *
+		 * @return {Function} The `run` spy.
+		 */
+		const renderModal = () => {
+			const run = jest.fn().mockResolvedValue( {} );
+
+			render(
+				<BulkActionContext.Provider
+					value={ { run, isRunning: false, onChanged: () => {} } }
+				>
+					<ChangeStatusModal
+						items={ items }
+						closeModal={ () => {} }
+					/>
+				</BulkActionContext.Provider>
+			);
+
+			return run;
+		};
+
+		const apply = () => screen.getByRole( 'button', { name: 'Apply' } );
+
+		beforeEach( () => {
+			window.sitCwm.requireAttestation = true;
+			window.sitCwm.attestationStatement = STATEMENT;
+		} );
+
+		it( 'requires the statement before moving to Approved', async () => {
+			const run = renderModal();
+
+			fireEvent.change( screen.getByLabelText( 'New status' ), {
+				target: { value: 'approved' },
+			} );
+
+			const checkbox = screen.getByRole( 'checkbox', {
+				name: STATEMENT,
+			} );
+
+			expect( apply().getAttribute( 'aria-disabled' ) ).toBe( 'true' );
+
+			fireEvent.click( apply() );
+			expect(
+				screen.queryByRole( 'button', { name: 'Yes, update 1 item' } )
+			).toBeNull();
+
+			fireEvent.click( checkbox );
+
+			expect( apply().getAttribute( 'aria-disabled' ) ).not.toBe(
+				'true'
+			);
+
+			fireEvent.click( apply() );
+			fireEvent.click(
+				screen.getByRole( 'button', { name: 'Yes, update 1 item' } )
+			);
+
+			await waitFor( () =>
+				expect( run ).toHaveBeenCalledWith(
+					'change_status',
+					{ status: 'approved', attested: true },
+					[ 1 ],
+					{ labels: { 1: 'One' } }
+				)
+			);
+		} );
+
+		it( 'shows no checkbox and sends no attested for other targets', async () => {
+			const run = renderModal();
+
+			expect( screen.getByLabelText( 'New status' ).value ).toBe(
+				'needs_changes'
+			);
+			expect( screen.queryByRole( 'checkbox' ) ).toBeNull();
+
+			fireEvent.click( apply() );
+			fireEvent.click(
+				screen.getByRole( 'button', { name: 'Yes, update 1 item' } )
+			);
+
+			await waitFor( () =>
+				expect( run ).toHaveBeenCalledWith(
+					'change_status',
+					{ status: 'needs_changes' },
+					[ 1 ],
+					{ labels: { 1: 'One' } }
+				)
+			);
+		} );
+
+		it( 'shows no checkbox when the site does not require it', () => {
+			window.sitCwm.requireAttestation = false;
+			renderModal();
+
+			fireEvent.change( screen.getByLabelText( 'New status' ), {
+				target: { value: 'approved' },
+			} );
+
+			expect( screen.queryByRole( 'checkbox' ) ).toBeNull();
+			expect( apply().getAttribute( 'aria-disabled' ) ).not.toBe(
+				'true'
+			);
+		} );
+	} );
 } );
 
 describe( 'toBulkRequest', () => {

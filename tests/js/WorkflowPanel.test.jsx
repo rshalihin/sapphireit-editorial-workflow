@@ -290,3 +290,69 @@ describe( 'WorkflowPanel onStatusChanged', () => {
 		expect( updateStatus ).toHaveBeenCalledWith( 'review' );
 	} );
 } );
+
+describe( 'WorkflowPanel attestation', () => {
+	const STATEMENT =
+		'I confirm I have reviewed this content and approve it for publication.';
+
+	it( 'gates Approve on the payload attestation and forwards it', async () => {
+		const updateStatus = jest.fn().mockResolvedValue( null );
+		mockWorkflow(
+			makeWorkflow( {
+				status: 'review',
+				status_label: 'Review',
+				available_transitions: [
+					{
+						slug: 'approved',
+						label: 'Approved',
+						is_forward: true,
+						is_rollback: false,
+					},
+				],
+				attestation: { required: true, statement: STATEMENT },
+			} ),
+			updateStatus
+		);
+
+		render( <ClassicPanel postId={ 42 } postType="post" /> );
+
+		const approve = screen.getByRole( 'button', {
+			name: 'Move to Approved',
+		} );
+
+		expect( approve.getAttribute( 'aria-disabled' ) ).toBe( 'true' );
+
+		await userEvent.click(
+			screen.getByRole( 'checkbox', { name: STATEMENT } )
+		);
+		await userEvent.click( approve );
+		await userEvent.click(
+			[
+				...screen.getByRole( 'dialog' ).querySelectorAll( 'button' ),
+			].find( ( button ) => button.textContent === 'Approve' )
+		);
+
+		expect( updateStatus ).toHaveBeenCalledWith( 'approved', {
+			attested: true,
+		} );
+	} );
+
+	it( 'shows no checkbox when an older server sends no attestation', () => {
+		mockWorkflow(
+			makeWorkflow( {
+				available_transitions: [
+					{
+						slug: 'approved',
+						label: 'Approved',
+						is_forward: true,
+						is_rollback: false,
+					},
+				],
+			} )
+		);
+
+		render( <WorkflowPanel postId={ 42 } /> );
+
+		expect( screen.queryByRole( 'checkbox' ) ).toBeNull();
+	} );
+} );

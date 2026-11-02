@@ -260,6 +260,91 @@ describe( 'TransitionModal', () => {
 		await waitFor( () => expect( onChanged ).toHaveBeenCalled() );
 		expect( snackbars() ).toEqual( [ 'You may not do that.' ] );
 	} );
+
+	describe( 'attestation', () => {
+		const STATEMENT =
+			'I confirm I have reviewed this content and approve it for publication.';
+
+		beforeEach( () => {
+			window.sitCwm.requireAttestation = true;
+			window.sitCwm.attestationStatement = STATEMENT;
+		} );
+
+		it( 'requires the statement before approving, then sends attested', async () => {
+			apiFetch.mockResolvedValue( {} );
+
+			const { onChanged } = renderModal( TransitionModal, {
+				items: [ row() ],
+				to: 'approved',
+				submitLabel: 'Approve',
+			} );
+
+			const submit = screen.getByRole( 'button', { name: 'Approve' } );
+
+			expect( submit.getAttribute( 'aria-disabled' ) ).toBe( 'true' );
+
+			fireEvent.click( submit );
+			expect( apiFetch ).not.toHaveBeenCalled();
+
+			fireEvent.click(
+				screen.getByRole( 'checkbox', { name: STATEMENT } )
+			);
+			fireEvent.click(
+				screen.getByRole( 'button', { name: 'Approve' } )
+			);
+
+			await waitFor( () => expect( onChanged ).toHaveBeenCalled() );
+			expect( call( 0 ) ).toMatchObject( {
+				path: '/sit-cwm/v1/posts/12/workflow',
+				data: { from: 'review', status: 'approved', attested: true },
+			} );
+		} );
+
+		it( 'shows no checkbox and sends no attested for other targets', async () => {
+			apiFetch.mockResolvedValue( {} );
+
+			const { onChanged } = renderModal( TransitionModal, {
+				items: [ row() ],
+				to: 'needs_changes',
+				submitLabel: 'Request changes',
+			} );
+
+			expect( screen.queryByRole( 'checkbox' ) ).toBeNull();
+
+			fireEvent.click(
+				screen.getByRole( 'button', { name: 'Request changes' } )
+			);
+
+			await waitFor( () => expect( onChanged ).toHaveBeenCalled() );
+			expect( call( 0 ).data ).toEqual( {
+				from: 'review',
+				status: 'needs_changes',
+			} );
+		} );
+
+		it( 'shows no checkbox when the site does not require it', async () => {
+			window.sitCwm.requireAttestation = false;
+			apiFetch.mockResolvedValue( {} );
+
+			const { onChanged } = renderModal( TransitionModal, {
+				items: [ row() ],
+				to: 'approved',
+				submitLabel: 'Approve',
+			} );
+
+			expect( screen.queryByRole( 'checkbox' ) ).toBeNull();
+
+			fireEvent.click(
+				screen.getByRole( 'button', { name: 'Approve' } )
+			);
+
+			await waitFor( () => expect( onChanged ).toHaveBeenCalled() );
+			expect( call( 0 ).data ).toEqual( {
+				from: 'review',
+				status: 'approved',
+			} );
+		} );
+	} );
 } );
 
 describe( 'ReviewerModal', () => {

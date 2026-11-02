@@ -338,6 +338,15 @@ export default function ActivityItem( { entry } ) {
 			<Avatar entry={ entry } />
 			<div className="sit-cwm-activity-body">
 				<p className="sit-cwm-activity-sentence">{ sentence }</p>
+				{ /* The statement the approver confirmed (F10). */ }
+				{ entry.attested === true && (
+					<span
+						className="sit-cwm-activity__attested"
+						title={ entry.attestation || '' }
+					>
+						{ __( 'Review confirmed', 'sapphireit-editorial-workflow' ) }
+					</span>
+				) }
 				{ message && (
 					<p className="sit-cwm-activity-message">{ message }</p>
 				) }

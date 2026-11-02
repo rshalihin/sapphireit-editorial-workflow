@@ -268,6 +268,14 @@ final class Settings implements Bootable {
 			self::SECTION_GATE
 		);
 
+		add_settings_field(
+			'sit_cwm_attestation',
+			__( 'Review attestation', 'sapphireit-editorial-workflow' ),
+			array( $this, 'render_attestation_field' ),
+			self::MENU_SLUG,
+			self::SECTION_GATE
+		);
+
 		add_settings_section(
 			self::SECTION_NOTIFICATIONS,
 			__( 'Email notifications', 'sapphireit-editorial-workflow' ),
@@ -300,10 +308,10 @@ final class Settings implements Bootable {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Sanitizes `publish_gate`, `notifications` and `prevent_self_approval`.
-	 * @since 1.2.0 Sanitizes `ai_origin_defaults`.
+	 * @since 1.2.0 Sanitizes `ai_origin_defaults` and `require_attestation`.
 	 *
 	 * @param mixed $input Submitted value.
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool, ai_origin_defaults: array<string, string>}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool, ai_origin_defaults: array<string, string>, require_attestation: bool}
 	 */
 	public function sanitize( $input ): array {
 		$current = $this->settings->all();
@@ -331,8 +339,9 @@ final class Settings implements Bootable {
 			&& is_scalar( $input['prevent_self_approval'] )
 			&& rest_sanitize_boolean( $input['prevent_self_approval'] );
 		$clean['ai_origin_defaults']       = $this->sanitize_ai_origin_defaults( $input['ai_origin_defaults'] ?? array(), (array) $current['ai_origin_defaults'] );
-		// No field on this screen yet, so saving keeps the stored value.
-		$clean['require_attestation'] = true === $current['require_attestation'];
+		$clean['require_attestation']      = ! empty( $input['require_attestation'] )
+			&& is_scalar( $input['require_attestation'] )
+			&& rest_sanitize_boolean( $input['require_attestation'] );
 
 		return $clean;
 	}
@@ -581,6 +590,27 @@ final class Settings implements Bootable {
 		printf(
 			'<p class="description">%s</p>',
 			esc_html__( 'When this is on, nobody can move content they wrote to Approved, administrators included. Someone else with approval rights has to approve it. “Wrote” means the author set on the post.', 'sapphireit-editorial-workflow' )
+		);
+	}
+
+	/**
+	 * Prints the "require review attestation" checkbox (F10, F16).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function render_attestation_field(): void {
+		printf(
+			'<label><input type="checkbox" name="%1$s" value="1" %2$s /> %3$s</label>',
+			esc_attr( SettingsStore::OPTION . '[require_attestation]' ),
+			checked( $this->settings->requires_attestation(), true, false ),
+			esc_html__( 'Require approvers to confirm they reviewed the content', 'sapphireit-editorial-workflow' )
+		);
+
+		printf(
+			'<p class="description">%s</p>',
+			esc_html__( 'When this is on, approving needs an explicit confirmation, which is stored with the approval in the activity log.', 'sapphireit-editorial-workflow' )
 		);
 	}
 

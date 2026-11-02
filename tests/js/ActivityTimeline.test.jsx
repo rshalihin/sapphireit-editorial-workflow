@@ -412,4 +412,48 @@ describe( 'ActivityItem publication sentences', () => {
 			);
 		}
 	);
+
+	it( 'marks an attested approval with the confirmed statement', () => {
+		const statement =
+			'I confirm I have reviewed this content and approve it for publication.';
+		const { container } = render(
+			<ul>
+				<ActivityItem
+					entry={ entry( 1, {
+						action: 'status_changed',
+						old_label: 'Review',
+						new_label: 'Approved',
+						attested: true,
+						attestation: statement,
+					} ) }
+				/>
+			</ul>
+		);
+
+		const marker = screen.getByText( 'Review confirmed' );
+
+		expect( marker.className ).toBe( 'sit-cwm-activity__attested' );
+		expect( marker.getAttribute( 'title' ) ).toBe( statement );
+		expect(
+			container.querySelector( '.sit-cwm-activity-sentence' ).textContent
+		).toBe( 'Jane changed status from Review to Approved' );
+	} );
+
+	it( 'shows no marker when the approval was not attested', () => {
+		render(
+			<ul>
+				<ActivityItem
+					entry={ entry( 1, {
+						action: 'status_changed',
+						old_label: 'Review',
+						new_label: 'Approved',
+						attested: null,
+						attestation: null,
+					} ) }
+				/>
+			</ul>
+		);
+
+		expect( screen.queryByText( 'Review confirmed' ) ).toBeNull();
+	} );
 } );

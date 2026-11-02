@@ -1,0 +1,10 @@
+// Review attestation checkbox. Imported by AttestationCheckbox.jsx, so it lands
+// in the CSS file of whichever entry point renders it.
+
+.sit-cwm-attest {
+	margin: 0 0 12px;
+
+	.components-checkbox-control__label {
+		overflow-wrap: anywhere;
+	}
+}

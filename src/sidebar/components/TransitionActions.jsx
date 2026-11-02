@@ -15,7 +15,9 @@ import { __, sprintf } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
+import AttestationCheckbox from '../../components/AttestationCheckbox';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import { ATTESTED_STATUS } from '../../utils/attestation';
 import {
 	getTransitionConfirmation,
 	requiresConfirmation,
@@ -57,11 +59,18 @@ function isOffered( transitions, transition ) {
  * being swallowed by a disabled button. It is dropped if the transition is no
  * longer offered by then.
  *
- * @param {Object}   props              Props.
- * @param {Object[]} props.transitions  Available transitions.
- * @param {Function} props.onTransition Receives the target status slug.
- * @param {boolean}  props.isSaving     Whether a workflow change is in flight.
- * @param {boolean}  [props.isDisabled] Disables every action (e.g. post gone).
+ * When the post requires an attestation, Approve stays disabled until the
+ * approver ticks the statement, before any confirmation dialog. The tick is
+ * cleared after each approval and whenever Approve stops being offered.
+ *
+ * @param {Object}   props               Props.
+ * @param {Object[]} props.transitions   Available transitions.
+ * @param {Function} props.onTransition  Receives the target status slug, plus
+ *                                       `{ attested: true }` for an attested
+ *                                       approval.
+ * @param {boolean}  props.isSaving      Whether a workflow change is in flight.
+ * @param {boolean}  [props.isDisabled]  Disables every action (e.g. post gone).
+ * @param {Object}   [props.attestation] `{ required, statement }` from the payload.
  * @return {Element} Actions.
  */
 export default function TransitionActions( {
@@ -69,11 +78,23 @@ export default function TransitionActions( {
 	onTransition,
 	isSaving,
 	isDisabled = false,
+	attestation = { required: false, statement: '' },
 } ) {
 	const [ pending, setPending ] = useState( null );
 	const [ activeSlug, setActiveSlug ] = useState( null );
 	const [ queued, setQueued ] = useState( null );
+	const [ attested, setAttested ] = useState( false );
 	const groupRef = useRef( null );
+
+	const approvalOffered = isOffered( transitions, { slug: ATTESTED_STATUS } );
+	const needsAttestation = true === attestation?.required && approvalOffered;
+
+	// A tick confirms one approval of the content shown now.
+	useEffect( () => {
+		if ( ! approvalOffered ) {
+			setAttested( false );
+		}
+	}, [ approvalOffered ] );
 
 	// The clicked button is disabled while saving and may be replaced once the
 	// status changes; keep keyboard focus in the actions rather than on <body>.
@@ -96,11 +117,21 @@ export default function TransitionActions( {
 	};
 
 	const run = async ( transition ) => {
+		const isApproval = transition.slug === ATTESTED_STATUS;
+
 		setActiveSlug( transition.slug );
 
 		try {
-			await onTransition( transition.slug );
+			if ( isApproval && attested ) {
+				await onTransition( transition.slug, { attested: true } );
+			} else {
+				await onTransition( transition.slug );
+			}
 		} finally {
+			if ( isApproval ) {
+				setAttested( false );
+			}
+
 			setActiveSlug( null );
 			restoreFocus();
 		}
@@ -148,8 +179,19 @@ export default function TransitionActions( {
 
 	const confirmation = pending ? getTransitionConfirmation( pending ) : null;
 
+	const isBusy = isDisabled || activeSlug !== null || queued !== null;
+
 	return (
 		<>
+			{ needsAttestation && (
+				<AttestationCheckbox
+					statement={ attestation.statement }
+					checked={ attested }
+					onChange={ setAttested }
+					disabled={ isBusy }
+				/>
+			) }
+
 			<div
 				ref={ groupRef }
 				className="sit-cwm-actions"
@@ -157,31 +199,39 @@ export default function TransitionActions( {
 				aria-label={ __( 'Workflow actions', 'sapphireit-editorial-workflow' ) }
 				tabIndex={ -1 }
 			>
-				{ transitions.map( ( transition ) => (
-					<Button
-						key={ transition.slug }
-						variant={
-							transition.is_rollback ? 'secondary' : 'primary'
-						}
-						isDestructive={ !! transition.is_rollback }
-						isBusy={
-							activeSlug === transition.slug ||
-							queued?.slug === transition.slug
-						}
-						// Only a running or queued transition blocks the others;
-						// any other save in flight just queues the click.
-						disabled={
-							isDisabled || activeSlug !== null || queued !== null
-						}
-						onClick={ () =>
-							requiresConfirmation( transition )
-								? setPending( transition )
-								: start( transition )
-						}
-					>
-						{ actionLabel( transition ) }
-					</Button>
-				) ) }
+				{ transitions.map( ( transition ) => {
+					// Stays focusable so the approver can find out why.
+					const awaitsAttestation =
+						needsAttestation &&
+						! attested &&
+						transition.slug === ATTESTED_STATUS;
+
+					return (
+						<Button
+							key={ transition.slug }
+							variant={
+								transition.is_rollback ? 'secondary' : 'primary'
+							}
+							isDestructive={ !! transition.is_rollback }
+							isBusy={
+								activeSlug === transition.slug ||
+								queued?.slug === transition.slug
+							}
+							// Only a running or queued transition blocks the
+							// others; any other save in flight just queues the
+							// click.
+							disabled={ isBusy || awaitsAttestation }
+							accessibleWhenDisabled={ ! isBusy && awaitsAttestation }
+							onClick={ () =>
+								requiresConfirmation( transition )
+									? setPending( transition )
+									: start( transition )
+							}
+						>
+							{ actionLabel( transition ) }
+						</Button>
+					);
+				} ) }
 			</div>
 
 			{ confirmation && (

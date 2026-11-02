@@ -43,7 +43,8 @@ const GONE = { code: 'sit_cwm_gone', message: '', status: 404 };
  * so callers can react locally. Workflow mutations (status, reviewer, due date)
  * also expose their failure as `error`; `addComment` leaves that to the caller.
  *
- * A status change sends `{ from, status }` with the status the user saw. On a
+ * A status change sends `{ from, status }` with the status the user saw, plus
+ * `attested: true` when `updateStatus( to, { attested: true } )` is called. On a
  * 409 the hook refetches and reports that the post changed elsewhere rather
  * than retrying. Any other refusal (4xx but 401 and 404) keeps the server's
  * message and also refetches, so revoked permissions stop being offered and an
@@ -255,15 +256,17 @@ export default function useWorkflow( postId ) {
 	);
 
 	const updateStatus = useCallback(
-		async ( to ) => {
+		async ( to, options = {} ) => {
 			if ( ! workflow ) {
 				return BUSY;
 			}
 
-			// `from` is the status this render showed the user.
+			// `from` is the status this render showed the user. `attested` is
+			// sent only for an explicit confirmation (F10).
 			const { data, error: err } = await update( {
 				from: workflow.status,
 				status: to,
+				...( true === options?.attested ? { attested: true } : {} ),
 			} );
 
 			if ( data ) {

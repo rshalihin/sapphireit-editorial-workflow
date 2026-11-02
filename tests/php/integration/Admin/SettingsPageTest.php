@@ -377,6 +377,47 @@ final class SettingsPageTest extends TestCase {
 	}
 
 	/**
+	 * The attestation checkbox sits in the Publish gate section after the
+	 * self-approval one, renders the F16 copy and its state, and saves as a
+	 * boolean (F10).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_attestation_field_renders_and_saves() {
+		global $wp_settings_fields;
+
+		$this->page->register_settings();
+
+		$fields = array_keys( $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION_GATE ] );
+
+		$this->assertContains( 'sit_cwm_attestation', $fields );
+		$this->assertSame( array_search( 'sit_cwm_self_approval', $fields, true ) + 1, array_search( 'sit_cwm_attestation', $fields, true ) );
+		$this->assertSame( 'Review attestation', $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION_GATE ]['sit_cwm_attestation']['title'] );
+
+		ob_start();
+		$this->page->render_attestation_field();
+		$html = ob_get_clean();
+
+		$this->assertMatchesRegularExpression( '/<label><input type="checkbox" name="sit_cwm_settings\[require_attestation\]" value="1"\s*\/> Require approvers to confirm they reviewed the content<\/label>/', $html );
+		$this->assertStringContainsString( '<p class="description">When this is on, approving needs an explicit confirmation, which is stored with the approval in the activity log.</p>', $html );
+		$this->assertStringNotContainsString( 'checked', $html );
+
+		$this->assertTrue( $this->store->update( array( 'require_attestation' => true ) ) );
+
+		ob_start();
+		$this->page->render_attestation_field();
+		$html = ob_get_clean();
+
+		$this->assertMatchesRegularExpression( '/name="sit_cwm_settings\[require_attestation\]" value="1"\s+checked=/', $html );
+
+		$this->assertTrue( $this->page->sanitize( array( 'require_attestation' => '1' ) )['require_attestation'] );
+		$this->assertFalse( $this->page->sanitize( array( 'post_types' => array( 'post' ) ) )['require_attestation'], 'A missing box is off.' );
+		$this->assertFalse( $this->page->sanitize( array( 'require_attestation' => array( '1' ) ) )['require_attestation'], 'A non-scalar value is off.' );
+	}
+
+	/**
 	 * One labelled select per enabled post type, with the stored mode selected.
 	 *
 	 * @since 1.1.0

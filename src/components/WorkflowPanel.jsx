@@ -127,9 +127,10 @@ function WorkflowPanel( {
 	} = useWorkflow( postId );
 	const [ isGoneDismissed, setIsGoneDismissed ] = useState( false );
 
-	// `updateStatus` resolves to null on success, or the error.
-	const changeStatus = async ( to ) => {
-		const err = await updateStatus( to );
+	// `updateStatus` resolves to null on success, or the error. `options`
+	// carries an approver's attestation.
+	const changeStatus = async ( to, ...options ) => {
+		const err = await updateStatus( to, ...options );
 
 		if ( ! err ) {
 			onStatusChanged?.();
@@ -296,6 +297,8 @@ function WorkflowPanel( {
 					onTransition={ changeStatus }
 					isSaving={ isSaving }
 					isDisabled={ isGone }
+					// A 1.1 server sends no attestation.
+					attestation={ workflow.attestation || undefined }
 				/>
 				<BlockedTransitions blocked={ workflow.blocked_transitions } />
 				{ /* The server sets this only when the rule is the reason Approve is missing. */ }

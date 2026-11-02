@@ -16,6 +16,8 @@ import { __, sprintf } from '@wordpress/i18n';
 import ModalActions from './ModalActions';
 import useRowMutation from './useRowMutation';
 import { addComment, updateWorkflow } from '../../api/client';
+import AttestationCheckbox from '../../components/AttestationCheckbox';
+import { ATTESTED_STATUS, getSiteAttestation } from '../../utils/attestation';
 import { getTransitionConfirmation } from '../../utils/confirmations';
 import { displayTitle } from '../../utils/format';
 
@@ -45,6 +47,8 @@ const COMMENT_FIELDS = [
 const COMMENT_FORM = { layout: { type: 'regular' }, fields: [ 'comment' ] };
 
 /**
+ * Approving on a site that requires attestation asks for the statement first.
+ *
  * @param {Object}   props               Props.
  * @param {Object[]} props.items         Rows the action runs on (one).
  * @param {Function} props.closeModal    Closes the modal.
@@ -64,7 +68,9 @@ export default function TransitionModal( {
 } ) {
 	const [ item ] = items;
 	const [ data, setData ] = useState( { comment: '' } );
+	const [ attested, setAttested ] = useState( false );
 	const { run, isBusy, error } = useRowMutation( { closeModal, onChanged } );
+	const attestation = getSiteAttestation();
 
 	// Offered by the server for this row; the server re-validates on submit.
 	const transition = ( item?.available_transitions || [] ).find(
@@ -95,15 +101,22 @@ export default function TransitionModal( {
 
 	const title = displayTitle( item.title );
 	const { message: explanation } = getTransitionConfirmation( transition );
+	const needsAttestation = attestation.required && to === ATTESTED_STATUS;
+	const canSubmit = ! needsAttestation || attested;
 
 	const submit = ( event ) => {
 		event.preventDefault();
+
+		if ( ! canSubmit ) {
+			return;
+		}
 
 		run( async () => {
 			// `from` is the status this row showed; a mismatch answers 409.
 			await updateWorkflow( item.post_id, {
 				from: item.status,
 				status: to,
+				...( needsAttestation ? { attested: true } : {} ),
 			} );
 
 			const message = withComment ? data.comment.trim() : '';
@@ -154,6 +167,15 @@ export default function TransitionModal( {
 			</p>
 			{ explanation && <p>{ explanation }</p> }
 
+			{ needsAttestation && (
+				<AttestationCheckbox
+					statement={ attestation.statement }
+					checked={ attested }
+					onChange={ setAttested }
+					disabled={ isBusy }
+				/>
+			) }
+
 			{ withComment && (
 				<DataForm
 					data={ data }
@@ -175,6 +197,7 @@ export default function TransitionModal( {
 				onCancel={ closeModal }
 				submitLabel={ submitLabel }
 				isBusy={ isBusy }
+				canSubmit={ canSubmit }
 				isDestructive={ !! transition.is_rollback }
 			/>
 		</form>

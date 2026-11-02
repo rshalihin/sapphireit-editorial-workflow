@@ -164,6 +164,39 @@ describe( 'useWorkflow', () => {
 		);
 	} );
 
+	it( 'sends attested only when the caller attested', async () => {
+		apiFetch
+			.mockResolvedValueOnce( workflow() )
+			.mockResolvedValueOnce( workflow() )
+			.mockResolvedValueOnce( workflow() );
+
+		const { result } = renderHook( () => useWorkflow( 42 ) );
+
+		await waitFor( () => expect( result.current.workflow ).not.toBeNull() );
+
+		await act( async () => {
+			await result.current.updateStatus( 'approved', { attested: true } );
+		} );
+
+		expect( apiFetch ).toHaveBeenLastCalledWith( {
+			path: '/sit-cwm/v1/posts/42/workflow',
+			method: 'POST',
+			data: { from: 'review', status: 'approved', attested: true },
+		} );
+
+		await act( async () => {
+			await result.current.updateStatus( 'approved', {
+				attested: 'yes',
+			} );
+		} );
+
+		expect( apiFetch ).toHaveBeenLastCalledWith( {
+			path: '/sit-cwm/v1/posts/42/workflow',
+			method: 'POST',
+			data: { from: 'review', status: 'approved' },
+		} );
+	} );
+
 	it( 'declares AI use and applies the server response', async () => {
 		apiFetch.mockResolvedValueOnce( workflow() ).mockResolvedValueOnce(
 			workflow( {
