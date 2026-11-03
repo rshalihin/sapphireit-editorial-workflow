@@ -535,6 +535,30 @@ function sit_cwm_e2e_insert_activity( WP_REST_Request $request ) {
 }
 
 /**
+ * `DELETE /activity`: deletes every activity row, so a spec whose figures
+ * count the whole table (the governance report) starts from nothing, whatever
+ * other specs left behind.
+ *
+ * @since 1.2.0
+ *
+ * @return WP_REST_Response|WP_Error
+ */
+function sit_cwm_e2e_clear_activity() {
+	global $wpdb;
+
+	if ( ! class_exists( '\Sit_Cwm\Core\Database' ) ) {
+		return new WP_Error( 'sit_cwm_e2e_inactive', 'The plugin is not active.', array( 'status' => 500 ) );
+	}
+
+	$table = ( new \Sit_Cwm\Core\Database() )->table_name();
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture; the logger has no "delete all" API.
+	$wpdb->query( $wpdb->prepare( 'DELETE FROM %i', $table ) );
+
+	return rest_ensure_response( array( 'deleted' => true ) );
+}
+
+/**
  * `POST /probe-checklist`: sets (`done: true`) or removes the probe add-on's
  * checklist flag on a post.
  *
@@ -590,7 +614,7 @@ function sit_cwm_e2e_user_cap( WP_REST_Request $request ) {
  * Registers the fixture routes.
  *
  * @since 1.1.0
- * @since 1.2.0 Adds `/freemius`, `/activity` (POST) and `/probe-checklist`.
+ * @since 1.2.0 Adds `/freemius`, `/activity` (POST, DELETE) and `/probe-checklist`.
  *
  * @return void
  */
@@ -692,30 +716,37 @@ function sit_cwm_e2e_register_routes() {
 		$namespace,
 		'/activity',
 		array(
-			'methods'             => WP_REST_Server::CREATABLE,
-			'callback'            => 'sit_cwm_e2e_insert_activity',
-			'permission_callback' => 'sit_cwm_e2e_can_use',
-			'args'                => array(
-				'post_id'    => array(
-					'type'     => 'integer',
-					'minimum'  => 1,
-					'required' => true,
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => 'sit_cwm_e2e_insert_activity',
+				'permission_callback' => 'sit_cwm_e2e_can_use',
+				'args'                => array(
+					'post_id'    => array(
+						'type'     => 'integer',
+						'minimum'  => 1,
+						'required' => true,
+					),
+					'action'     => array(
+						'type'     => 'string',
+						'required' => true,
+					),
+					'context'    => array( 'type' => 'object' ),
+					'user_id'    => array(
+						'type'    => 'integer',
+						'minimum' => 0,
+					),
+					'old_value'  => array( 'type' => 'string' ),
+					'new_value'  => array( 'type' => 'string' ),
+					'created_at' => array(
+						'type'    => 'string',
+						'pattern' => '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$',
+					),
 				),
-				'action'     => array(
-					'type'     => 'string',
-					'required' => true,
-				),
-				'context'    => array( 'type' => 'object' ),
-				'user_id'    => array(
-					'type'    => 'integer',
-					'minimum' => 0,
-				),
-				'old_value'  => array( 'type' => 'string' ),
-				'new_value'  => array( 'type' => 'string' ),
-				'created_at' => array(
-					'type'    => 'string',
-					'pattern' => '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$',
-				),
+			),
+			array(
+				'methods'             => WP_REST_Server::DELETABLE,
+				'callback'            => 'sit_cwm_e2e_clear_activity',
+				'permission_callback' => 'sit_cwm_e2e_can_use',
 			),
 		)
 	);

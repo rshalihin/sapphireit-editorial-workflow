@@ -145,7 +145,10 @@ test.describe( 'Declared AI use', () => {
 			panel.getByRole( 'combobox', { name: 'AI use' } )
 		).toHaveValue( 'ai_assisted' );
 		await expect( declarations( panel ) ).toHaveCount( 1 );
-		await expect( declarations( panel ) ).toContainText( 'AI-assisted' );
+		// Credited to the Settings default, not to the admin who made the post.
+		await expect( declarations( panel ) ).toContainText(
+			'AI use set to AI-assisted by the default for this content type'
+		);
 	} );
 
 	test( 'dashboard shows the AI use column', async ( {

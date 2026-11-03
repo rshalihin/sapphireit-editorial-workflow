@@ -244,6 +244,39 @@ final class ActivityControllerTest extends WP_UnitTestCase {
 		);
 		$this->assertNull( $data[1]['old_label'] );
 		$this->assertSame( 'Human-written', $data[1]['new_label'] );
+
+		// `via` tells a Settings default stamp from a person's declaration.
+		$this->assertSame( array( 'workflow', 'default' ), array( $data[0]['via'], $data[1]['via'] ) );
+	}
+
+	/**
+	 * `via` is null on entries other than AI-origin changes, and on an
+	 * AI-origin row whose stored route is not a known one.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_via_is_null_outside_known_ai_origin_routes() {
+		$post = $this->make_post( $this->make_user( 'author' ) );
+
+		$this->activity->log(
+			$post,
+			'ai_origin_changed',
+			array(
+				'new_value' => 'human',
+				'context'   => array( 'via' => 'tampered' ),
+			)
+		);
+		$this->activity->log( $post, 'comment_added', array( 'context' => array( 'via' => 'default' ) ) );
+
+		wp_set_current_user( $this->make_user( 'administrator' ) );
+
+		$data = $this->get_activity( $post )->get_data();
+
+		$this->assertCount( 2, $data );
+		$this->assertNull( $data[0]['via'] );
+		$this->assertNull( $data[1]['via'] );
 	}
 
 	/**
@@ -277,7 +310,7 @@ final class ActivityControllerTest extends WP_UnitTestCase {
 		$this->assertSame( '1', $response->get_headers()['X-WP-Total'] );
 		$this->assertCount( 1, $data );
 		$this->assertSame(
-			array( 'id', 'action', 'action_label', 'old_value', 'old_label', 'new_value', 'new_label', 'message', 'created_at', 'created_at_human', 'user_id', 'user', 'workflow_status', 'workflow_status_label', 'gate_reason', 'attested', 'attestation' ),
+			array( 'id', 'action', 'action_label', 'old_value', 'old_label', 'new_value', 'new_label', 'message', 'created_at', 'created_at_human', 'user_id', 'user', 'workflow_status', 'workflow_status_label', 'gate_reason', 'attested', 'attestation', 'via' ),
 			array_keys( $data[0] )
 		);
 		$this->assertSame( $editor, $data[0]['user_id'] );

@@ -496,4 +496,48 @@ describe( 'ActivityItem AI use sentences', () => {
 
 		expect( itemTexts( container ) ).toEqual( [ 'Jane: AI use declared' ] );
 	} );
+
+	it( 'credits a Settings default to the default, not the author', () => {
+		const { container } = render(
+			<ul>
+				<ActivityItem
+					entry={ entry( 1, {
+						action: 'ai_origin_changed',
+						action_label: 'AI use declared',
+						new_value: 'human',
+						new_label: 'Human-written',
+						via: 'default',
+					} ) }
+				/>
+			</ul>
+		);
+
+		expect( itemTexts( container ) ).toEqual( [
+			'AI use set to Human-written by the default for this content type',
+		] );
+		expect( container.querySelector( 'img' ) ).toBeNull();
+		expect(
+			container.querySelector( '.sit-cwm-activity-avatar.is-generic' )
+		).not.toBeNull();
+	} );
+
+	it( 'still credits the user for a declaration made in the workflow', () => {
+		const { container } = render(
+			<ul>
+				<ActivityItem
+					entry={ entry( 1, {
+						action: 'ai_origin_changed',
+						action_label: 'AI use declared',
+						new_value: 'human',
+						new_label: 'Human-written',
+						via: 'workflow',
+					} ) }
+				/>
+			</ul>
+		);
+
+		expect( itemTexts( container ) ).toEqual( [
+			'Jane: AI use declared as Human-written',
+		] );
+	} );
 } );

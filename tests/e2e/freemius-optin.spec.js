@@ -14,9 +14,15 @@ import { expect, test } from '@wordpress/e2e-test-utils-playwright';
 /**
  * Internal dependencies
  */
-import { createWorkflowUser, freemiusOptin, loginAs } from './utils';
+import {
+	createWorkflowUser,
+	freemiusOptin,
+	loginAs,
+	setUserCap,
+} from './utils';
 
 const EDITOR = 'e2e_fs_editor';
+const MANAGER = 'e2e_fs_manager';
 
 const PLUGIN_FILE =
 	'sapphireit-editorial-workflow/sapphireit-editorial-workflow.php';
@@ -151,6 +157,35 @@ test.describe( 'Freemius opt-in', () => {
 		await expect( page.locator( '#fs_connect' ) ).toHaveCount( 0 );
 		expect( new URL( page.url() ).searchParams.get( 'page' ) ).toBe(
 			'sit-cwm-dashboard'
+		);
+	} );
+
+	test( 'a manager without admin rights gets Settings, not the opt-in', async ( {
+		page,
+		requestUtils,
+	} ) => {
+		const manager = await createWorkflowUser(
+			requestUtils,
+			MANAGER,
+			'editor'
+		);
+		await setUserCap(
+			requestUtils,
+			manager.id,
+			'sit_cwm_manage_workflows',
+			true
+		);
+
+		await showOptin( page, requestUtils );
+		await loginAs( page, MANAGER );
+		await page.goto( '/wp-admin/admin.php?page=sit-cwm-settings' );
+
+		await expect( page.locator( '#fs_connect' ) ).toHaveCount( 0 );
+		await expect(
+			page.getByRole( 'button', { name: 'Save changes' } )
+		).toBeVisible();
+		expect( new URL( page.url() ).searchParams.get( 'page' ) ).toBe(
+			'sit-cwm-settings'
 		);
 	} );
 

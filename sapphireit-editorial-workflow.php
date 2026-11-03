@@ -158,6 +158,36 @@ if ( ! function_exists( 'sit_cwm_fs' ) ) {
 
 	sit_cwm_fs()->add_filter( 'pricing_url', 'sit_cwm_fs_pricing_url' );
 
+	if ( ! function_exists( 'sit_cwm_fs_optin_for_admins_only' ) ) {
+		/**
+		 * Keeps the opt-in away from managers who cannot answer it.
+		 *
+		 * Until an administrator opts in or skips, the SDK swaps the Settings
+		 * page for its opt-in for anyone who can open Settings, including a
+		 * manager without `activate_plugins`, who cannot opt in. For those
+		 * users the SDK's menu step is dropped, so Settings renders as usual.
+		 * Its other menu items (Account) need `manage_options` anyway.
+		 *
+		 * Runs just before the SDK's own `admin_menu` callback.
+		 *
+		 * @internal
+		 * @since 1.2.0
+		 *
+		 * @return void
+		 */
+		function sit_cwm_fs_optin_for_admins_only() {
+			$fs = sit_cwm_fs();
+
+			if ( $fs->is_user_admin() || ! $fs->is_activation_mode() ) {
+				return;
+			}
+
+			remove_action( 'admin_menu', array( $fs, '_prepare_admin_menu' ), WP_FS__LOWEST_PRIORITY );
+		}
+	}
+
+	add_action( 'admin_menu', 'sit_cwm_fs_optin_for_admins_only', WP_FS__LOWEST_PRIORITY - 1 );
+
 	/**
 	 * Fires once the Freemius SDK is initialised for Free. The Pro add-on
 	 * initialises its own SDK instance (with this product as parent) here.

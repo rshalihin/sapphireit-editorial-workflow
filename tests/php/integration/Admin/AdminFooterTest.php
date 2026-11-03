@@ -136,7 +136,7 @@ final class AdminFooterTest extends TestCase {
 	 * @return void
 	 */
 	public function test_other_screens_keep_the_core_footer() {
-		foreach ( array( null, 'some-other-page', 'sit-cwm-dashboard-account' ) as $page ) {
+		foreach ( array( null, 'some-other-page', 'sit-cwm-settings-account' ) as $page ) {
 			$GLOBALS['plugin_page'] = $page; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Simulates the requested page.
 
 			$this->assertSame( 'core text', $this->footer->filter_footer_text( 'core text' ), (string) $page );

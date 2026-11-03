@@ -179,7 +179,7 @@ final class AdminShellTest extends TestCase {
 		wp_set_current_user( self::fixture_user( 'admin' ) );
 
 		$this->assertSame( '', $this->header_on( 'some-other-page' ) );
-		$this->assertSame( '', $this->header_on( 'sit-cwm-dashboard-account' ) );
+		$this->assertSame( '', $this->header_on( 'sit-cwm-settings-account' ) );
 	}
 
 	/**
@@ -196,7 +196,7 @@ final class AdminShellTest extends TestCase {
 			$this->assertTrue( $this->shell->is_plugin_screen(), $slug );
 		}
 
-		$GLOBALS['plugin_page'] = 'sit-cwm-dashboard-account'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Simulates the Freemius account page.
+		$GLOBALS['plugin_page'] = 'sit-cwm-settings-account'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Simulates the Freemius account page.
 		$this->assertFalse( $this->shell->is_plugin_screen() );
 	}
 

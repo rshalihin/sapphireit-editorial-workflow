@@ -457,6 +457,13 @@ class ActivityController extends AbstractController {
 					'context'     => array( 'view', 'edit' ),
 					'readonly'    => true,
 				),
+				'via'                   => array(
+					'description' => __( 'How an AI use change arrived: workflow, post_api, or default (set by the post type\'s default in Settings, not by the user); null for other entries.', 'sapphireit-editorial-workflow' ),
+					'type'        => array( 'string', 'null' ),
+					'enum'        => array_merge( ActivityLogger::AI_ORIGIN_VIAS, array( null ) ),
+					'context'     => array( 'view', 'edit' ),
+					'readonly'    => true,
+				),
 			),
 		);
 

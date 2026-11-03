@@ -2,8 +2,8 @@
  * End-to-end: the governance report screen (1.2.0 phases 20–21, F12).
  *
  * The figures come from seeded activity rows, so the expected numbers are
- * fixed: every other spec deletes its posts, and deleting a post deletes its
- * activity.
+ * fixed: the whole activity table is emptied before seeding, so rows other
+ * specs leave behind never count.
  */
 
 /**
@@ -14,7 +14,13 @@ import { expect, test } from '@wordpress/e2e-test-utils-playwright';
 /**
  * Internal dependencies
  */
-import { createWorkflowUser, daysAgo, loginAs, seedActivity } from './utils';
+import {
+	clearActivity,
+	createWorkflowUser,
+	daysAgo,
+	loginAs,
+	seedActivity,
+} from './utils';
 
 const EDITOR = 'e2e_report_editor';
 const REPORT = 'page=sit-cwm-report';
@@ -48,6 +54,7 @@ test.describe( 'Governance report', () => {
 	test.beforeAll( async ( { requestUtils } ) => {
 		await requestUtils.deleteAllPosts();
 		await requestUtils.deleteAllUsers();
+		await clearActivity( requestUtils );
 		await createWorkflowUser( requestUtils, EDITOR, 'editor' );
 
 		const post = await requestUtils.rest( {

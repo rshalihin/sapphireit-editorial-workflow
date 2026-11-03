@@ -246,23 +246,20 @@ if ( is_link( $sit_cwm_mu_file ) && realpath( $sit_cwm_mu_file ) === realpath( $
 $sit_cwm_probe_src  = $sit_cwm_root . '/tests/fixtures/sit-cwm-probe';
 $sit_cwm_probe_dest = WP_PLUGIN_DIR . '/sit-cwm-probe';
 
-$sit_cwm_probe_file = '/sit-cwm-probe.php';
-
 if ( is_link( $sit_cwm_probe_dest ) ) {
 	sit_cwm_say( 'Probe add-on already linked (' . $sit_cwm_probe_dest . ').' );
 } elseif ( is_dir( $sit_cwm_probe_dest ) ) {
-	// An earlier copy: refresh it, so fixture edits reach the site.
-	if ( ! copy( $sit_cwm_probe_src . $sit_cwm_probe_file, $sit_cwm_probe_dest . $sit_cwm_probe_file ) ) {
-		sit_cwm_fail( 'Cannot refresh the probe add-on in ' . $sit_cwm_probe_dest . '.' );
-	}
+	// An earlier copy: replace the whole tree, so every fixture edit (new,
+	// changed or removed files) reaches the site.
+	sit_cwm_rmdir( $sit_cwm_probe_dest );
+	sit_cwm_copy_tree( $sit_cwm_probe_src, $sit_cwm_probe_dest );
 	sit_cwm_say( 'Refreshed the probe add-on copy in ' . $sit_cwm_probe_dest . '.' );
 	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Unprivileged Windows shells cannot symlink; copied below.
 } elseif ( @symlink( $sit_cwm_probe_src, $sit_cwm_probe_dest ) ) {
 	sit_cwm_say( 'Linked the probe add-on into ' . $sit_cwm_probe_dest . ' (inactive).' );
-} elseif ( mkdir( $sit_cwm_probe_dest, 0755, true ) && copy( $sit_cwm_probe_src . $sit_cwm_probe_file, $sit_cwm_probe_dest . $sit_cwm_probe_file ) ) {
-	sit_cwm_say( 'Copied the probe add-on into ' . $sit_cwm_probe_dest . ' (inactive). Rerun this script after changing it.' );
 } else {
-	sit_cwm_fail( 'Cannot install the probe add-on into ' . $sit_cwm_probe_dest . '.' );
+	sit_cwm_copy_tree( $sit_cwm_probe_src, $sit_cwm_probe_dest );
+	sit_cwm_say( 'Copied the probe add-on into ' . $sit_cwm_probe_dest . ' (inactive). Rerun this script after changing it.' );
 }
 
 $sit_cwm_probe_plugin = 'sit-cwm-probe/sit-cwm-probe.php';

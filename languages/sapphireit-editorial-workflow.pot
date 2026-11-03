@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-03T05:55:14+00:00\n"
+"POT-Creation-Date: 2026-11-03T17:08:57+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.9.0\n"
 "X-Domain: sapphireit-editorial-workflow\n"
@@ -59,34 +59,34 @@ msgstr ""
 #: admin/Dashboard.php:153
 #: admin/GettingStartedPage.php:452
 #: includes/Editor/ClassicMetaBox.php:131
-#: assets/build/sidebar.js:29
+#: assets/build/sidebar.js:31
 #: src/sidebar/Sidebar.jsx:56
 msgid "Editorial Workflow"
 msgstr ""
 
 #: admin/Dashboard.php:185
-#: admin/Dashboard.php:240
+#: admin/Dashboard.php:239
 msgid "Dashboard"
 msgstr ""
 
 #: admin/Dashboard.php:232
 #: admin/GettingStartedPage.php:212
-#: admin/GovernanceReportPage.php:203
-#: admin/Settings.php:402
+#: admin/GovernanceReportPage.php:211
+#: admin/Settings.php:456
 msgid "Sorry, you are not allowed to access this page."
 msgstr ""
 
-#: admin/Dashboard.php:241
+#: admin/Dashboard.php:240
 msgid "Everything moving through the editorial workflow."
 msgstr ""
 
 #: admin/GettingStartedPage.php:195
 #: admin/GettingStartedPage.php:196
-#: admin/GettingStartedPage.php:217
+#: admin/GettingStartedPage.php:218
 msgid "Getting Started"
 msgstr ""
 
-#: admin/GettingStartedPage.php:220
+#: admin/GettingStartedPage.php:219
 msgid "Set up the workflow, learn it from short videos, and find help when you need it."
 msgstr ""
 
@@ -241,242 +241,276 @@ msgstr ""
 msgid "Needs Changes: a reviewer sends it back to the author, who returns it to Review."
 msgstr ""
 
-#: admin/GovernanceReportPage.php:154
-#: admin/GovernanceReportPage.php:211
+#: admin/GovernanceReportPage.php:162
+#: admin/GovernanceReportPage.php:221
 msgid "Governance report"
 msgstr ""
 
+#: admin/GovernanceReportPage.php:222
+msgid "How content reached publication, from the activity log."
+msgstr ""
+
 #: admin/PluginActionLinks.php:78
-#: admin/Settings.php:177
+#: admin/Settings.php:210
+#: admin/Settings.php:462
 #: assets/build/review-disclosure.js:1
 #: src/blocks/review-disclosure/edit.jsx:37
 msgid "Settings"
 msgstr ""
 
-#: admin/Settings.php:176
-#: admin/Settings.php:407
+#: admin/Settings.php:209
 msgid "Editorial Workflow Settings"
 msgstr ""
 
-#: admin/Settings.php:230
+#: admin/Settings.php:263
 msgid "SapphireIT Editorial Workflow settings."
 msgstr ""
 
-#: admin/Settings.php:239
-#: admin/Settings.php:739
+#: admin/Settings.php:274
+#: admin/Settings.php:977
 msgid "Workflow"
 msgstr ""
 
-#: admin/Settings.php:246
-#: admin/Settings.php:445
+#: admin/Settings.php:281
+#: admin/Settings.php:654
 msgid "Enabled content types"
 msgstr ""
 
-#: admin/Settings.php:254
-msgid "AI use default"
-msgstr ""
-
-#: admin/Settings.php:262
-msgid "Uninstall"
-msgstr ""
-
-#: admin/Settings.php:271
-msgid "Publish gate"
-msgstr ""
-
-#: admin/Settings.php:282
-msgid "Require approval to publish"
-msgstr ""
-
-#: admin/Settings.php:290
+#: admin/Settings.php:289
 msgid "Self-approval"
 msgstr ""
 
-#: admin/Settings.php:298
-msgid "Review attestation"
+#: admin/Settings.php:297
+msgid "Publish gate"
 msgstr ""
 
-#: admin/Settings.php:306
+#: admin/Settings.php:304
+msgid "Require approval to publish"
+msgstr ""
+
+#: admin/Settings.php:312
 msgid "Email notifications"
 msgstr ""
 
-#: admin/Settings.php:313
-#: admin/Settings.php:707
+#: admin/Settings.php:319
+#: admin/Settings.php:945
 msgid "Send email when"
 msgstr ""
 
-#: admin/Settings.php:321
+#: admin/Settings.php:327
+#: admin/Settings.php:334
+msgid "AI use default"
+msgstr ""
+
+#: admin/Settings.php:342
+#: admin/Settings.php:349
+msgid "Review attestation"
+msgstr ""
+
+#: admin/Settings.php:358
 msgid "Front-end disclosure"
 msgstr ""
 
-#: admin/Settings.php:328
+#: admin/Settings.php:365
 #: assets/build/review-disclosure.js:1
 #: src/blocks/review-disclosure/edit.jsx:65
 msgid "Review disclosure"
 msgstr ""
 
-#: admin/Settings.php:365
+#: admin/Settings.php:374
+#: admin/Settings.php:381
+msgid "Uninstall"
+msgstr ""
+
+#: admin/Settings.php:419
 msgid "The settings were not saved because the submitted data was invalid."
 msgstr ""
 
-#: admin/Settings.php:429
+#: admin/Settings.php:476
+msgid "Settings sections"
+msgstr ""
+
+#: admin/Settings.php:498
+msgid "Save changes"
+msgstr ""
+
+#: admin/Settings.php:638
 msgid "Choose which content goes through the editorial workflow."
 msgstr ""
 
-#: admin/Settings.php:471
+#: admin/Settings.php:680
 msgid "Turning a content type off stops the workflow for it. Its workflow statuses, reviewers, due dates, publish gate mode and activity history are kept, and come back if you turn it on again."
 msgstr ""
 
-#: admin/Settings.php:483
+#: admin/Settings.php:692
 msgid "No default (Not declared)"
 msgstr ""
 
-#: admin/Settings.php:518
-#: admin/Settings.php:616
+#: admin/Settings.php:727
+#: admin/Settings.php:825
 msgid "Enable a content type above first."
 msgstr ""
 
-#: admin/Settings.php:523
+#: admin/Settings.php:732
 msgid "Recorded on new content of each type when it is created. Authors can change it; every change is logged."
 msgstr ""
 
-#: admin/Settings.php:539
+#: admin/Settings.php:748
 msgid "Delete all workflow data when the plugin is deleted"
 msgstr ""
 
-#: admin/Settings.php:544
+#: admin/Settings.php:753
 msgid "Warning:"
 msgstr ""
 
-#: admin/Settings.php:545
+#: admin/Settings.php:754
 msgid "this permanently removes the activity history, workflow comments, statuses, reviewers, due dates and the plugin’s capabilities. It cannot be undone. Deactivating the plugin never deletes data."
 msgstr ""
 
-#: admin/Settings.php:559
+#: admin/Settings.php:768
 msgid "Decide whether content has to be approved in the workflow before it can be published. Off changes nothing. Log only lets people publish but records every publish that skipped approval. Enforce blocks publishing until the content is approved; administrators can still publish, and that is recorded."
 msgstr ""
 
-#: admin/Settings.php:564
+#: admin/Settings.php:773
 msgid "Every publish and unpublish of workflow content is recorded in its activity history in all three modes. Changes written straight to the database by other code are not covered."
 msgstr ""
 
-#: admin/Settings.php:578
+#: admin/Settings.php:787
 msgid "Off"
 msgstr ""
 
-#: admin/Settings.php:579
+#: admin/Settings.php:788
 msgid "Log only"
 msgstr ""
 
-#: admin/Settings.php:580
+#: admin/Settings.php:789
 msgid "Enforce"
 msgstr ""
 
-#: admin/Settings.php:632
+#: admin/Settings.php:841
 msgid "Prevent people from approving their own content"
 msgstr ""
 
-#: admin/Settings.php:637
+#: admin/Settings.php:846
 msgid "When this is on, nobody can move content they wrote to Approved, administrators included. Someone else with approval rights has to approve it. “Wrote” means the author set on the post."
 msgstr ""
 
-#: admin/Settings.php:653
+#: admin/Settings.php:862
 msgid "Require approvers to confirm they reviewed the content"
 msgstr ""
 
-#: admin/Settings.php:658
+#: admin/Settings.php:867
 msgid "When this is on, approving needs an explicit confirmation, which is stored with the approval in the activity log."
 msgstr ""
 
-#: admin/Settings.php:674
+#: admin/Settings.php:883
 msgid "Show review disclosures on published content"
 msgstr ""
 
-#: admin/Settings.php:679
+#: admin/Settings.php:888
 msgid "Enables the Review disclosure block and the [sit_cwm_review_disclosure] shortcode. They show who approved the content and when, plus its declared AI use."
 msgstr ""
 
-#: admin/Settings.php:693
+#: admin/Settings.php:905
+msgid "Your name"
+msgstr ""
+
+#: admin/Settings.php:910
+msgid "Preview"
+msgstr ""
+
+#. translators: 1: approver's display name, 2: approval date.
+#: admin/Settings.php:913
+#: includes/Disclosure/ReviewDisclosure.php:154
+msgid "Reviewed by %1$s on %2$s."
+msgstr ""
+
+#: admin/Settings.php:917
+#: includes/Disclosure/ReviewDisclosure.php:186
+msgid "This content was created with AI assistance and reviewed by a person."
+msgstr ""
+
+#: admin/Settings.php:931
 msgid "Send an email when these workflow events happen. Nobody is emailed about their own actions, and comment text is only included for people allowed to read the activity history."
 msgstr ""
 
-#: admin/Settings.php:756
+#: admin/Settings.php:994
 msgid "Draft, Writing and Review: users who can change the workflow (by default administrators, editors, authors and contributors)."
 msgstr ""
 
-#: admin/Settings.php:757
+#: admin/Settings.php:995
 msgid "Needs Changes: users who can review content (by default administrators and editors)."
 msgstr ""
 
-#: admin/Settings.php:758
+#: admin/Settings.php:996
 msgid "Approved: users who can approve content (by default administrators and editors)."
 msgstr ""
 
-#: admin/Settings.php:759
+#: admin/Settings.php:997
 msgid "Published: users who can approve content and can also publish that post."
 msgstr ""
 
-#: admin/Settings.php:760
+#: admin/Settings.php:998
 msgid "Reviewers and due dates: users who can assign reviewers (by default administrators and editors)."
 msgstr ""
 
-#: admin/Settings.php:763
+#: admin/Settings.php:1001
 msgid "Draft → Writing → Review → Approved → Published. A reviewer can send content in Review back to Needs Changes, which returns to Writing. Published content starts a new cycle in Writing."
 msgstr ""
 
-#: admin/Settings.php:771
+#: admin/Settings.php:1009
 msgid "Every action also requires permission to edit that piece of content. See WORKFLOW.md in the plugin folder for the full reference."
 msgstr ""
 
-#: admin/Settings.php:772
+#: admin/Settings.php:1010
 msgid "Publish gate: Off changes nothing, Log only records every publish that skipped approval, and Enforce blocks publishing until the content is approved. Administrators can still publish, and that is recorded."
 msgstr ""
 
-#: admin/Settings.php:773
+#: admin/Settings.php:1011
 msgid "Self-approval: when prevented, nobody can move content they wrote to Approved, administrators included, and the author is not offered as its reviewer. Someone else with approval rights has to approve it."
 msgstr ""
 
-#: admin/Settings.php:774
+#: admin/Settings.php:1012
 msgid "Email notifications: each event can be switched on separately. Nobody is emailed about their own actions, and comment text is only included for people allowed to read the activity history."
 msgstr ""
 
-#: admin/Settings.php:775
+#: admin/Settings.php:1013
 msgid "AI use is declared by people or tools, never detected."
 msgstr ""
 
-#: admin/Settings.php:776
+#: admin/Settings.php:1014
 msgid "Review attestation: when required, approving needs an explicit confirmation that the content was reviewed. The confirmation is stored with the approval in the activity log."
 msgstr ""
 
-#: admin/Settings.php:777
+#: admin/Settings.php:1015
 msgid "Front-end disclosure: when on, the Review disclosure block and shortcode show who approved published content and when, plus its declared AI use. They show nothing until the content is approved and published."
 msgstr ""
 
-#: admin/Settings.php:795
+#: admin/Settings.php:1033
 msgid "(not supported: kept because it is already enabled; once turned off it will not be offered again)"
 msgstr ""
 
-#: admin/Settings.php:811
+#: admin/Settings.php:1049
 msgid "The enabled content types were not changed because the submitted value was invalid."
 msgstr ""
 
-#: admin/Settings.php:831
+#: admin/Settings.php:1069
 msgid "Content types that do not exist were ignored."
 msgstr ""
 
-#: admin/Settings.php:854
+#: admin/Settings.php:1092
 msgid "The publish gate settings were not changed because the submitted value was invalid."
 msgstr ""
 
-#: admin/Settings.php:882
+#: admin/Settings.php:1120
 msgid "Publish gate settings for unknown content types or modes were ignored."
 msgstr ""
 
-#: admin/Settings.php:906
+#: admin/Settings.php:1144
 msgid "The AI use defaults were not changed because the submitted value was invalid."
 msgstr ""
 
-#: admin/Settings.php:937
+#: admin/Settings.php:1175
 msgid "AI use defaults for unknown content types or values were ignored."
 msgstr ""
 
@@ -500,17 +534,8 @@ msgstr ""
 msgid "Declared AI use; empty when not declared."
 msgstr ""
 
-#. translators: 1: approver's display name, 2: approval date.
-#: includes/Disclosure/ReviewDisclosure.php:154
-msgid "Reviewed by %1$s on %2$s."
-msgstr ""
-
 #: includes/Disclosure/ReviewDisclosure.php:185
 msgid "This content was written by a person."
-msgstr ""
-
-#: includes/Disclosure/ReviewDisclosure.php:186
-msgid "This content was created with AI assistance and reviewed by a person."
 msgstr ""
 
 #: includes/Disclosure/ReviewDisclosure.php:187
@@ -523,7 +548,7 @@ msgstr ""
 
 #: includes/Governance/AiOrigin.php:84
 #: assets/build/classic.js:1
-#: assets/build/dashboard.js:184
+#: assets/build/dashboard.js:185
 #: assets/build/report.js:1
 #: assets/build/sidebar.js:1
 #: src/sidebar/components/AiOriginControl.jsx:65
@@ -533,7 +558,7 @@ msgstr ""
 
 #: includes/Governance/AiOrigin.php:114
 #: assets/build/classic.js:1
-#: assets/build/dashboard.js:184
+#: assets/build/dashboard.js:185
 #: assets/build/report.js:1
 #: assets/build/sidebar.js:1
 #: src/utils/aiOrigin.js:27
@@ -542,7 +567,7 @@ msgstr ""
 
 #: includes/Governance/AiOrigin.php:115
 #: assets/build/classic.js:1
-#: assets/build/dashboard.js:184
+#: assets/build/dashboard.js:185
 #: assets/build/report.js:1
 #: assets/build/sidebar.js:1
 #: src/utils/aiOrigin.js:28
@@ -551,7 +576,7 @@ msgstr ""
 
 #: includes/Governance/AiOrigin.php:116
 #: assets/build/classic.js:1
-#: assets/build/dashboard.js:184
+#: assets/build/dashboard.js:185
 #: assets/build/report.js:1
 #: assets/build/sidebar.js:1
 #: src/utils/aiOrigin.js:29
@@ -677,7 +702,7 @@ msgid "“%1$s” was not published: it has to be approved in the editorial work
 msgstr ""
 
 #: includes/REST/AbstractController.php:133
-#: includes/REST/PostsController.php:367
+#: includes/REST/PostsController.php:458
 #: includes/REST/WorkflowController.php:485
 msgid "Post ID."
 msgstr ""
@@ -787,64 +812,68 @@ msgstr ""
 msgid "The statement the approver confirmed, plain text; null otherwise."
 msgstr ""
 
+#: includes/REST/ActivityController.php:461
+msgid "How an AI use change arrived: workflow, post_api, or default (set by the post type's default in Settings, not by the user); null for other entries."
+msgstr ""
+
 #. translators: %s: Human-readable time difference, e.g. "2 hours".
 #: includes/REST/ActivityFormatter.php:137
 msgid "%s ago"
 msgstr ""
 
-#: includes/REST/ActivityFormatter.php:163
+#: includes/REST/ActivityFormatter.php:184
 msgid "Status changed"
 msgstr ""
 
-#: includes/REST/ActivityFormatter.php:164
+#: includes/REST/ActivityFormatter.php:185
 msgid "Reviewer assigned"
 msgstr ""
 
-#: includes/REST/ActivityFormatter.php:165
+#: includes/REST/ActivityFormatter.php:186
 msgid "Reviewer removed"
 msgstr ""
 
-#: includes/REST/ActivityFormatter.php:166
+#: includes/REST/ActivityFormatter.php:187
 msgid "Due date set"
 msgstr ""
 
-#: includes/REST/ActivityFormatter.php:167
+#: includes/REST/ActivityFormatter.php:188
 msgid "Due date removed"
 msgstr ""
 
-#: includes/REST/ActivityFormatter.php:168
+#: includes/REST/ActivityFormatter.php:189
 msgid "Comment added"
 msgstr ""
 
-#: includes/REST/ActivityFormatter.php:169
+#: includes/REST/ActivityFormatter.php:190
 msgid "AI use declared"
 msgstr ""
 
-#: includes/REST/ActivityFormatter.php:170
+#: includes/REST/ActivityFormatter.php:191
 msgid "Published"
 msgstr ""
 
-#: includes/REST/ActivityFormatter.php:171
+#: includes/REST/ActivityFormatter.php:192
 msgid "Unpublished"
 msgstr ""
 
-#: includes/REST/ActivityFormatter.php:172
-#: assets/build/report.js:2
-#: src/report/App.jsx:259
+#: includes/REST/ActivityFormatter.php:193
+#: assets/build/report.js:5
+#: src/report/App.jsx:290
 msgid "Publishing blocked"
 msgstr ""
 
-#: includes/REST/ActivityFormatter.php:173
-#: assets/build/report.js:2
-#: src/report/App.jsx:266
+#: includes/REST/ActivityFormatter.php:194
+#: assets/build/report.js:5
+#: src/report/App.jsx:268
 msgid "Published without approval"
 msgstr ""
 
-#: includes/REST/ActivityFormatter.php:221
+#: includes/REST/ActivityFormatter.php:242
 msgid "Deleted user"
 msgstr ""
 
-#: includes/REST/ActivityFormatter.php:251
+#: includes/REST/ActivityFormatter.php:272
 msgid "New"
 msgstr ""
 
@@ -885,111 +914,131 @@ msgstr ""
 msgid "Fresh workflow state of every updated post."
 msgstr ""
 
-#: includes/REST/PostsController.php:177
+#: includes/REST/PostsController.php:240
+msgid "Content in Review."
+msgstr ""
+
+#: includes/REST/PostsController.php:241
+msgid "Content in Review with the current user as reviewer."
+msgstr ""
+
+#: includes/REST/PostsController.php:242
+msgid "Content in Needs Changes."
+msgstr ""
+
+#: includes/REST/PostsController.php:243
+msgid "Content past its due date and not in a final status."
+msgstr ""
+
+#: includes/REST/PostsController.php:244
+msgid "Content Approved in the workflow and not yet Published."
+msgstr ""
+
+#: includes/REST/PostsController.php:268
 msgid "Limit to posts matching a search."
 msgstr ""
 
-#: includes/REST/PostsController.php:184
+#: includes/REST/PostsController.php:275
 msgid "Limit to one or more workflow statuses."
 msgstr ""
 
-#: includes/REST/PostsController.php:195
+#: includes/REST/PostsController.php:286
 msgid "Limit to posts with this reviewer; 0 for posts without one."
 msgstr ""
 
-#: includes/REST/PostsController.php:202
+#: includes/REST/PostsController.php:293
 msgid "Limit to posts by this author."
 msgstr ""
 
-#: includes/REST/PostsController.php:209
+#: includes/REST/PostsController.php:300
 msgid "Limit to one workflow-enabled post type."
 msgstr ""
 
-#: includes/REST/PostsController.php:215
+#: includes/REST/PostsController.php:306
 msgid "Limit to posts due on or before this date (YYYY-MM-DD)."
 msgstr ""
 
-#: includes/REST/PostsController.php:216
+#: includes/REST/PostsController.php:307
 msgid "Limit to posts due on or after this date (YYYY-MM-DD)."
 msgstr ""
 
-#: includes/REST/PostsController.php:218
+#: includes/REST/PostsController.php:309
 msgid "Limit to posts whose due date has passed, in the site timezone, before the workflow completed."
 msgstr ""
 
-#: includes/REST/PostsController.php:224
+#: includes/REST/PostsController.php:315
 msgid "Sort column."
 msgstr ""
 
-#: includes/REST/PostsController.php:232
+#: includes/REST/PostsController.php:323
 msgid "Sort direction."
 msgstr ""
 
-#: includes/REST/PostsController.php:372
+#: includes/REST/PostsController.php:463
 msgid "Raw post title; escape at output."
 msgstr ""
 
-#: includes/REST/PostsController.php:377
+#: includes/REST/PostsController.php:468
 #: includes/REST/WorkflowController.php:495
 msgid "Post type."
 msgstr ""
 
-#: includes/REST/PostsController.php:382
+#: includes/REST/PostsController.php:473
 #: includes/REST/WorkflowController.php:500
 msgid "Native WordPress post status, separate from the workflow status."
 msgstr ""
 
-#: includes/REST/PostsController.php:387
+#: includes/REST/PostsController.php:478
 msgid "Post author."
 msgstr ""
 
-#: includes/REST/PostsController.php:396
+#: includes/REST/PostsController.php:487
 #: includes/REST/WorkflowController.php:511
 msgid "Workflow status."
 msgstr ""
 
-#: includes/REST/PostsController.php:403
+#: includes/REST/PostsController.php:494
 #: includes/REST/WorkflowController.php:517
 msgid "Workflow status label."
 msgstr ""
 
-#: includes/REST/PostsController.php:408
+#: includes/REST/PostsController.php:499
 #: includes/REST/WorkflowController.php:522
 msgid "Whether the stored workflow status is no longer registered and the default status is reported instead."
 msgstr ""
 
-#: includes/REST/PostsController.php:412
+#: includes/REST/PostsController.php:503
 #: includes/REST/WorkflowController.php:527
 msgid "Assigned reviewer."
 msgstr ""
 
-#: includes/REST/PostsController.php:414
+#: includes/REST/PostsController.php:505
 #: includes/REST/WorkflowController.php:539
 msgid "Due date as YYYY-MM-DD, or an empty string."
 msgstr ""
 
-#: includes/REST/PostsController.php:419
+#: includes/REST/PostsController.php:510
 msgid "Whether the due date has passed before the workflow completed."
 msgstr ""
 
-#: includes/REST/PostsController.php:424
+#: includes/REST/PostsController.php:515
 msgid "Declared AI use (not detected), or an empty string when nothing was declared."
 msgstr ""
 
-#: includes/REST/PostsController.php:430
+#: includes/REST/PostsController.php:521
 msgid "Most recent activity entry, shaped like the activity route items."
 msgstr ""
 
-#: includes/REST/PostsController.php:435
+#: includes/REST/PostsController.php:526
 msgid "Edit screen URL; empty when the user cannot edit the post."
 msgstr ""
 
-#: includes/REST/PostsController.php:440
+#: includes/REST/PostsController.php:531
 #: includes/REST/WorkflowController.php:557
 msgid "Transitions the current user may perform now."
 msgstr ""
 
-#: includes/REST/PostsController.php:454
+#: includes/REST/PostsController.php:545
 #: includes/REST/WorkflowController.php:578
 msgid "What the current user may do on this post. Display hints only."
 msgstr ""
@@ -1217,13 +1266,13 @@ msgid "Confirm that you reviewed this content before approving it."
 msgstr ""
 
 #. translators: 1: Required PHP version, 2: Current PHP version.
-#: sapphireit-editorial-workflow.php:126
+#: sapphireit-editorial-workflow.php:249
 msgid "SapphireIT Editorial Workflow requires PHP %1$s or higher. This site runs PHP %2$s, so the plugin is not loaded."
 msgstr ""
 
 #: assets/build/classic.js:1
 #: assets/build/dashboard.js:157
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: assets/build/report.js:1
 #: assets/build/sidebar.js:1
 #: src/api/client.js:125
@@ -1247,11 +1296,11 @@ msgid "Declare how this content was made. This is recorded in the activity log; 
 msgstr ""
 
 #: assets/build/classic.js:1
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: assets/build/report.js:1
 #: assets/build/sidebar.js:1
 #: src/dashboard/fields.js:275
-#: src/report/Breakdown.jsx:76
+#: src/report/Breakdown.jsx:135
 #: src/sidebar/components/AiOriginControl.jsx:47
 #: src/sidebar/components/AiOriginControl.jsx:76
 msgid "AI use"
@@ -1276,7 +1325,7 @@ msgid "Add comment"
 msgstr ""
 
 #: assets/build/classic.js:1
-#: assets/build/dashboard.js:185
+#: assets/build/dashboard.js:186
 #: assets/build/sidebar.js:1
 #: src/dashboard/fields.js:148
 #: src/sidebar/components/DueDateControl.jsx:82
@@ -1285,7 +1334,7 @@ msgstr ""
 
 #. translators: %s: Due date.
 #: assets/build/classic.js:2
-#: assets/build/dashboard.js:185
+#: assets/build/dashboard.js:186
 #: assets/build/sidebar.js:2
 #: src/dashboard/fields.js:163
 #: src/sidebar/components/DueDateControl.jsx:88
@@ -1325,7 +1374,7 @@ msgstr ""
 #: assets/build/classic.js:3
 #: assets/build/dashboard.js:157
 #: assets/build/dashboard.js:160
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: assets/build/sidebar.js:3
 #: src/dashboard/bulk/AssignReviewerModal.jsx:85
 #: src/dashboard/fields.js:284
@@ -1335,7 +1384,7 @@ msgid "Reviewer"
 msgstr ""
 
 #: assets/build/classic.js:3
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: assets/build/sidebar.js:3
 #: src/dashboard/fields.js:260
 #: src/sidebar/components/StatusControl.jsx:32
@@ -1393,7 +1442,7 @@ msgstr ""
 
 #: assets/build/classic.js:6
 #: assets/build/dashboard.js:178
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: assets/build/sidebar.js:6
 #: src/dashboard/actions.jsx:74
 #: src/utils/confirmations.js:74
@@ -1409,7 +1458,7 @@ msgstr ""
 
 #: assets/build/classic.js:6
 #: assets/build/dashboard.js:178
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: assets/build/sidebar.js:6
 #: src/dashboard/actions.jsx:40
 #: src/dashboard/actions.jsx:73
@@ -1439,9 +1488,9 @@ msgid "Publish"
 msgstr ""
 
 #: assets/build/classic.js:8
-#: assets/build/classic.js:29
+#: assets/build/classic.js:31
 #: assets/build/sidebar.js:8
-#: assets/build/sidebar.js:29
+#: assets/build/sidebar.js:31
 #: src/components/WorkflowPanel.jsx:294
 #: src/sidebar/components/TransitionActions.jsx:199
 msgid "Workflow actions"
@@ -1457,322 +1506,336 @@ msgstr ""
 #. translators: 1: user name, 2: previous status, 3: new status
 #: assets/build/classic.js:9
 #: assets/build/sidebar.js:9
-#: src/components/ActivityItem.jsx:111
+#: src/components/ActivityItem.jsx:122
 msgid "%1$s changed status from %2$s to %3$s"
 msgstr ""
 
 #. translators: 1: user name, 2: new status
 #: assets/build/classic.js:10
 #: assets/build/sidebar.js:10
-#: src/components/ActivityItem.jsx:123
+#: src/components/ActivityItem.jsx:134
 msgid "%1$s set the status to %2$s"
 msgstr ""
 
 #. translators: 1: user name, 2: reviewer name
 #: assets/build/classic.js:11
 #: assets/build/sidebar.js:11
-#: src/components/ActivityItem.jsx:134
+#: src/components/ActivityItem.jsx:145
 msgid "%1$s assigned %2$s as reviewer"
 msgstr ""
 
 #. translators: 1: user name, 2: reviewer name
 #: assets/build/classic.js:12
 #: assets/build/sidebar.js:12
-#: src/components/ActivityItem.jsx:146
+#: src/components/ActivityItem.jsx:157
 msgid "%1$s removed %2$s as reviewer"
 msgstr ""
 
 #. translators: %s: user name
 #: assets/build/classic.js:13
 #: assets/build/sidebar.js:13
-#: src/components/ActivityItem.jsx:157
+#: src/components/ActivityItem.jsx:168
 msgid "%s removed the reviewer"
 msgstr ""
 
-#. translators: 1: user name, 2: due date
+#. translators: %s: declared AI use, e.g. "Human-written"
 #: assets/build/classic.js:14
 #: assets/build/sidebar.js:14
-#: src/components/ActivityItem.jsx:167
+#: src/components/ActivityItem.jsx:188
+msgid "AI use set to %s by the default for this content type"
+msgstr ""
+
+#. translators: 1: user name, 2: declared AI use, e.g. "AI-generated"
+#: assets/build/classic.js:15
+#: assets/build/sidebar.js:15
+#: src/components/ActivityItem.jsx:198
+msgid "%1$s: AI use declared as %2$s"
+msgstr ""
+
+#. translators: 1: user name, 2: due date
+#: assets/build/classic.js:16
+#: assets/build/sidebar.js:16
+#: src/components/ActivityItem.jsx:209
 msgid "%1$s set the due date to %2$s"
 msgstr ""
 
 #. translators: %s: user name
-#: assets/build/classic.js:15
-#: assets/build/sidebar.js:15
-#: src/components/ActivityItem.jsx:178
+#: assets/build/classic.js:17
+#: assets/build/sidebar.js:17
+#: src/components/ActivityItem.jsx:220
 msgid "%s removed the due date"
 msgstr ""
 
 #. translators: %s: user name
-#: assets/build/classic.js:16
-#: assets/build/sidebar.js:16
-#: src/components/ActivityItem.jsx:188
+#: assets/build/classic.js:18
+#: assets/build/sidebar.js:18
+#: src/components/ActivityItem.jsx:230
 msgid "%s commented"
 msgstr ""
 
 #. translators: 1: user name, usually "System", 2: workflow status, e.g. "Approved"
-#: assets/build/classic.js:17
-#: assets/build/sidebar.js:17
-#: src/components/ActivityItem.jsx:200
+#: assets/build/classic.js:19
+#: assets/build/sidebar.js:19
+#: src/components/ActivityItem.jsx:242
 msgid "%1$s published this on schedule while it was at %2$s"
 msgstr ""
 
 #. translators: 1: user name, 2: workflow status, e.g. "Review"
-#: assets/build/classic.js:18
-#: assets/build/sidebar.js:18
-#: src/components/ActivityItem.jsx:211
+#: assets/build/classic.js:20
+#: assets/build/sidebar.js:20
+#: src/components/ActivityItem.jsx:253
 msgid "%1$s published this while it was at %2$s"
 msgstr ""
 
 #. translators: 1: user name, 2: new post status, e.g. "Draft"
-#: assets/build/classic.js:19
-#: assets/build/sidebar.js:19
-#: src/components/ActivityItem.jsx:226
+#: assets/build/classic.js:21
+#: assets/build/sidebar.js:21
+#: src/components/ActivityItem.jsx:268
 msgid "%1$s unpublished this (now %2$s)"
 msgstr ""
 
 #. translators: 1: user name, 2: workflow status, e.g. "Writing"
-#: assets/build/classic.js:20
-#: assets/build/sidebar.js:20
-#: src/components/ActivityItem.jsx:241
+#: assets/build/classic.js:22
+#: assets/build/sidebar.js:22
+#: src/components/ActivityItem.jsx:283
 msgid "Publishing by %1$s was blocked: it was at %2$s, not approved"
 msgstr ""
 
 #. translators: %s: user name
-#: assets/build/classic.js:21
-#: assets/build/sidebar.js:21
-#: src/components/ActivityItem.jsx:253
+#: assets/build/classic.js:23
+#: assets/build/sidebar.js:23
+#: src/components/ActivityItem.jsx:295
 msgid "%s published this without the approval check (internal error)"
 msgstr ""
 
 #. translators: 1: user name, 2: workflow status, e.g. "Draft"
-#: assets/build/classic.js:22
-#: assets/build/sidebar.js:22
-#: src/components/ActivityItem.jsx:267
+#: assets/build/classic.js:24
+#: assets/build/sidebar.js:24
+#: src/components/ActivityItem.jsx:309
 msgid "%1$s published this without approval (it was at %2$s)"
 msgstr ""
 
 #. translators: 1: user name, 2: activity label, e.g. "Status changed"
-#: assets/build/classic.js:23
-#: assets/build/sidebar.js:23
-#: src/components/ActivityItem.jsx:278
+#: assets/build/classic.js:25
+#: assets/build/sidebar.js:25
+#: src/components/ActivityItem.jsx:320
 msgid "%1$s: %2$s"
 msgstr ""
 
-#: assets/build/classic.js:23
-#: assets/build/sidebar.js:23
-#: src/components/ActivityItem.jsx:347
+#: assets/build/classic.js:25
+#: assets/build/sidebar.js:25
+#: src/components/ActivityItem.jsx:400
 msgid "Review confirmed"
 msgstr ""
 
-#: assets/build/classic.js:23
-#: assets/build/sidebar.js:23
+#: assets/build/classic.js:25
+#: assets/build/sidebar.js:25
 #: src/components/ActivityTimeline.jsx:43
 msgid "Loading activity…"
 msgstr ""
 
-#: assets/build/classic.js:23
-#: assets/build/sidebar.js:23
+#: assets/build/classic.js:25
+#: assets/build/sidebar.js:25
 #: src/utils/groupByDay.js:80
 msgid "Unknown date"
 msgstr ""
 
-#: assets/build/classic.js:23
-#: assets/build/sidebar.js:23
+#: assets/build/classic.js:25
+#: assets/build/sidebar.js:25
 #: src/utils/groupByDay.js:82
 msgid "Today"
 msgstr ""
 
-#: assets/build/classic.js:23
-#: assets/build/sidebar.js:23
+#: assets/build/classic.js:25
+#: assets/build/sidebar.js:25
 #: src/utils/groupByDay.js:84
 msgid "Yesterday"
 msgstr ""
 
 #. translators: %d: Number of new activity entries.
-#: assets/build/classic.js:24
-#: assets/build/sidebar.js:24
+#: assets/build/classic.js:26
+#: assets/build/sidebar.js:26
 #: src/components/ActivityTimeline.jsx:93
 msgid "%d new activity entry."
 msgid_plural "%d new activity entries."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/classic.js:24
-#: assets/build/classic.js:28
-#: assets/build/dashboard.js:187
-#: assets/build/report.js:1
-#: assets/build/sidebar.js:24
-#: assets/build/sidebar.js:28
+#: assets/build/classic.js:26
+#: assets/build/classic.js:30
+#: assets/build/dashboard.js:188
+#: assets/build/report.js:4
+#: assets/build/sidebar.js:26
+#: assets/build/sidebar.js:30
 #: src/components/ActivityTimeline.jsx:145
 #: src/components/WorkflowPanel.jsx:81
 #: src/components/WorkflowPanel.jsx:203
-#: src/dashboard/WorkflowDataViews.jsx:253
-#: src/report/App.jsx:178
+#: src/dashboard/WorkflowDataViews.jsx:293
+#: src/report/App.jsx:193
 msgid "Retry"
 msgstr ""
 
-#: assets/build/classic.js:24
-#: assets/build/sidebar.js:24
+#: assets/build/classic.js:26
+#: assets/build/sidebar.js:26
 #: src/components/ActivityTimeline.jsx:154
 msgid "No activity yet."
 msgstr ""
 
-#: assets/build/classic.js:24
-#: assets/build/sidebar.js:24
+#: assets/build/classic.js:26
+#: assets/build/sidebar.js:26
 #: src/components/ActivityTimeline.jsx:156
 msgid "Status changes, reviewer assignments, due dates and comments will appear here."
 msgstr ""
 
-#: assets/build/classic.js:24
-#: assets/build/sidebar.js:24
+#: assets/build/classic.js:26
+#: assets/build/sidebar.js:26
 #: src/components/ActivityTimeline.jsx:167
 msgid "Updating…"
 msgstr ""
 
-#: assets/build/classic.js:24
-#: assets/build/sidebar.js:24
+#: assets/build/classic.js:26
+#: assets/build/sidebar.js:26
 #: src/components/ActivityTimeline.jsx:193
 msgid "Load more"
 msgstr ""
 
-#: assets/build/classic.js:24
-#: assets/build/sidebar.js:24
+#: assets/build/classic.js:26
+#: assets/build/sidebar.js:26
 #: src/components/PublishGateNotice.jsx:31
 msgid "Publishing is locked until this content is approved."
 msgstr ""
 
-#: assets/build/classic.js:24
-#: assets/build/sidebar.js:24
+#: assets/build/classic.js:26
+#: assets/build/sidebar.js:26
 #: src/components/PublishGateNotice.jsx:41
 msgid "This content is not approved yet. Publishing it now will be recorded as a bypass of the review."
 msgstr ""
 
-#: assets/build/classic.js:24
-#: assets/build/sidebar.js:24
+#: assets/build/classic.js:26
+#: assets/build/sidebar.js:26
 #: src/components/PublishGateNotice.jsx:51
 msgid "This content is not approved yet. You can still publish it, and that will be recorded as a bypass of the review."
 msgstr ""
 
-#: assets/build/classic.js:24
-#: assets/build/sidebar.js:24
+#: assets/build/classic.js:26
+#: assets/build/sidebar.js:26
 #: src/components/WorkflowPanel.jsx:43
 msgid "Workflow is not available for this post type. An administrator can enable it in the Editorial Workflow settings."
 msgstr ""
 
-#: assets/build/classic.js:24
-#: assets/build/sidebar.js:24
+#: assets/build/classic.js:26
+#: assets/build/sidebar.js:26
 #: src/components/WorkflowPanel.jsx:65
 msgid "You don’t have permission to view the workflow of this content."
 msgstr ""
 
 #. translators: %d: Number of fields that need attention
-#: assets/build/classic.js:24
+#: assets/build/classic.js:26
 #: assets/build/dashboard.js:157
-#: assets/build/sidebar.js:24
+#: assets/build/sidebar.js:26
 #: src/dashboard/modals/useRowMutation.js:68
 #: src/hooks/useWorkflow.js:202
 msgid "This post changed elsewhere — refreshed."
 msgstr ""
 
 #. translators: %s: Workflow status label.
-#: assets/build/classic.js:25
-#: assets/build/sidebar.js:25
+#: assets/build/classic.js:27
+#: assets/build/sidebar.js:27
 #: src/hooks/useWorkflow.js:276
 msgid "Workflow status changed to %s."
 msgstr ""
 
 #. translators: %s: Reviewer display name.
-#: assets/build/classic.js:26
-#: assets/build/sidebar.js:26
+#: assets/build/classic.js:28
+#: assets/build/sidebar.js:28
 #: src/hooks/useWorkflow.js:302
 msgid "Reviewer set to %s."
 msgstr ""
 
-#: assets/build/classic.js:26
-#: assets/build/sidebar.js:26
+#: assets/build/classic.js:28
+#: assets/build/sidebar.js:28
 #: src/hooks/useWorkflow.js:308
 msgid "Reviewer removed."
 msgstr ""
 
 #. translators: %s: Due date.
-#: assets/build/classic.js:27
-#: assets/build/sidebar.js:27
+#: assets/build/classic.js:29
+#: assets/build/sidebar.js:29
 #: src/hooks/useWorkflow.js:331
 msgid "Due date set to %s."
 msgstr ""
 
-#: assets/build/classic.js:27
-#: assets/build/sidebar.js:27
+#: assets/build/classic.js:29
+#: assets/build/sidebar.js:29
 #: src/hooks/useWorkflow.js:337
 msgid "Due date removed."
 msgstr ""
 
 #. translators: %s: Declared AI use, e.g. "AI-assisted".
-#: assets/build/classic.js:28
-#: assets/build/sidebar.js:28
+#: assets/build/classic.js:30
+#: assets/build/sidebar.js:30
 #: src/hooks/useWorkflow.js:357
 msgid "AI use declared as %s."
 msgstr ""
 
-#: assets/build/classic.js:28
-#: assets/build/sidebar.js:28
+#: assets/build/classic.js:30
+#: assets/build/sidebar.js:30
 #: src/hooks/useWorkflow.js:382
 msgid "Comment added."
 msgstr ""
 
-#: assets/build/classic.js:28
-#: assets/build/sidebar.js:28
+#: assets/build/classic.js:30
+#: assets/build/sidebar.js:30
 #: src/components/WorkflowPanel.jsx:147
 msgid "Loading workflow…"
 msgstr ""
 
-#: assets/build/classic.js:28
-#: assets/build/sidebar.js:28
+#: assets/build/classic.js:30
+#: assets/build/sidebar.js:30
 #: src/components/WorkflowPanel.jsx:186
 msgid "This content was deleted or is no longer part of the workflow. Workflow controls are disabled."
 msgstr ""
 
 #. translators: %s: Default workflow status label, e.g. "Draft".
-#: assets/build/classic.js:29
-#: assets/build/sidebar.js:29
+#: assets/build/classic.js:31
+#: assets/build/sidebar.js:31
 #: src/components/WorkflowPanel.jsx:226
 msgid "This content had a workflow status that is no longer available, so it is treated as %s. Use the workflow actions below to continue."
 msgstr ""
 
-#: assets/build/classic.js:29
-#: assets/build/sidebar.js:29
+#: assets/build/classic.js:31
+#: assets/build/sidebar.js:31
 #: src/components/WorkflowPanel.jsx:241
 msgid "You can follow this workflow, but your role doesn’t allow you to change it."
 msgstr ""
 
-#: assets/build/classic.js:29
-#: assets/build/dashboard.js:187
-#: assets/build/sidebar.js:29
+#: assets/build/classic.js:31
+#: assets/build/dashboard.js:188
+#: assets/build/sidebar.js:31
 #: src/components/WorkflowPanel.jsx:251
-#: src/dashboard/WorkflowDataViews.jsx:263
+#: src/dashboard/WorkflowDataViews.jsx:303
 msgid "Refreshing…"
 msgstr ""
 
-#: assets/build/classic.js:29
-#: assets/build/sidebar.js:29
+#: assets/build/classic.js:31
+#: assets/build/sidebar.js:31
 #: src/components/WorkflowPanel.jsx:307
 msgid "You can't approve your own content. Another reviewer has to approve it."
 msgstr ""
 
-#: assets/build/classic.js:29
-#: assets/build/sidebar.js:29
+#: assets/build/classic.js:31
+#: assets/build/sidebar.js:31
 #: src/components/WorkflowPanel.jsx:316
 msgid "Comment"
 msgstr ""
 
-#: assets/build/classic.js:29
-#: assets/build/sidebar.js:29
+#: assets/build/classic.js:31
+#: assets/build/sidebar.js:31
 #: src/components/WorkflowPanel.jsx:327
 msgid "Activity"
 msgstr ""
 
-#: assets/build/classic.js:29
+#: assets/build/classic.js:31
 #: src/classic/ClassicPanel.jsx:54
 msgid "Workflow changes are saved immediately. You don’t need to click Update."
 msgstr ""
@@ -2020,223 +2083,317 @@ msgid "Move “%1$s” from %2$s to %3$s?"
 msgstr ""
 
 #: assets/build/dashboard.js:183
-#: src/dashboard/EmptyState.jsx:33
+#: src/dashboard/EmptyState.jsx:55
+msgid "New to Editorial Workflow?"
+msgstr ""
+
+#: assets/build/dashboard.js:183
+#: src/dashboard/EmptyState.jsx:61
+msgid "Getting Started has the setup steps and the documentation."
+msgstr ""
+
+#: assets/build/dashboard.js:183
+#: src/dashboard/EmptyState.jsx:71
+msgid "Open Getting Started"
+msgstr ""
+
+#: assets/build/dashboard.js:183
+#: src/dashboard/EmptyState.jsx:79
 msgid "No content is in the workflow yet."
 msgstr ""
 
 #: assets/build/dashboard.js:183
-#: src/dashboard/EmptyState.jsx:35
+#: src/dashboard/EmptyState.jsx:85
 msgid "Content of the workflow-enabled post types appears here as soon as it is created."
 msgstr ""
 
 #. translators: %s: Singular post type label, e.g. "Post".
 #: assets/build/dashboard.js:184
-#: src/dashboard/EmptyState.jsx:46
+#: src/dashboard/EmptyState.jsx:95
 msgid "Add new %s"
 msgstr ""
 
 #: assets/build/dashboard.js:184
-#: src/dashboard/EmptyState.jsx:53
-msgid "Open Getting Started"
+#: src/dashboard/SummaryTiles.jsx:43
+msgid "In review"
 msgstr ""
 
-#: assets/build/dashboard.js:184
+#. translators: %s: number of items in Review assigned to the current user.
+#: assets/build/dashboard.js:185
+#: src/dashboard/SummaryTiles.jsx:47
+msgid "%s assigned to you"
+msgid_plural "%s assigned to you"
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/build/dashboard.js:185
+#: src/dashboard/SummaryTiles.jsx:60
+msgid "Needs changes"
+msgstr ""
+
+#: assets/build/dashboard.js:185
+#: src/dashboard/SummaryTiles.jsx:62
+msgid "Waiting on the author"
+msgstr ""
+
+#: assets/build/dashboard.js:185
+#: assets/build/dashboard.js:186
+#: assets/build/dashboard.js:188
+#: src/dashboard/fields.js:224
+#: src/dashboard/fields.js:345
+#: src/dashboard/SummaryTiles.jsx:68
+msgid "Overdue"
+msgstr ""
+
+#: assets/build/dashboard.js:185
+#: src/dashboard/SummaryTiles.jsx:70
+msgid "Past their due date"
+msgstr ""
+
+#: assets/build/dashboard.js:185
+#: src/dashboard/SummaryTiles.jsx:76
+msgid "Approved, not published"
+msgstr ""
+
+#: assets/build/dashboard.js:185
+#: src/dashboard/SummaryTiles.jsx:81
+msgid "Ready to go live"
+msgstr ""
+
+#: assets/build/dashboard.js:185
+#: src/dashboard/SummaryTiles.jsx:148
+msgid "Workflow summary"
+msgstr ""
+
+#: assets/build/dashboard.js:185
 #: src/dashboard/StatusBadge.jsx:29
 msgid "The previous workflow status is no longer available."
 msgstr ""
 
-#: assets/build/dashboard.js:184
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:185
+#: assets/build/dashboard.js:188
 #: src/dashboard/fields.js:121
 #: src/dashboard/fields.js:290
 msgid "Unassigned"
 msgstr ""
 
-#: assets/build/dashboard.js:185
+#: assets/build/dashboard.js:186
 #: src/dashboard/fields.js:175
 msgid "Unknown author"
 msgstr ""
 
-#: assets/build/dashboard.js:185
+#: assets/build/dashboard.js:186
 #: src/dashboard/fields.js:195
 msgid "No activity"
 msgstr ""
 
-#: assets/build/dashboard.js:185
-#: assets/build/dashboard.js:187
-#: src/dashboard/fields.js:224
-#: src/dashboard/fields.js:345
-msgid "Overdue"
-msgstr ""
-
-#: assets/build/dashboard.js:185
+#: assets/build/dashboard.js:186
 #: src/dashboard/fields.js:228
 msgid "Not overdue"
 msgstr ""
 
 #. translators: %d: Number of updated posts.
-#: assets/build/dashboard.js:186
+#: assets/build/dashboard.js:187
 #: src/hooks/useBulkAction.js:134
 msgid "%d post updated."
 msgid_plural "%d posts updated."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/dashboard.js:186
+#: assets/build/dashboard.js:187
 #: src/hooks/useBulkAction.js:142
 msgid "No posts were updated."
 msgstr ""
 
 #. translators: %d: Number of posts that could not be updated.
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: src/hooks/useBulkAction.js:149
 msgid "%d could not be updated."
 msgid_plural "%d could not be updated."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/dashboard.js:187
-#: src/dashboard/WorkflowDataViews.jsx:132
+#: assets/build/dashboard.js:188
+#: src/dashboard/WorkflowDataViews.jsx:139
 msgid "No content matches the current search and filters."
 msgstr ""
 
-#: assets/build/dashboard.js:187
-#: src/dashboard/WorkflowDataViews.jsx:138
-#: src/dashboard/WorkflowDataViews.jsx:299
+#: assets/build/dashboard.js:188
+#: src/dashboard/WorkflowDataViews.jsx:145
+#: src/dashboard/WorkflowDataViews.jsx:339
 msgid "Clear all filters"
 msgstr ""
 
-#: assets/build/dashboard.js:187
-#: src/dashboard/WorkflowDataViews.jsx:153
+#: assets/build/dashboard.js:188
+#: src/dashboard/WorkflowDataViews.jsx:160
 msgid "Content could not be loaded."
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: src/hooks/useBulkAction.js:105
 msgid "The server did not report a result for this item."
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: src/dashboard/fields.js:249
 msgid "Title"
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: src/dashboard/fields.js:300
 msgid "Due"
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: src/dashboard/fields.js:309
 msgid "Author"
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: src/dashboard/fields.js:322
 msgid "Type"
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: src/dashboard/fields.js:336
 msgid "Last activity"
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: src/dashboard/fields.js:351
 msgid "Overdue only"
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: src/dashboard/actions.jsx:61
 msgid "Edit"
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: src/dashboard/actions.jsx:51
 #: src/dashboard/actions.jsx:80
 msgid "Request changes"
 msgstr ""
 
-#: assets/build/dashboard.js:187
+#: assets/build/dashboard.js:188
 #: src/dashboard/actions.jsx:81
 msgid "Request changes?"
 msgstr ""
 
-#: assets/build/dashboard.js:187
-#: src/dashboard/WorkflowDataViews.jsx:290
+#: assets/build/dashboard.js:188
+#: src/dashboard/WorkflowDataViews.jsx:284
+msgid "Workflow content"
+msgstr ""
+
+#: assets/build/dashboard.js:188
+#: src/dashboard/WorkflowDataViews.jsx:330
 msgid "Search content"
 msgstr ""
 
 #: assets/build/report.js:1
-#: src/report/Breakdown.jsx:31
+#: src/report/Breakdown.jsx:38
 msgid "Not recorded"
 msgstr ""
 
 #: assets/build/report.js:1
-#: src/report/Breakdown.jsx:82
+#: src/report/Breakdown.jsx:141
 msgid "Count"
-msgstr ""
-
-#: assets/build/report.js:1
-#: src/report/App.jsx:164
-msgid "Period"
-msgstr ""
-
-#: assets/build/report.js:1
-#: src/report/App.jsx:97
-msgid "Last 30 days"
-msgstr ""
-
-#: assets/build/report.js:1
-#: src/report/App.jsx:101
-msgid "Last 90 days"
-msgstr ""
-
-#: assets/build/report.js:1
-#: src/report/App.jsx:105
-msgid "Last 12 months"
 msgstr ""
 
 #. translators: 1: publications made after approval, 2: all publications in the period.
 #: assets/build/report.js:2
-#: src/report/App.jsx:223
+#: src/report/HeadlineTile.jsx:61
+msgid "%1$s of %2$s publications were approved first"
+msgstr ""
+
+#. translators: %s: publications made after approval.
+#: assets/build/report.js:3
+#: src/report/HeadlineTile.jsx:81
+msgid "Approved first · %s"
+msgstr ""
+
+#. translators: %s: publications made without approval.
+#: assets/build/report.js:4
+#: src/report/HeadlineTile.jsx:91
+msgid "Without approval · %s"
+msgstr ""
+
+#: assets/build/report.js:4
+#: src/report/App.jsx:172
+msgid "Period"
+msgstr ""
+
+#: assets/build/report.js:4
+#: src/report/App.jsx:106
+msgid "Last 30 days"
+msgstr ""
+
+#: assets/build/report.js:4
+#: src/report/App.jsx:110
+msgid "Last 90 days"
+msgstr ""
+
+#: assets/build/report.js:4
+#: src/report/App.jsx:114
+msgid "Last 12 months"
+msgstr ""
+
+#. translators: 1: publications made after approval, 2: all publications in the period.
+#: assets/build/report.js:5
+#: src/report/App.jsx:238
 msgid "%1$s of %2$s publication"
 msgid_plural "%1$s of %2$s publications"
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/build/report.js:2
-#: src/report/App.jsx:238
+#: assets/build/report.js:5
+#: src/report/App.jsx:253
 msgid "Published after approval"
 msgstr ""
 
-#: assets/build/report.js:2
-#: src/report/App.jsx:250
+#: assets/build/report.js:5
+#: src/report/App.jsx:281
 msgid "Published while the gate was off or logging only"
 msgstr ""
 
-#: assets/build/report.js:2
-#: src/report/App.jsx:279
+#: assets/build/report.js:5
+#: src/report/App.jsx:297
 msgid "Overdue reviews"
 msgstr ""
 
-#: assets/build/report.js:2
-#: src/report/App.jsx:290
+#: assets/build/report.js:5
+#: src/report/App.jsx:309
 msgid "AI use: all workflow content"
 msgstr ""
 
-#: assets/build/report.js:2
-#: src/report/App.jsx:302
+#. translators: %s: number of workflow items.
+#: assets/build/report.js:6
+#: src/report/App.jsx:317
+msgid "%s item"
+msgid_plural "%s items"
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/build/report.js:6
+#: src/report/App.jsx:333
 msgid "AI use: published in this period"
 msgstr ""
 
-#: assets/build/report.js:2
-#: src/report/App.jsx:311
+#. translators: %s: number of publications.
+#: assets/build/report.js:7
+#: src/report/App.jsx:341
+msgid "%s publication"
+msgid_plural "%s publications"
+msgstr[0] ""
+msgstr[1] ""
+
+#: assets/build/report.js:7
+#: src/report/App.jsx:354
 msgid "Nothing was published in this period."
 msgstr ""
 
-#: assets/build/report.js:2
-#: src/report/App.jsx:319
+#: assets/build/report.js:7
+#: src/report/App.jsx:362
 msgid "“Not recorded” counts publications logged before version 1.2, which did not record AI use."
 msgstr ""
 

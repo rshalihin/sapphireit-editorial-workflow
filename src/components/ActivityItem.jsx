@@ -86,6 +86,17 @@ export function actorName( entry ) {
 }
 
 /**
+ * Whether an entry is an AI use value stamped from Settings' default for the
+ * post type, rather than declared by a person.
+ *
+ * @param {Object} entry Activity entry.
+ * @return {boolean} True for a default stamp.
+ */
+export function isSettingsDefault( entry ) {
+	return entry.action === 'ai_origin_changed' && entry.via === 'default';
+}
+
+/**
  * Translated sentence template for an entry.
  *
  * Placeholders are filled with `<actor />`, `<from />`, `<to />`,
@@ -167,6 +178,19 @@ function sentenceTemplate( entry ) {
 			// generic "actor: AI use declared".
 			if ( ! entry.new_label ) {
 				break;
+			}
+
+			// Stamped from the post type's default in Settings: the user who
+			// created the post did not declare it, so they are not credited.
+			if ( isSettingsDefault( entry ) ) {
+				return sprintf(
+					/* translators: %s: declared AI use, e.g. "Human-written" */
+					__(
+						'AI use set to %s by the default for this content type',
+						'sapphireit-editorial-workflow'
+					),
+					to
+				);
 			}
 
 			return sprintf(
@@ -307,6 +331,17 @@ function sentenceTemplate( entry ) {
  * @return {Element} Avatar.
  */
 function Avatar( { entry } ) {
+	if ( isSettingsDefault( entry ) ) {
+		return (
+			<span
+				className="sit-cwm-activity-avatar is-generic"
+				aria-hidden="true"
+			>
+				<Icon icon={ cog } size={ 20 } />
+			</span>
+		);
+	}
+
 	if ( entry.user?.avatar ) {
 		return (
 			<img

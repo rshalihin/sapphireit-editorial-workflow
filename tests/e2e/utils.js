@@ -587,6 +587,19 @@ export async function seedActivity( requestUtils, rows ) {
 }
 
 /**
+ * Deletes every activity row, for specs whose figures count the whole table.
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @return {Promise<Object>} Response.
+ */
+export async function clearActivity( requestUtils ) {
+	return requestUtils.rest( {
+		method: 'DELETE',
+		path: `${ E2E_NAMESPACE }/activity`,
+	} );
+}
+
+/**
  * A UTC `Y-m-d H:i:s` timestamp some days ago, for `seedActivity()`.
  *
  * @param {number} days Days before now.

@@ -107,11 +107,11 @@ final class ActivityFormatter {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Adds `workflow_status`, `workflow_status_label` and `gate_reason`.
-	 * @since 1.2.0 Adds `attested` and `attestation` (F10).
+	 * @since 1.2.0 Adds `attested`, `attestation` (F10) and `via` (F9).
 	 *
 	 * @param ActivityEntry $entry Entry.
 	 * @param array         $users User id => summary, from UserSummaries::load().
-	 * @return array{id: int, action: string, action_label: string, old_value: string|null, old_label: string|null, new_value: string|null, new_label: string|null, message: string, created_at: string, created_at_human: string, user_id: int, user: array|null, workflow_status: string|null, workflow_status_label: string|null, gate_reason: string|null, attested: bool|null, attestation: string|null}
+	 * @return array{id: int, action: string, action_label: string, old_value: string|null, old_label: string|null, new_value: string|null, new_label: string|null, message: string, created_at: string, created_at_human: string, user_id: int, user: array|null, workflow_status: string|null, workflow_status_label: string|null, gate_reason: string|null, attested: bool|null, attestation: string|null, via: string|null}
 	 */
 	public function format( ActivityEntry $entry, array $users ): array {
 		$action          = $entry->get_action();
@@ -147,7 +147,28 @@ final class ActivityFormatter {
 			// An attested approval (F10); null for every other entry. The statement is plain text.
 			'attested'              => '1' === $this->context_string( $entry, 'attested' ) ? true : null,
 			'attestation'           => $this->context_string( $entry, 'attestation' ),
+			// How an AI use change arrived (F9): `default` means Settings stamped
+			// it, not the actor. Null for other entries and unknown values.
+			'via'                   => $this->ai_origin_via( $entry ),
 		);
+	}
+
+	/**
+	 * Route an `ai_origin_changed` entry arrived by.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param ActivityEntry $entry Entry.
+	 * @return string|null One of ActivityLogger::AI_ORIGIN_VIAS, or null.
+	 */
+	private function ai_origin_via( ActivityEntry $entry ): ?string {
+		if ( 'ai_origin_changed' !== $entry->get_action() ) {
+			return null;
+		}
+
+		$via = $this->context_string( $entry, 'via' );
+
+		return in_array( $via, ActivityLogger::AI_ORIGIN_VIAS, true ) ? $via : null;
 	}
 
 	/**
