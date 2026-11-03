@@ -59,12 +59,12 @@ class GettingStartedPage implements Bootable {
 	const MENU_PRIORITY = 20;
 
 	/**
-	 * The plugin's website.
+	 * The plugin's website. Empty until the page is live.
 	 *
 	 * @since 1.2.0
 	 * @var string
 	 */
-	const WEBSITE_URL = 'https://sapphireitlabs.com/editorial-workflow/';
+	const WEBSITE_URL = '';
 
 	/**
 	 * The plugin's WordPress.org support forum.
@@ -75,37 +75,28 @@ class GettingStartedPage implements Bootable {
 	const SUPPORT_URL = 'https://wordpress.org/support/plugin/sapphireit-editorial-workflow/';
 
 	/**
-	 * The documentation home.
+	 * The documentation home. Empty until the docs are live.
 	 *
 	 * @since 1.2.0
 	 * @var string
 	 */
-	const DOCS_URL = 'https://sapphireitlabs.com/editorial-workflow/docs';
+	const DOCS_URL = '';
 
 	/**
-	 * Placeholder video link until the YouTube channel exists. Deliberately
-	 * fake, so it can never point at someone else's video.
+	 * The video tour. Empty until the video is published.
 	 *
 	 * @since 1.2.0
 	 * @var string
 	 */
-	const DEMO_VIDEO_URL = 'https://www.youtube.com/watch?v=XXXXXXXXXXX'; // DEMO: replace before release.
+	const TOUR_URL = '';
 
 	/**
-	 * The video tour.
+	 * Every tutorial video. Empty until the channel is live.
 	 *
 	 * @since 1.2.0
 	 * @var string
 	 */
-	const TOUR_URL = self::DEMO_VIDEO_URL;
-
-	/**
-	 * Every tutorial video.
-	 *
-	 * @since 1.2.0
-	 * @var string
-	 */
-	const VIDEOS_URL = self::DEMO_VIDEO_URL;
+	const VIDEOS_URL = '';
 
 	/**
 	 * Id of the publish gate section on the settings screen.
@@ -263,32 +254,14 @@ class GettingStartedPage implements Bootable {
 	/**
 	 * Tutorial videos, in display order.
 	 *
-	 * Until the channel exists, the mockup's titles link to the demo URL.
+	 * Holds only videos that are published; none yet, so the card hides.
 	 *
 	 * @since 1.2.0
 	 *
 	 * @return array<int, array{title: string, duration: string, url: string}>
 	 */
 	protected function tutorials(): array {
-		$titles = array(
-			__( 'Set up the publish gate', 'sapphireit-editorial-workflow' ),
-			__( 'Assign reviewers and due dates', 'sapphireit-editorial-workflow' ),
-			__( 'Request changes and approve', 'sapphireit-editorial-workflow' ),
-			__( 'Record AI use and attest a review', 'sapphireit-editorial-workflow' ),
-			__( 'Read the governance report', 'sapphireit-editorial-workflow' ),
-		);
-
-		$tutorials = array();
-
-		foreach ( $titles as $title ) {
-			$tutorials[] = array(
-				'title'    => $title,
-				'duration' => '',
-				'url'      => self::DEMO_VIDEO_URL,
-			);
-		}
-
-		return $tutorials;
+		return array();
 	}
 
 	/**

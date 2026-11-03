@@ -747,7 +747,7 @@ final class Settings implements Bootable {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Explains the publish gate, self-approval and email notifications.
-	 * @since 1.2.0 Explains that AI use is declared.
+	 * @since 1.2.0 Explains that AI use is declared, review attestation and the front-end disclosure.
 	 *
 	 * @return string Escaped HTML.
 	 */
@@ -773,6 +773,8 @@ final class Settings implements Bootable {
 		$html .= '<p>' . esc_html__( 'Self-approval: when prevented, nobody can move content they wrote to Approved, administrators included, and the author is not offered as its reviewer. Someone else with approval rights has to approve it.', 'sapphireit-editorial-workflow' ) . '</p>';
 		$html .= '<p>' . esc_html__( 'Email notifications: each event can be switched on separately. Nobody is emailed about their own actions, and comment text is only included for people allowed to read the activity history.', 'sapphireit-editorial-workflow' ) . '</p>';
 		$html .= '<p>' . esc_html__( 'AI use is declared by people or tools, never detected.', 'sapphireit-editorial-workflow' ) . '</p>';
+		$html .= '<p>' . esc_html__( 'Review attestation: when required, approving needs an explicit confirmation that the content was reviewed. The confirmation is stored with the approval in the activity log.', 'sapphireit-editorial-workflow' ) . '</p>';
+		$html .= '<p>' . esc_html__( 'Front-end disclosure: when on, the Review disclosure block and shortcode show who approved published content and when, plus its declared AI use. They show nothing until the content is approved and published.', 'sapphireit-editorial-workflow' ) . '</p>';
 
 		return $html;
 	}

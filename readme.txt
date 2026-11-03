@@ -28,6 +28,19 @@ and publishing it, on the posts, pages and custom post types you already have:
 * **Notifications.** Opt-in emails when a reviewer is assigned, when content is
   submitted for review, when changes are requested, when content is approved
   and when a workflow comment is added.
+* **Governance.** Evidence of how content was made and who signed it off:
+  * declared AI use on every item (Human-written, AI-assisted or AI-generated),
+    set by people in the editor or by agents through the REST API. AI use is
+    declared, not detected: the plugin never inspects your text, it records
+    who made each declaration and when;
+  * optional review attestation: approvers confirm they reviewed the content,
+    and the confirmation is stored with the approval;
+  * CSV export of the full audit trail;
+  * a governance report: how much was published after approval, what went out
+    while the gate was off, blocked publishes, declared AI use and overdue
+    reviews;
+  * an opt-in "Reviewed by" disclosure block and shortcode for published
+    content.
 
 Every managed post gets a workflow status, an assigned reviewer, a due date,
 workflow comments and a complete activity history, managed from a Gutenberg
@@ -36,6 +49,10 @@ sidebar, a classic editor meta box and an admin dashboard.
 **Six statuses, one clear path:** Draft → Writing → Review → Needs Changes →
 Approved → Published, with explicit paths for sending content back and for
 re-editing something that is already live.
+
+A **Getting Started** page (Workflow → Getting Started) walks you through the
+setup steps and links to help. The page makes no external request until you
+click a link.
 
 = What it does =
 
@@ -74,8 +91,10 @@ Being straight about this matters more than a longer feature list:
   WordPress post status. Publishing stays a deliberate action by a human. The
   two are separate fields on purpose, so that scheduled posts keep their
   schedule and live content can be re-edited without being unpublished.
-* **It does not detect AI-written text.** It records who approved content, not
-  who or what wrote it.
+* **It does not judge whether AI wrote your text.** AI use is declared, not
+  detected: people or agents state it, and the plugin records the statement
+  and who made it. It records who approved content, not a verdict on who or
+  what wrote it.
 * **It does not guard database writes made by other code.** Code that updates
   `post_status` in `wp_posts` directly through `$wpdb`, without WordPress's
   publishing functions, is not seen by the publish gate.
@@ -250,8 +269,35 @@ with your readers' comments.
 
 = Is there an API? =
 
-Yes, at `/wp-json/sit-cwm/v1/`. Eight documented endpoints, all authenticated,
+Yes, at `/wp-json/sit-cwm/v1/`. Nine documented endpoints, all authenticated,
 all with JSON schemas, and usable with application passwords.
+
+= Does the plugin detect whether content was written by AI? =
+
+No. AI use is declared, not detected. Whoever works on the content (a person
+in the editor, or an agent through the REST API) declares it as
+Human-written, AI-assisted or AI-generated. The plugin never inspects the
+text. It records each declaration in the activity log with the user who made
+it, and records the declared value again when the content is published. You
+can also set a default per content type in Workflow → Settings.
+
+= Can an AI agent submit content for review? =
+
+Yes. Give the agent its own WordPress user with the Author role and an
+application password. It creates a draft through the WordPress REST API,
+declares its AI use, and moves the draft to Review through
+`/wp-json/sit-cwm/v1/posts/{id}/workflow`. An Author cannot approve, and with
+the publish gate set to Enforce it cannot publish either, so a person always
+signs off. The step-by-step recipe, with curl, n8n and MCP examples, is in
+`docs/AGENTS.md` in the source repository at
+https://github.com/rshalihin/sapphireit-editorial-workflow.
+
+= Who can export the activity log? =
+
+Users who can both view the activity history and manage workflows
+(`sit_cwm_view_activity` and `sit_cwm_manage_workflows`), which by default
+means administrators only. The same users can open the governance report. The
+export is a CSV of the whole log, with spreadsheet formulas neutralised.
 
 = Does the plugin contact any external service? =
 

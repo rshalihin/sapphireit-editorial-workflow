@@ -183,7 +183,6 @@ final class GettingStartedPageTest extends TestCase {
 		$this->assertStringContainsString( '<h1 class="wp-heading-inline">Getting Started</h1>', $html );
 		$this->assertStringContainsString( 'Set up the workflow, learn it from short videos, and find help when you need it.', $html );
 		$this->assertStringContainsString( 'Learn and get help', $html );
-		$this->assertStringContainsString( 'Watch the video tour', $html );
 		$this->assertStringContainsString( 'How content moves', $html );
 		$this->assertStringNotContainsString( 'Set up your editorial workflow', $html );
 		$this->assertStringNotContainsString( 'Choose content types', $html );
@@ -271,6 +270,69 @@ final class GettingStartedPageTest extends TestCase {
 	}
 
 	/**
+	 * Renders a page whose URL constants and lists are all filled in.
+	 *
+	 * @return string Page markup.
+	 */
+	private function render_page_with_urls() {
+		$page = new class( $this->shell, $this->permissions, $this->store, $this->statuses ) extends GettingStartedPage {
+			const TOUR_URL    = 'https://example.com/tour';
+			const VIDEOS_URL  = 'https://example.com/videos';
+			const DOCS_URL    = 'https://example.com/docs';
+			const WEBSITE_URL = 'https://example.com/';
+
+			/**
+			 * One tutorial.
+			 *
+			 * @return array
+			 */
+			protected function tutorials(): array {
+				return array(
+					array(
+						'title'    => 'Set up the publish gate',
+						'duration' => '2:10',
+						'url'      => 'https://example.com/videos/gate',
+					),
+				);
+			}
+
+			/**
+			 * One doc.
+			 *
+			 * @return array
+			 */
+			protected function docs(): array {
+				return array(
+					array(
+						'title' => 'Publish gate',
+						'url'   => 'https://example.com/docs/gate',
+					),
+				);
+			}
+		};
+
+		ob_start();
+		$page->render();
+
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Filled-in URL constants and lists show their cards and links.
+	 *
+	 * @return void
+	 */
+	public function test_url_constants_show_their_cards() {
+		wp_set_current_user( self::fixture_user( 'editor' ) );
+
+		$html = $this->render_page_with_urls();
+
+		foreach ( array( 'Watch the video tour', 'Video tutorials', 'Documentation', 'Plugin website', 'Set up the publish gate', 'Publish gate' ) as $text ) {
+			$this->assertStringContainsString( $text, $html );
+		}
+	}
+
+	/**
 	 * Empty URL constants and lists hide their cards and links.
 	 *
 	 * @return void
@@ -323,7 +385,7 @@ final class GettingStartedPageTest extends TestCase {
 	public function test_external_links_open_in_new_tab_with_screen_reader_text() {
 		wp_set_current_user( self::fixture_user( 'admin' ) );
 
-		$html = $this->render_page();
+		$html = $this->render_page_with_urls();
 
 		preg_match_all( '/<a\s[^>]*href="(https?:\/\/[^"]+)"[^>]*>(.*?)<\/a>/s', $html, $links, PREG_SET_ORDER );
 
@@ -342,7 +404,7 @@ final class GettingStartedPageTest extends TestCase {
 			$this->assertStringContainsString( '<span class="screen-reader-text"> (opens in a new tab)</span>', $link[0], $link[1] );
 		}
 
-		foreach ( array( GettingStartedPage::SUPPORT_URL, GettingStartedPage::WEBSITE_URL, GettingStartedPage::DOCS_URL, GettingStartedPage::TOUR_URL ) as $url ) {
+		foreach ( array( GettingStartedPage::SUPPORT_URL, 'https://example.com/', 'https://example.com/docs', 'https://example.com/tour' ) as $url ) {
 			$this->assertStringContainsString( 'href="' . esc_url( $url ) . '"', $html );
 		}
 	}

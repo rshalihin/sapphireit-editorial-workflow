@@ -14,8 +14,10 @@ the code.
 - [Structure vs. authorization](#structure-vs-authorization)
 - [Publishing](#publishing) *(publish gate and publication log)*
 - [Notifications](#notifications)
+- [Governance (1.2)](#governance-12) *(AI use, attestation, disclosure, report, export)*
 - [Public API (frozen in 1.2.0)](#public-api-frozen-in-120)
 - [Hooks](#hooks)
+- [Extending (for add-ons)](#extending-for-add-ons)
 - [Data model](#data-model)
 - [Known trade-offs](#known-trade-offs)
 - [Authorization](#authorization-sit_cwmworkflowpermissionmanager) *(detail)*
@@ -187,6 +189,8 @@ never moves the workflow.
 | Class | Responsibility |
 |---|---|
 | `AiOrigin` | The closed set of declared AI-origin values (`human`, `ai_assisted`, `ai_generated`), their labels and the strict sanitizer. Declared, never detected: nothing inspects content. |
+| `AiOriginStamper` | Stamps a new post with its type's AI use default on `wp_after_insert_post`, only when nothing was declared yet. Logs `ai_origin_changed` with `via=default`. |
+| `Attestation` | Whether approving a post needs an explicit review confirmation (setting, then `sit_cwm_require_attestation`), and the translated statement the approver confirms. |
 | `GovernanceReport` | The read-only governance figures for 30, 90 or 365 days (F12): approved share and gate modes of publications, gate refusals and bypasses, declared AI use (current and at publication) and overdue reviews. Reads activity in keyset batches of 1,000 and runs one grouped SQL count for current AI use. Site-wide; callers check `can_audit()`. |
 
 ### `includes/Disclosure/`
@@ -195,6 +199,7 @@ never moves the workflow.
 |---|---|
 | `ReviewDisclosure` | The opt-in front-end disclosure: "Reviewed by X on date" from the latest approval row (`ActivityLogger::latest_for_post()`), plus the declared AI-use line. Says nothing unless the setting is on and the post is workflow-managed, published, still Approved or Published, and has an approval row. Late-escaped markup, no stylesheet. |
 | `DisclosureShortcode` | `[sit_cwm_review_disclosure reviewer="1" ai="1"]`, always registered (prints `''` while off) and bound to the current post: there is no `post_id` attribute. |
+| `DisclosureBlock` | The dynamic `sit-cwm/review-disclosure` block. Always registered so saved content stays valid; hidden from the inserter while the setting is off. Renders through `ReviewDisclosure::render()`. |
 
 ### `includes/Audit/`
 
@@ -564,6 +569,141 @@ reviewer `0`, which resolves to nobody.
 
 ---
 
+## Governance (1.2)
+
+Five features that turn the activity log into evidence. None adds a table, a
+schema change or a capability: new activity actions fit the existing `action`
+column, new facts live in the existing `context` JSON column, and access reuses
+the 1.0 capabilities. Every new setting starts off, so upgrading from 1.1
+changes no behaviour.
+
+### AI origin (declared use of AI)
+
+How a post was made, as **declared** by a person or a tool: `human`,
+`ai_assisted` or `ai_generated` (`Governance\AiOrigin::VALUES`). Unset means
+"Not declared"; existing posts are not migrated.
+
+```
+sidebar / classic box / agent ──► POST sit-cwm/v1/posts/{id}/workflow  (ai_origin)   via=workflow
+agent                         ──► POST wp/v2/{type}   (sit_cwm_ai_origin field)      via=post_api
+                                         │
+                                         ▼
+                 WorkflowManager::set_ai_origin( $post_id, $origin, $user_id, $via )
+                   post gate (404) → value in VALUES (400) → can_declare_ai_origin (403)
+                   → same as stored? return true, write nothing
+                                         │
+                                         ▼
+          PostRepository::set_ai_origin()  → meta _sit_cwm_ai_origin
+          ActivityLogger::log_ai_origin_changed()  → ai_origin_changed row, context.via
+          do_action( 'sit_cwm_ai_origin_changed', … )
+
+new post, nothing declared  ──► AiOriginStamper (wp_after_insert_post, $update false)
+                                 → type's default from settings, via=default, no permission check
+
+publish / unpublish ──► PublicationLogger adds context.ai_origin (stored value, or `none`)
+```
+
+- **One writer.** Every path ends in `WorkflowManager::set_ai_origin()`, except
+  the creation stamp, which is a system action. The meta's own
+  `auth_callback` is always false and the key is locked, so core's generic
+  `meta` field cannot write it.
+- **Change, never withdraw.** `''` is rejected: once declared, a post can
+  switch between values but not go back to "Not declared".
+- **An agent's declaration wins over the default.** Core's REST `create_item`
+  runs field callbacks before it fires `wp_after_insert_post`, so the stamper
+  sees a value already stored and does nothing.
+- **Permission:** `PermissionManager::can_declare_ai_origin()`: `edit_post` on
+  the post plus `sit_cwm_change_workflow`.
+
+### Attestation
+
+An optional confirmation that the approver reviewed the content. The setting
+`require_attestation` (default off) feeds the `sit_cwm_require_attestation`
+filter; only boolean `true` requires it. Only the target `approved` is
+affected.
+
+`transition()`, `check_transition()` and `can_transition()` take a trailing
+`array $args`; `$args['attested']` counts only when it is boolean `true`.
+The check order in `validate_transition()`:
+
+1. post gate (404)
+2. stale `from` (409)
+3. status exists (400)
+4. legal edge (400)
+5. permission, including extension vetoes (403, or the veto's own 4xx)
+6. **attestation** (`sit_cwm_attestation_required`, 422)
+
+Attestation comes last, so a user who may not approve gets 403 and never learns
+the attestation rule. An attested approval, required or volunteered, stores
+`attested: '1'` and the statement text in the `status_changed` row's context;
+REST activity items expose them as `attested` and `attestation`. The batch
+route forwards `attested` to every post.
+
+### Disclosure
+
+An opt-in front-end line, "Reviewed by {name} on {date}", plus the declared AI
+use, as a block (`sit-cwm/review-disclosure`) and a shortcode
+(`[sit_cwm_review_disclosure]`). `ReviewDisclosure::data_for()` returns data
+only when **all** of these hold:
+
+- the `disclosure_enabled` setting is on;
+- the post type is in the workflow;
+- the WordPress post status is `publish`;
+- the workflow status is in `PublishGate::PUBLISHABLE_STATUSES`
+  (`approved`, `published`);
+- an approval row exists (`ActivityLogger::latest_for_post( $post_id,
+  'status_changed', 'approved' )`), which supplies the approver and the date.
+
+A line with nothing to say is omitted (for example the approver's account was
+deleted); with both lines omitted the output is `''`. Markup is late-escaped
+and ships no stylesheet; themes style it through block supports and the BEM
+classes. Both the block and the shortcode stay registered while the setting is
+off, so saved content stays valid and simply renders nothing.
+
+### Governance report
+
+`GET /sit-cwm/v1/reports/governance?period=30|90|365` and the *Governance
+report* screen, both gated by `PermissionManager::can_audit()`
+(`sit_cwm_view_activity` **and** `sit_cwm_manage_workflows`, so administrators
+by default). Definitions, all over rows with `created_at >= since` (midnight
+UTC, `period` days ago):
+
+| Figure | Definition |
+|---|---|
+| `publication.total` | `post_published` rows in the period |
+| `publication.approved` | those whose `context.workflow_status` is in `PUBLISHABLE_STATUSES` |
+| `publication.approved_share` | `approved / total`, 4 decimals, `null` when total is 0 |
+| `publication.by_gate_mode` | by `context.gate_mode`; missing (pre-1.1 rows) counts as `unknown` |
+| `gate.refused` | `publish_gate_refused` rows |
+| `gate.bypassed` | `publish_gate_bypassed` rows, by `context.reason` (`log_only`, `capability`, `error`) |
+| `ai_origin.current` | one grouped SQL count over managed posts of enabled types, excluding `trash`, `auto-draft` and `inherit` |
+| `ai_origin.published` | from `post_published` rows' `context.ai_origin`: `none` → `not_declared`, missing (pre-1.2 rows) → `not_recorded` |
+| `overdue.count` | the total of the dashboard's own overdue query, ignoring per-user visibility |
+
+Activity is read in keyset batches of 1,000 through
+`ActivityLogger::get_batch()` and the context JSON is decoded in PHP. There is
+no JSON SQL, because the MySQL floor is below 5.7. Nothing is cached.
+
+### CSV export
+
+*Export activity log (CSV)* posts to `admin-post.php`
+(`action=sit_cwm_export_activity`). `Admin\ActivityExport` checks, in order,
+the nonce (`check_admin_referer`), then `can_audit()` (`wp_die` 403), then
+streams. `Audit\ActivityExporter` writes the **whole** log in keyset batches of
+500, priming users and posts once per batch and flushing after each, so memory
+follows the batch size, not the log size. Columns, in order:
+
+`id, created_at_utc, post_id, post_title, post_type, user_id, user_login,
+user_name, action, action_label, old_value, new_value, message,
+workflow_status, gate_mode, gate_layer, gate_reason, source, ai_origin, via,
+attested, attestation`
+
+`Audit\CsvWriter` prefixes any cell starting with `=`, `+`, `-`, `@`, tab or CR
+with `'`, so spreadsheets never run it as a formula. Filtered, scheduled and
+tamper-evident exports are not part of Free.
+
+---
+
 ## Public API (frozen in 1.2.0)
 
 What an add-on (Pro included) may call from PHP. Every class under
@@ -883,6 +1023,72 @@ Every `sit_cwm_*` hook, covered by the [stability rule](#stability-rule).
 
 ---
 
+## Extending (for add-ons)
+
+An add-on (Pro included) extends Free through three things only: the
+[hooks](#hooks), the [`@api` PHP surface](#public-api-frozen-in-120) and the
+[REST API](REST-API.md). It never edits Free's files and never calls an
+`@internal` class.
+
+The worked example is the **probe add-on**,
+`tests/fixtures/sit-cwm-probe/sit-cwm-probe.php`: a single-file plugin, never
+shipped, that adds a *Legal Review* step. It touches nothing under
+`includes/` or `admin/`, and `tests/php/integration/ProbeAddonTest.php` asserts
+each of its seven behaviours, so if a seam breaks, that test fails. Copy its
+patterns:
+
+1. **Add a status.** `sit_cwm_statuses` adds `legal_review` (label, colour,
+   `order` 35, which sorts it between Review and Needs Changes). It is added for
+   every `$post_id`, including `0`; see the
+   [site-wide context contract](#site-wide-context-contract).
+2. **Rewire the graph.** `sit_cwm_transition_map` sets `review → [legal_review,
+   needs_changes]` and `legal_review → [approved, needs_changes]`, so
+   `review → approved` disappears. The engine, the sidebar and the dashboard
+   follow the filtered map; nothing else changes.
+3. **Guard a status with a capability.** `sit_cwm_status_capability_map` maps
+   `legal_review` to `sit_cwm_probe_legal_review`, which the probe's activation
+   hook grants to editors and administrators. Use a capability, never a role
+   check.
+4. **Veto a step with a reason.** `sit_cwm_can_transition` returns
+   `new WP_Error( 'sit_cwm_probe_checklist', 'The legal checklist is not
+   complete.', array( 'status' => 422 ) )` for `approved` while a post meta
+   checklist is incomplete. The REST route returns that error as is, and
+   `blocked_transitions` lists it in advance. A user without the capability
+   for the step sees `sit_cwm_forbidden` instead (see
+   [the contract](#the-sit_cwm_can_transition-contract)). Return `$allowed`
+   unchanged when you have no opinion.
+5. **React to changes.** `sit_cwm_status_changed` records each move. This is
+   where notifications, Slack messages or a rules engine attach.
+6. **Add a dashboard view.** `sit_cwm_posts_query_args` adds a `meta_query`
+   clause when the request carries `view=legal_checklist_open`. Add clauses;
+   do not replace `visible_to` or widen `post_types` (both are enforced).
+7. **Call the engine.** On `sit_cwm_loaded` the probe keeps
+   `$plugin->container()`. Later, `sit_cwm_probe_send_to_legal()` calls
+   `$container->get( 'workflow_manager' )->transition( $post_id, 'review',
+   'legal_review', $user_id )`, which runs every check a REST request would.
+   Outside that action, `sit_cwm_container()` returns the same container (or
+   `null` before boot).
+
+Two habits the probe also shows:
+
+- **Register and unregister symmetrically.** One list of hooks drives
+  `sit_cwm_probe_register()` and `sit_cwm_probe_unregister()`, so tests add
+  and remove the add-on cleanly.
+- **Guard your constants** with `defined()` so the file can be loaded twice.
+
+Rules that keep an add-on safe across releases:
+
+- Depend only on `@api` methods and the frozen [service ids](#service-ids);
+  both follow the [stability rule](#stability-rule).
+- Never write workflow meta directly. Go through `WorkflowManager` so the
+  checks, the activity row and the actions all happen.
+- Add new activity actions through `sit_cwm_activity_actions` and their labels
+  through `sit_cwm_activity_action_labels`; put extra facts in the row's
+  `context`, not in new tables, unless volume demands it.
+- Load after Free: hook into `sit_cwm_loaded` rather than `plugins_loaded`.
+
+---
+
 ## Data model
 
 ### Post meta (decision D6)
@@ -1072,6 +1278,27 @@ earlier than WordPress offers would mean patching core.
 
 *Pro follow-up:* none possible in PHP; a database trigger is outside what a
 WordPress plugin should install.
+
+### 9. AI use is declared, not detected
+
+The AI origin of a post (`human`, `ai_assisted`, `ai_generated`) is whatever a
+person or an agent declared. Nothing in the plugin inspects content, and a
+wrong declaration is not caught. What the plugin guarantees is accountability
+for the declaration: each change is an `ai_origin_changed` row naming the user
+and how it arrived (`via`), and each publication records the value at that
+moment.
+
+*Why accepted:* AI-text detectors are unreliable, give false positives on
+human writing (above all non-native English), and are trivially defeated by
+light editing. A governance record built on a guess would be worse than one
+built on an attributable statement. Inspecting content would also mean
+sending it to an external service, which the plugin does not do. The docs,
+the settings help and the readme say "declared, not detected" so nobody reads
+the label as a verdict.
+
+*Pro follow-up:* stricter declaration rules (for example requiring a
+declaration before review) are possible through existing hooks. Detection is
+not planned.
 
 ---
 

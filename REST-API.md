@@ -12,6 +12,32 @@ is no `__return_true` anywhere in the plugin. Authorization is re-derived
 server-side on every request, so the `capabilities` and `available_transitions`
 a response hands you are display hints, never a grant.
 
+## Changes in 1.2
+
+Everything below is additive: no field was removed or renamed, and 1.1 clients
+keep working unchanged.
+
+- **Workflow payload** (`GET`/`POST /posts/{post_id}/workflow`) gains
+  [`blocked_transitions`](#blocked_transitions-since-12),
+  [`ai_origin`](#ai_origin-since-12) and
+  [`attestation`](#attestation-since-12).
+- **Workflow route arguments** gain `ai_origin` and `attested`
+  (see [`POST /posts/{post_id}/workflow`](#post-postspost_idworkflow)).
+- **Batch route**: the `change_status` payload accepts `attested`
+  ([`POST /posts/batch`](#post-postsbatch)).
+- **Dashboard rows** (`GET /posts`) gain `ai_origin`.
+- **Activity items** gain `attested` and `attestation`
+  ([attested approvals](#attested-approvals-since-12)), and the log has a new
+  action, [`ai_origin_changed`](#ai-use-entries-since-12).
+- **New error codes**: `sit_cwm_attestation_required` (422) and
+  `sit_cwm_invalid_ai_origin` (400). Extensions can now veto a transition with
+  [their own code and message](#extension-vetoes).
+- **New route**: [`GET /reports/governance`](#get-reportsgovernance).
+- **Core routes**: workflow-enabled types get a `sit_cwm_ai_origin` field on
+  `wp/v2` ([Declaring AI use](#declaring-ai-use)).
+- **Agents**: a step-by-step recipe for an AI agent or automation that submits
+  drafts for human review is in [docs/AGENTS.md](docs/AGENTS.md).
+
 ---
 
 ## Authenticating
@@ -98,6 +124,7 @@ curl -sS -u "$CWM_AUTH" "$CWM_SITE/wp-json/sit-cwm/v1/posts/125/workflow" | jq
     { "slug": "approved",      "label": "Approved",      "is_forward": true,  "is_rollback": false },
     { "slug": "needs_changes", "label": "Needs Changes", "is_forward": false, "is_rollback": true  }
   ],
+  "blocked_transitions": [],
   "capabilities": {
     "can_change_status": true,
     "can_assign_reviewer": true,
@@ -144,6 +171,30 @@ offered `approved`: `approved` is a legal next step, the user holds
 `sit_cwm_approve_content`, they are the post's author, and
 [self-approval is prevented](WORKFLOW.md#self-approval). Otherwise `false`. A
 display hint, like `capabilities`; same routes as `publish_gate`.
+
+### `blocked_transitions` (since 1.2)
+
+Legal next steps that an extension has vetoed for the current user, with the
+reason, so a client can explain why a step is missing instead of just hiding it.
+Each entry is `{ slug, label, code, message }`, in transition-map order:
+
+```json
+"blocked_transitions": [
+  {
+    "slug": "approved",
+    "label": "Approved",
+    "code": "acme_checklist_incomplete",
+    "message": "The legal checklist is not complete."
+  }
+]
+```
+
+An entry appears only when a `sit_cwm_can_transition` filter returned a
+`WP_Error` for a step the user's capabilities would otherwise allow. Plain
+capability refusals are never listed, so a user learns nothing about rules for
+steps they could not take anyway. It never overlaps `available_transitions`.
+`message` is plain text: render it as text, never as HTML. Empty when nothing
+is vetoed. Not on dashboard rows.
 
 ### `ai_origin` (since 1.2)
 
@@ -369,6 +420,21 @@ Every item carries three more fields, `null` for the 1.0 actions:
 | `workflow_status` | string \| null | The workflow status slug at the moment of the publication event |
 | `workflow_status_label` | string \| null | Its label |
 | `gate_reason` | string \| null | On `publish_gate_bypassed` only: `log_only`, `capability` (the bypass capability) or `error` (a gate layer failed open) |
+
+#### AI use entries (since 1.2)
+
+| `action` | `action_label` | `old_value` → `new_value` |
+|---|---|---|
+| `ai_origin_changed` | AI use declared | previous declaration (`null` when nothing was declared) → `human`, `ai_assisted` or `ai_generated` |
+
+`old_label`/`new_label` carry the translated labels (`old_label` is `null`
+when nothing was declared before). How the declaration
+arrived (`workflow`, `post_api` or `default`, see
+[Declaring AI use](#declaring-ai-use)) is kept in the row's context and appears
+in the CSV export's `via` column. Since 1.2, `post_published` and
+`post_unpublished` rows also record the post's declared AI use at that moment
+(`none` when nothing was declared). It is in the CSV export's `ai_origin`
+column and feeds the governance report.
 
 #### Attested approvals (since 1.2)
 
@@ -838,6 +904,25 @@ Errors are standard WordPress `WP_Error` JSON:
 | `sit_cwm_publish_gated` | **403** | Returned by core's `wp/v2` routes, not this namespace: the publish gate refused a create or update into `publish`/`future`. See [Core routes](#core-routes-wpv2). |
 | `rest_missing_callback_param` | **400** | A required argument is absent — including `from` when `status` is sent. |
 | `rest_invalid_param` | **400** | An argument failed its schema (type, `enum`, range, length). |
+
+### Extension vetoes
+
+Since 1.2, an add-on can refuse a status change with its own reason by
+returning a `WP_Error` from the `sit_cwm_can_transition` filter. The workflow
+route (and each batch item) then answers with **that** code and message, and an
+HTTP status between 400 and 499 (403 unless the extension chose another):
+
+```json
+{
+  "code": "acme_checklist_incomplete",
+  "message": "The legal checklist is not complete.",
+  "data": { "status": 422 }
+}
+```
+
+A user who lacks the capability for that step gets the generic
+`sit_cwm_forbidden` instead, never the extension's reason. The same vetoes are
+listed ahead of time in [`blocked_transitions`](#blocked_transitions-since-12).
 
 ### Why 404 and not 403
 

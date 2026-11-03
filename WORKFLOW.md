@@ -200,6 +200,11 @@ editorial process finished, and those two facts are allowed to disagree — see
 With the [publish gate](#publishing-and-the-publish-gate) set to *Enforce*,
 *Publish* only becomes available from step 6 on.
 
+With [review attestation](#review-attestation) required, step 6 has one more
+action: the editor ticks *I confirm I have reviewed this content and approve it
+for publication.* before **Approve** becomes available, and the
+`status_changed` row stores that statement.
+
 At step 2, the author's sidebar offers exactly one button. The graph allows only
 `draft → writing`, so there is nothing else to offer — not because the UI hides
 it, but because `available_transitions` came back with one entry.
@@ -404,6 +409,103 @@ overstate:
 
 ---
 
+## Governance: AI use, attestation, disclosure and the report
+
+Since 1.2. Each feature is optional and starts off (or, for AI use, "Not
+declared"), so a site upgraded from 1.1 behaves exactly as before.
+
+### AI use
+
+Every workflow item can say how it was made:
+
+| Value | Label |
+|---|---|
+| `human` | Human-written |
+| `ai_assisted` | AI-assisted |
+| `ai_generated` | AI-generated |
+| *(nothing yet)* | Not declared |
+
+**AI use is declared, not detected.** The plugin never inspects the text.
+Someone states the value, and the plugin records who stated it and when.
+
+- **Where:** the **AI use** control in the editor's Workflow panel (and the
+  classic editor box), with the help text *Declare how this content was made.
+  This is recorded in the activity log; it is not detected automatically.*
+  Agents and scripts set it through the REST API; see
+  [docs/AGENTS.md](docs/AGENTS.md).
+- **Who:** anyone who can change the workflow and edit that post: by default
+  authors and contributors on their own content, editors and administrators on
+  everyone's.
+- **Defaults:** *Workflow → Settings → AI use default* picks a value recorded on
+  new content of each type when it is created. Authors can change it; every
+  change is logged. An agent's own declaration on create wins over the default.
+- **Change, never withdraw.** Once declared, the value can be changed but not
+  set back to "Not declared".
+- **Logged:** each change is an *AI use declared* entry in the timeline. When
+  the content is published, the publication entry records the AI use at that
+  moment too.
+
+### Review attestation
+
+*Workflow → Settings → Review attestation* → *Require approvers to confirm they
+reviewed the content.* When this is on, approving needs an explicit
+confirmation, which is stored with the approval in the activity log.
+
+- In the sidebar, the approver ticks the statement *I confirm I have reviewed
+  this content and approve it for publication.* and only then can click
+  **Approve**. Bulk approval on the dashboard asks for the same tick once for
+  the whole selection, and records it on every post.
+- An approval without the confirmation is refused with *Confirm that you
+  reviewed this content before approving it.* A user who may not approve at
+  all is simply refused, as before.
+- In the timeline, an attested approval carries the marker **Review
+  confirmed**. Approvers may also tick it when it is not required; that is
+  recorded the same way.
+- Only the move to **Approved** is affected. Developers can require it for
+  some content only with the `sit_cwm_require_attestation` filter.
+
+### Front-end disclosure
+
+*Workflow → Settings → Front-end disclosure* → *Show review disclosures on
+published content.* This enables the **Review disclosure** block and the
+`[sit_cwm_review_disclosure]` shortcode. They show who approved the content
+and when, plus its declared AI use:
+
+> Reviewed by Dana Okafor on 2 November 2026.
+>
+> This content was generated with AI and reviewed by a person.
+
+The disclosure shows nothing until **all** of these are true: the setting is
+on, the content type is in the workflow, the post is published in WordPress,
+its workflow status is Approved or Published, and an approval is on record. If
+the approver's account was deleted, the "Reviewed by" line is left out. With
+nothing declared, the AI line is left out. The block has two toggles, *Show
+reviewer and date* and *Show AI use*; the shortcode takes `reviewer="0"` or `ai="0"` to
+hide either line.
+
+### Governance report
+
+*Workflow → Governance report*, for administrators (anyone holding both
+`sit_cwm_view_activity` and `sit_cwm_manage_workflows`). Choose *Last 30
+days*, *Last 90 days* or *Last 12 months*:
+
+| Tile | What it counts |
+|---|---|
+| Published after approval | Publications in the period whose content was Approved or Published at that moment, as a share of all publications |
+| Published while the gate was off or logging only | Publications in the period while the content type's gate was *Off* or *Log only* |
+| Publishing blocked | Publishes the gate refused in the period |
+| Published without approval | Unapproved content that went live in the period (*Log only*, the bypass capability, or a gate failure) |
+| Overdue reviews | Content in the workflow whose due date has passed, right now |
+
+Two tables follow: *AI use: all workflow content* (as declared now) and *AI
+use: published in this period* (as declared at publication). "Not recorded"
+counts publications logged before version 1.2, which did not record AI use.
+
+The same screen, and the dashboard, offer **Export activity log (CSV)**: the
+whole activity log, every post and every action, for audits and spreadsheets.
+
+---
+
 ## What gets recorded
 
 Every successful change writes exactly one row to `wp_sit_cwm_activity`:
@@ -416,6 +518,7 @@ Every successful change writes exactly one row to `wp_sit_cwm_activity`:
 | `due_date_set` | A due date is set or changed. |
 | `due_date_cleared` | The due date is removed. |
 | `comment_added` | A workflow comment is posted. `message` holds the text. |
+| `ai_origin_changed` | Since 1.2. The declared AI use changes. Values are `human`, `ai_assisted`, `ai_generated` (`null` before the first declaration); the context says how it arrived (`workflow`, `post_api` or `default`). |
 | `post_published` | Managed content goes live (`publish`), in every gate mode including Off. Values are post statuses. |
 | `post_unpublished` | Managed content stops being live, including to the trash. |
 | `publish_gate_refused` | The gate refused a publish or schedule in *Enforce*. |
@@ -425,7 +528,10 @@ The four publication rows also store, in `context`, the workflow status at that
 moment, the gate mode, where the request came from (`cron`, `cli`, `rest`,
 `ajax`, `admin` or `other`) and, for the gate rows, the layer and the bypass
 reason. The timeline shows them as *Published*, *Unpublished*, *Publishing
-blocked* and *Published without approval*.
+blocked* and *Published without approval*. Since 1.2, `post_published` and
+`post_unpublished` also store the declared AI use at that moment, and an
+attested approval's `status_changed` row stores the statement the approver
+confirmed.
 
 Rules:
 
