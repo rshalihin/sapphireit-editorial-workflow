@@ -344,6 +344,17 @@ export function getPosts( args = {}, { signal } = {} ) {
 }
 
 /**
+ * The dashboard tiles' counts, scoped to what the user could list (20b).
+ *
+ * @param {Object}      [options]      Options.
+ * @param {AbortSignal} options.signal Cancels the request.
+ * @return {Promise<Object>} `{ in_review, in_review_mine, needs_changes, overdue, approved }`.
+ */
+export function getPostsSummary( { signal } = {} ) {
+	return request( { path: `/${ namespace() }/posts/summary`, signal } );
+}
+
+/**
  * Applies one workflow action to many posts.
  *
  * The server authorizes every post on its own and answers with the outcome of

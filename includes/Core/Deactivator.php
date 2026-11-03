@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Runs on plugin deactivation.
  *
  * Never drops tables, deletes meta or removes capabilities; that belongs to
- * `uninstall.php` only.
+ * `Uninstaller` only.
  *
  * @since 1.0.0
  * @internal

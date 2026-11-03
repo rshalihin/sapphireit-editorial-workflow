@@ -2,13 +2,35 @@
 // other stylesheet reads them through var( --sit-cwm-* ). Declared on the body
 // class AdminShell adds to the plugin's screens.
 .sit-cwm-admin {
+	--sit-cwm-page-bg: #f0f0f1;
 	--sit-cwm-surface: #fff;
+	--sit-cwm-surface-muted: #fafafa;
 	--sit-cwm-border: #dcdcde;
+	--sit-cwm-divider: #f0f0f1;
+	--sit-cwm-field-border: #949494;
+	--sit-cwm-text: #1e1e1e;
+	--sit-cwm-muted: #50575e;
 	--sit-cwm-accent: #2145b8;
 	--sit-cwm-accent-strong: #183590;
 	--sit-cwm-accent-soft: #eef2fc;
-	--sit-cwm-muted: #50575e;
+	--sit-cwm-accent-soft-border: #c5d2f3;
+	--sit-cwm-row-hover: #f8f9fc;
+	--sit-cwm-track: #e4e5e7;
+	--sit-cwm-neutral-bar: #a7aaad;
 	--sit-cwm-danger: #b32d2e;
+	--sit-cwm-danger-text: #8a2424;
 	--sit-cwm-radius: 8px;
+	--sit-cwm-radius-control: 4px;
 	--sit-cwm-gap: 16px;
+	--sit-cwm-page-x: 32px;
+	--sit-cwm-page-top: 28px;
+	--sit-cwm-control-height: 36px;
+}
+
+@media (max-width: 600px) {
+
+	.sit-cwm-admin {
+		--sit-cwm-page-x: 16px;
+		--sit-cwm-page-top: 20px;
+	}
 }

@@ -55,6 +55,14 @@ final class GovernanceReportPage implements Bootable {
 	const ROOT_ID = 'sit-cwm-report';
 
 	/**
+	 * Id of the title-row slot the app portals its Period control into.
+	 *
+	 * @since 1.2.0
+	 * @var string
+	 */
+	const PERIOD_ID = 'sit-cwm-report-period';
+
+	/**
 	 * `admin_menu` priority: with the dashboard (10), before settings (11).
 	 *
 	 * @since 1.2.0
@@ -206,11 +214,17 @@ final class GovernanceReportPage implements Bootable {
 		echo '<div class="wrap sit-cwm-report-wrap">';
 		$this->shell->render_header();
 
-		printf(
-			'<h1 class="wp-heading-inline">%1$s</h1>%2$s<hr class="wp-header-end"><div id="%3$s"></div></div>',
-			esc_html__( 'Governance report', 'sapphireit-editorial-workflow' ),
-			$this->export->render_form(), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- render_form() returns escaped markup.
-			esc_attr( self::ROOT_ID )
+		// The React app portals its Period control into the actions slot.
+		$actions = sprintf( '<div id="%s" class="sit-cwm-report-period"></div>', esc_attr( self::PERIOD_ID ) ) . $this->export->render_form();
+
+		$head = $this->shell->page_head(
+			__( 'Governance report', 'sapphireit-editorial-workflow' ),
+			__( 'How content reached publication, from the activity log.', 'sapphireit-editorial-workflow' ),
+			$actions
 		);
+
+		echo $head; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- page_head() escapes the text; the actions are built from escaped parts.
+
+		printf( '<div id="%s"></div></div>', esc_attr( self::ROOT_ID ) );
 	}
 }

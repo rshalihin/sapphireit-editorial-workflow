@@ -257,7 +257,7 @@ final class DashboardTest extends WP_UnitTestCase {
 		$html = ob_get_clean();
 
 		$this->assertSame(
-			'<div class="wrap sit-cwm-dashboard-wrap"><h1 class="wp-heading-inline">Dashboard</h1><p class="sit-cwm-page-subtitle">Everything moving through the editorial workflow.</p><hr class="wp-header-end"><div id="sit-cwm-dashboard"></div></div>',
+			'<div class="wrap sit-cwm-dashboard-wrap"><div class="sit-cwm-page-head"><div class="sit-cwm-page-title"><h1 class="wp-heading-inline">Dashboard</h1><p class="sit-cwm-page-subtitle">Everything moving through the editorial workflow.</p></div></div><hr class="wp-header-end"><div id="sit-cwm-dashboard"></div></div>',
 			$html
 		);
 	}

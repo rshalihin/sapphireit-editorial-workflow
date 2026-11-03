@@ -59,12 +59,12 @@ class GettingStartedPage implements Bootable {
 	const MENU_PRIORITY = 20;
 
 	/**
-	 * The plugin's website. Empty until the page is live.
+	 * The plugin's website.
 	 *
 	 * @since 1.2.0
 	 * @var string
 	 */
-	const WEBSITE_URL = '';
+	const WEBSITE_URL = 'https://sapphireitlabs.com/editorial-workflow/';
 
 	/**
 	 * The plugin's WordPress.org support forum.
@@ -75,12 +75,12 @@ class GettingStartedPage implements Bootable {
 	const SUPPORT_URL = 'https://wordpress.org/support/plugin/sapphireit-editorial-workflow/';
 
 	/**
-	 * The documentation home. Empty until the docs are live.
+	 * The documentation home.
 	 *
 	 * @since 1.2.0
 	 * @var string
 	 */
-	const DOCS_URL = '';
+	const DOCS_URL = 'https://sapphireitlabs.com/editorial-workflow/docs';
 
 	/**
 	 * The video tour. Empty until the video is published.
@@ -214,12 +214,12 @@ class GettingStartedPage implements Bootable {
 
 		echo '<div class="wrap sit-cwm-getting-started">';
 		$this->shell->render_header();
-		printf( '<h1 class="wp-heading-inline">%s</h1>', esc_html__( 'Getting Started', 'sapphireit-editorial-workflow' ) );
-		printf(
-			'<p class="sit-cwm-page-subtitle">%s</p>',
-			esc_html__( 'Set up the workflow, learn it from short videos, and find help when you need it.', 'sapphireit-editorial-workflow' )
+		$head = $this->shell->page_head(
+			__( 'Getting Started', 'sapphireit-editorial-workflow' ),
+			__( 'Set up the workflow, learn it from short videos, and find help when you need it.', 'sapphireit-editorial-workflow' )
 		);
-		echo '<hr class="wp-header-end">';
+
+		echo $head; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- page_head() escapes its text.
 
 		echo '<div class="sit-cwm-gs">';
 

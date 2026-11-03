@@ -242,6 +242,62 @@ describe( 'Governance report', () => {
 		expect( getGovernanceReport ).toHaveBeenCalledTimes( 2 );
 	} );
 
+	it( 'draws the headline split bar with a sentence and a legend', async () => {
+		render( <App /> );
+		await screen.findByText( '87.5%' );
+
+		expect(
+			screen.getByRole( 'img', {
+				name: '7 of 8 publications were approved first',
+			} )
+		).toBeTruthy();
+		expect( screen.getByText( 'Approved first · 7' ) ).toBeTruthy();
+		expect( screen.getByText( 'Without approval · 1' ) ).toBeTruthy();
+		expect(
+			document.querySelector( '.sit-cwm-report__split-fill' ).style.width
+		).toBe( '87.5%' );
+	} );
+
+	it( 'shows each breakdown total and bar values with shares', async () => {
+		render( <App /> );
+		await screen.findByText( '87.5%' );
+
+		expect( screen.getByText( '16 items' ) ).toBeTruthy();
+		expect( screen.getByText( '8 publications' ) ).toBeTruthy();
+
+		const values = Array.from(
+			document.querySelectorAll( '.sit-cwm-report__bar-value' )
+		).map( ( node ) => node.textContent );
+
+		expect( values.slice( 0, 4 ) ).toEqual( [
+			'4 · 25%',
+			'2 · 13%',
+			'1 · 6%',
+			'9 · 56%',
+		] );
+		expect(
+			document.querySelectorAll( '.sit-cwm-report__bar-fill.is-neutral' )
+		).toHaveLength( 3 );
+	} );
+
+	it( 'portals the Period control into the title-row slot when present', async () => {
+		const slot = document.createElement( 'div' );
+		slot.id = 'sit-cwm-report-period';
+		document.body.appendChild( slot );
+
+		const { container } = render( <App /> );
+		await screen.findByText( '87.5%' );
+
+		expect(
+			within( slot ).getByRole( 'combobox', { name: 'Period' } )
+		).toBeTruthy();
+		expect(
+			within( container ).queryByRole( 'combobox', { name: 'Period' } )
+		).toBeNull();
+
+		slot.remove();
+	} );
+
 	it( 'shows a spinner while loading', () => {
 		getGovernanceReport.mockReturnValue( new Promise( () => {} ) );
 

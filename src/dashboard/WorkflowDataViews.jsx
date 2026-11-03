@@ -7,7 +7,13 @@
  */
 import { Button, Notice, Spinner } from '@wordpress/components';
 import { DataViews } from '@wordpress/dataviews';
-import { useCallback, useEffect, useMemo, useState } from '@wordpress/element';
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 
 /**
@@ -15,6 +21,7 @@ import { __, sprintf } from '@wordpress/i18n';
  */
 import buildActions from './actions';
 import EmptyState from './EmptyState';
+import SummaryTiles from './SummaryTiles';
 import BulkActions from './bulk/BulkActions';
 import buildFields, { mergeUsers } from './fields';
 import {
@@ -176,12 +183,34 @@ export default function WorkflowDataViews() {
 		enabled: canListReviewers(),
 	} );
 	const known = useKnownUsers( records );
+	const tableRef = useRef( null );
+
+	// Workflow changes also make the summary tiles stale.
+	const [ summaryKey, setSummaryKey ] = useState( 0 );
+	const refreshAll = useCallback( () => {
+		refresh();
+		setSummaryKey( ( key ) => key + 1 );
+	}, [ refresh ] );
+
+	// A tile replaces the filters with what it counts and moves to the table.
+	const applyTileFilter = useCallback( ( filter ) => {
+		setView( ( current ) => ( {
+			...current,
+			search: '',
+			filters: [ filter ],
+			page: 1,
+		} ) );
+
+		if ( tableRef.current ) {
+			tableRef.current.focus();
+		}
+	}, [] );
 
 	// After every batch: refetch the page and start from an empty selection.
 	const onBulkComplete = useCallback( () => {
-		refresh();
+		refreshAll();
 		setSelection( [] );
-	}, [ refresh ] );
+	}, [ refreshAll ] );
 	const bulk = useBulkAction( { onComplete: onBulkComplete } );
 
 	const fields = useMemo(
@@ -195,10 +224,10 @@ export default function WorkflowDataViews() {
 	const actions = useMemo(
 		() =>
 			buildActions( {
-				onChanged: refresh,
+				onChanged: refreshAll,
 				isBulkRunning: bulk.isRunning,
 			} ),
-		[ refresh, bulk.isRunning ]
+		[ refreshAll, bulk.isRunning ]
 	);
 
 	// Reflect the view in the URL so a filtered dashboard is linkable.
@@ -243,14 +272,25 @@ export default function WorkflowDataViews() {
 	}
 
 	return (
-		<BulkActions bulk={ bulk } onChanged={ refresh }>
+		<>
+			<SummaryTiles
+				refreshKey={ summaryKey }
+				onSelect={ applyTileFilter }
+			/>
+			<section
+				ref={ tableRef }
+				tabIndex={ -1 }
+				className="sit-cwm-dashboard-body"
+				aria-label={ __( 'Workflow content', 'sapphireit-editorial-workflow' ) }
+			>
+		<BulkActions bulk={ bulk } onChanged={ refreshAll }>
 			{ error && (
 				<Notice
 					className="sit-cwm-dashboard-error"
 					status="error"
 					isDismissible={ false }
 					actions={ [
-						{ label: __( 'Retry', 'sapphireit-editorial-workflow' ), onClick: refresh },
+						{ label: __( 'Retry', 'sapphireit-editorial-workflow' ), onClick: refreshAll },
 					] }
 				>
 					{ error.message }
@@ -310,5 +350,7 @@ export default function WorkflowDataViews() {
 				<DataViews.Footer />
 			</DataViews>
 		</BulkActions>
+			</section>
+		</>
 	);
 }

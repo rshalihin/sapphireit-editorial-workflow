@@ -88,6 +88,39 @@ final class Settings implements Bootable {
 	const SECTION_DISCLOSURE = 'sit_cwm_disclosure';
 
 	/**
+	 * AI use default settings section id.
+	 *
+	 * @since 1.2.0
+	 * @var string
+	 */
+	const SECTION_AI_ORIGIN = 'sit_cwm_ai_origin';
+
+	/**
+	 * Review attestation settings section id.
+	 *
+	 * @since 1.2.0
+	 * @var string
+	 */
+	const SECTION_ATTESTATION = 'sit_cwm_attestation';
+
+	/**
+	 * Uninstall settings section id.
+	 *
+	 * @since 1.2.0
+	 * @var string
+	 */
+	const SECTION_UNINSTALL = 'sit_cwm_uninstall';
+
+	/**
+	 * Field class (the `class` argument of `add_settings_field()`) that makes
+	 * a field span its card, with no label column.
+	 *
+	 * @since 1.2.0
+	 * @var string
+	 */
+	const WIDE_FIELD = 'is-wide';
+
+	/**
 	 * Contextual help tab id.
 	 *
 	 * @since 1.0.0
@@ -234,6 +267,8 @@ final class Settings implements Bootable {
 			)
 		);
 
+		// One section per card on the screen, in design A's order. Fields of a
+		// card with a single checkbox span the card (`is-wide`).
 		add_settings_section(
 			self::SECTION,
 			__( 'Workflow', 'sapphireit-editorial-workflow' ),
@@ -250,53 +285,24 @@ final class Settings implements Bootable {
 		);
 
 		add_settings_field(
-			'sit_cwm_ai_origin_defaults',
-			__( 'AI use default', 'sapphireit-editorial-workflow' ),
-			array( $this, 'render_ai_origin_defaults_field' ),
+			'sit_cwm_self_approval',
+			__( 'Self-approval', 'sapphireit-editorial-workflow' ),
+			array( $this, 'render_self_approval_field' ),
 			self::MENU_SLUG,
 			self::SECTION
 		);
 
-		add_settings_field(
-			'sit_cwm_delete_data_on_uninstall',
-			__( 'Uninstall', 'sapphireit-editorial-workflow' ),
-			array( $this, 'render_uninstall_field' ),
-			self::MENU_SLUG,
-			self::SECTION
-		);
-
-		// The wrapper id is the anchor Getting Started links to.
 		add_settings_section(
 			self::SECTION_GATE,
 			__( 'Publish gate', 'sapphireit-editorial-workflow' ),
 			array( $this, 'render_gate_section' ),
-			self::MENU_SLUG,
-			array(
-				'before_section' => '<div id="' . GettingStartedPage::GATE_ANCHOR . '">',
-				'after_section'  => '</div>',
-			)
+			self::MENU_SLUG
 		);
 
 		add_settings_field(
 			'sit_cwm_publish_gate_modes',
 			__( 'Require approval to publish', 'sapphireit-editorial-workflow' ),
 			array( $this, 'render_publish_gate_field' ),
-			self::MENU_SLUG,
-			self::SECTION_GATE
-		);
-
-		add_settings_field(
-			'sit_cwm_self_approval',
-			__( 'Self-approval', 'sapphireit-editorial-workflow' ),
-			array( $this, 'render_self_approval_field' ),
-			self::MENU_SLUG,
-			self::SECTION_GATE
-		);
-
-		add_settings_field(
-			'sit_cwm_attestation',
-			__( 'Review attestation', 'sapphireit-editorial-workflow' ),
-			array( $this, 'render_attestation_field' ),
 			self::MENU_SLUG,
 			self::SECTION_GATE
 		);
@@ -317,6 +323,37 @@ final class Settings implements Bootable {
 		);
 
 		add_settings_section(
+			self::SECTION_AI_ORIGIN,
+			__( 'AI use default', 'sapphireit-editorial-workflow' ),
+			'__return_false',
+			self::MENU_SLUG
+		);
+
+		add_settings_field(
+			'sit_cwm_ai_origin_defaults',
+			__( 'AI use default', 'sapphireit-editorial-workflow' ),
+			array( $this, 'render_ai_origin_defaults_field' ),
+			self::MENU_SLUG,
+			self::SECTION_AI_ORIGIN
+		);
+
+		add_settings_section(
+			self::SECTION_ATTESTATION,
+			__( 'Review attestation', 'sapphireit-editorial-workflow' ),
+			'__return_false',
+			self::MENU_SLUG
+		);
+
+		add_settings_field(
+			'sit_cwm_attestation',
+			__( 'Review attestation', 'sapphireit-editorial-workflow' ),
+			array( $this, 'render_attestation_field' ),
+			self::MENU_SLUG,
+			self::SECTION_ATTESTATION,
+			array( 'class' => self::WIDE_FIELD )
+		);
+
+		add_settings_section(
 			self::SECTION_DISCLOSURE,
 			__( 'Front-end disclosure', 'sapphireit-editorial-workflow' ),
 			'__return_false',
@@ -328,7 +365,24 @@ final class Settings implements Bootable {
 			__( 'Review disclosure', 'sapphireit-editorial-workflow' ),
 			array( $this, 'render_disclosure_field' ),
 			self::MENU_SLUG,
-			self::SECTION_DISCLOSURE
+			self::SECTION_DISCLOSURE,
+			array( 'class' => self::WIDE_FIELD )
+		);
+
+		add_settings_section(
+			self::SECTION_UNINSTALL,
+			__( 'Uninstall', 'sapphireit-editorial-workflow' ),
+			'__return_false',
+			self::MENU_SLUG
+		);
+
+		add_settings_field(
+			'sit_cwm_delete_data_on_uninstall',
+			__( 'Uninstall', 'sapphireit-editorial-workflow' ),
+			array( $this, 'render_uninstall_field' ),
+			self::MENU_SLUG,
+			self::SECTION_UNINSTALL,
+			array( 'class' => self::WIDE_FIELD )
 		);
 	}
 
@@ -402,18 +456,173 @@ final class Settings implements Bootable {
 			wp_die( esc_html__( 'Sorry, you are not allowed to access this page.', 'sapphireit-editorial-workflow' ), 403 );
 		}
 
-		echo '<div class="wrap">';
+		echo '<div class="wrap sit-cwm-settings-wrap">';
 		$this->shell->render_header();
-		printf( '<h1>%s</h1>', esc_html__( 'Editorial Workflow Settings', 'sapphireit-editorial-workflow' ) );
+
+		$head = $this->shell->page_head( __( 'Settings', 'sapphireit-editorial-workflow' ) );
+
+		echo $head; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- page_head() escapes its text.
 
 		// Only options-general.php screens print settings errors automatically.
 		settings_errors();
 
-		printf( '<form action="%s" method="post">', esc_url( admin_url( 'options.php' ) ) );
+		$sections = $this->sections();
+
+		printf( '<form class="sit-cwm-settings" action="%s" method="post">', esc_url( admin_url( 'options.php' ) ) );
 		settings_fields( self::OPTION_GROUP );
-		do_settings_sections( self::MENU_SLUG );
-		submit_button();
-		echo '</form></div>';
+
+		// Without JS the tabs are jump links and every panel shows; the
+		// admin-shell script turns them into tabs (src/admin-shell/settings-tabs.js).
+		printf( '<nav class="sit-cwm-card sit-cwm-settings__tabs" aria-label="%s"><ul>', esc_attr__( 'Settings sections', 'sapphireit-editorial-workflow' ) );
+
+		foreach ( $sections as $section ) {
+			if ( '' !== $section['title'] ) {
+				$anchor = $this->section_anchor( $section['id'] );
+
+				printf(
+					'<li><a class="sit-cwm-settings__tab" id="%1$s-tab" href="#%1$s"><span class="dashicons %2$s" aria-hidden="true"></span>%3$s</a></li>',
+					esc_attr( $anchor ),
+					esc_attr( $this->section_icon( $section['id'] ) ),
+					esc_html( $section['title'] )
+				);
+			}
+		}
+
+		echo '</ul></nav><div class="sit-cwm-card sit-cwm-settings__panels">';
+
+		foreach ( $sections as $section ) {
+			$this->render_card( $section );
+		}
+
+		echo '<div class="sit-cwm-settings__submit">';
+		submit_button( __( 'Save changes', 'sapphireit-editorial-workflow' ), 'primary', 'submit', false );
+		echo '</div></div></form></div>';
+	}
+
+	/**
+	 * Settings sections registered for this page, in registration order.
+	 * Add-ons that add a section to `MENU_SLUG` get a card like ours.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return array<int, array{id: string, title: string, callback: callable|null}>
+	 */
+	private function sections(): array {
+		global $wp_settings_sections;
+
+		$sections = array();
+
+		foreach ( (array) ( $wp_settings_sections[ self::MENU_SLUG ] ?? array() ) as $section ) {
+			if ( ! is_array( $section ) || ! isset( $section['id'] ) ) {
+				continue;
+			}
+
+			$sections[] = array(
+				'id'       => (string) $section['id'],
+				'title'    => isset( $section['title'] ) ? wp_strip_all_tags( (string) $section['title'] ) : '',
+				'callback' => isset( $section['callback'] ) && is_callable( $section['callback'] ) ? $section['callback'] : null,
+			);
+		}
+
+		return $sections;
+	}
+
+	/**
+	 * Id of a section's card, the target of its index link. The publish gate
+	 * keeps the anchor Getting Started links to.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param string $section_id Settings section id.
+	 * @return string
+	 */
+	private function section_anchor( string $section_id ): string {
+		if ( self::SECTION_GATE === $section_id ) {
+			return GettingStartedPage::GATE_ANCHOR;
+		}
+
+		return 'sit-cwm-settings-' . sanitize_html_class( str_replace( '_', '-', $section_id ) );
+	}
+
+	/**
+	 * Dashicon of a section's tab; sections added by add-ons get a generic one.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param string $section_id Settings section id.
+	 * @return string Dashicons class.
+	 */
+	private function section_icon( string $section_id ): string {
+		$icons = array(
+			self::SECTION               => 'dashicons-randomize',
+			self::SECTION_GATE          => 'dashicons-lock',
+			self::SECTION_NOTIFICATIONS => 'dashicons-email-alt',
+			self::SECTION_AI_ORIGIN     => 'dashicons-lightbulb',
+			self::SECTION_ATTESTATION   => 'dashicons-yes-alt',
+			self::SECTION_DISCLOSURE    => 'dashicons-visibility',
+			self::SECTION_UNINSTALL     => 'dashicons-trash',
+		);
+
+		return $icons[ $section_id ] ?? 'dashicons-admin-generic';
+	}
+
+	/**
+	 * Prints one section as a tab panel: a header with the title and the section
+	 * callback's introduction, then one row per field (label left, control
+	 * right; `is-wide` fields span the card).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param array{id: string, title: string, callback: callable|null} $section Section.
+	 * @return void
+	 */
+	private function render_card( array $section ): void {
+		global $wp_settings_fields;
+
+		$anchor = $this->section_anchor( $section['id'] );
+
+		printf(
+			'<section id="%1$s" class="sit-cwm-settings__panel"%2$s><div class="sit-cwm-settings__panel-head">',
+			esc_attr( $anchor ),
+			'' !== $section['title'] ? ' aria-labelledby="' . esc_attr( $anchor . '-title' ) . '"' : ''
+		);
+
+		if ( '' !== $section['title'] ) {
+			printf( '<h2 id="%1$s">%2$s</h2>', esc_attr( $anchor . '-title' ), esc_html( $section['title'] ) );
+		}
+
+		if ( null !== $section['callback'] ) {
+			call_user_func( $section['callback'], $section );
+		}
+
+		echo '</div><div class="sit-cwm-settings__fields">';
+
+		foreach ( (array) ( $wp_settings_fields[ self::MENU_SLUG ][ $section['id'] ] ?? array() ) as $field ) {
+			if ( ! is_array( $field ) || ! isset( $field['callback'] ) || ! is_callable( $field['callback'] ) ) {
+				continue;
+			}
+
+			$args  = isset( $field['args'] ) && is_array( $field['args'] ) ? $field['args'] : array();
+			$class = isset( $args['class'] ) ? (string) $args['class'] : '';
+			$wide  = in_array( self::WIDE_FIELD, explode( ' ', $class ), true );
+			$title = isset( $field['title'] ) ? wp_strip_all_tags( (string) $field['title'] ) : '';
+
+			printf( '<div class="%s">', esc_attr( trim( 'sit-cwm-settings__field ' . $class ) ) );
+
+			if ( ! $wide ) {
+				if ( ! empty( $args['label_for'] ) ) {
+					printf( '<label class="sit-cwm-settings__label" for="%1$s">%2$s</label>', esc_attr( (string) $args['label_for'] ), esc_html( $title ) );
+				} else {
+					printf( '<div class="sit-cwm-settings__label">%s</div>', esc_html( $title ) );
+				}
+			}
+
+			echo '<div class="sit-cwm-settings__control">';
+			call_user_func( $field['callback'], $args );
+			echo '</div></div>';
+		}
+
+		echo '</div></section>';
 	}
 
 	/**
@@ -494,7 +703,7 @@ final class Settings implements Bootable {
 			$current = $this->settings->ai_origin_default( $post_type );
 
 			printf(
-				'<p><label for="%1$s">%2$s</label> <select id="%1$s" name="%3$s">',
+				'<p class="sit-cwm-settings__select-row"><label for="%1$s">%2$s</label> <select id="%1$s" name="%3$s">',
 				esc_attr( $id ),
 				esc_html( $object->labels->name ),
 				esc_attr( SettingsStore::OPTION . '[ai_origin_defaults][' . $post_type . ']' )
@@ -592,7 +801,7 @@ final class Settings implements Bootable {
 			$current = $modes[ $post_type ] ?? PublishGate::MODE_OFF;
 
 			printf(
-				'<p><label for="%1$s">%2$s</label> <select id="%1$s" name="%3$s">',
+				'<p class="sit-cwm-settings__select-row"><label for="%1$s">%2$s</label> <select id="%1$s" name="%3$s">',
 				esc_attr( $id ),
 				esc_html( $object->labels->name ),
 				esc_attr( SettingsStore::OPTION . '[publish_gate][' . $post_type . ']' )
@@ -677,6 +886,35 @@ final class Settings implements Bootable {
 		printf(
 			'<p class="description">%s</p>',
 			esc_html__( 'Enables the Review disclosure block and the [sit_cwm_review_disclosure] shortcode. They show who approved the content and when, plus its declared AI use.', 'sapphireit-editorial-workflow' )
+		);
+
+		$this->render_disclosure_preview();
+	}
+
+	/**
+	 * Prints a static example of the disclosure, with the current user as the
+	 * approver and today's date, in the site's date format. The sentences are
+	 * the ones `ReviewDisclosure::render()` prints.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	private function render_disclosure_preview(): void {
+		$user = wp_get_current_user();
+		$name = $user->exists() ? $user->display_name : __( 'Your name', 'sapphireit-editorial-workflow' );
+		$date = wp_date( (string) get_option( 'date_format' ) );
+
+		printf(
+			'<div class="sit-cwm-settings__preview"><span class="sit-cwm-settings__preview-label">%1$s</span><p>%2$s</p><p>%3$s</p></div>',
+			esc_html__( 'Preview', 'sapphireit-editorial-workflow' ),
+			sprintf(
+				/* translators: 1: approver's display name, 2: approval date. */
+				esc_html__( 'Reviewed by %1$s on %2$s.', 'sapphireit-editorial-workflow' ),
+				esc_html( $name ),
+				esc_html( (string) $date )
+			),
+			esc_html__( 'This content was created with AI assistance and reviewed by a person.', 'sapphireit-editorial-workflow' )
 		);
 	}
 

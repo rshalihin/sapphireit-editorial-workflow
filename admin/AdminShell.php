@@ -179,6 +179,30 @@ final class AdminShell implements Bootable {
 	}
 
 	/**
+	 * Builds the title row under the header: the h1 and an optional subtitle
+	 * on the left, page actions on the right, then `.wp-header-end` so core
+	 * moves admin notices below it.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param string $title    Page title, plain text (escaped here).
+	 * @param string $subtitle Optional subtitle, plain text (escaped here).
+	 * @param string $actions  Optional actions markup, already escaped by the caller.
+	 * @return string
+	 */
+	public function page_head( string $title, string $subtitle = '', string $actions = '' ): string {
+		$heading = sprintf( '<h1 class="wp-heading-inline">%s</h1>', esc_html( $title ) );
+
+		if ( '' !== $subtitle ) {
+			$heading .= sprintf( '<p class="sit-cwm-page-subtitle">%s</p>', esc_html( $subtitle ) );
+		}
+
+		return '<div class="sit-cwm-page-head"><div class="sit-cwm-page-title">' . $heading . '</div>'
+			. ( '' !== $actions ? '<div class="sit-cwm-page-actions">' . $actions . '</div>' : '' )
+			. '</div><hr class="wp-header-end">';
+	}
+
+	/**
 	 * Tabs the current user can open, in `TAB_SLUGS` order.
 	 *
 	 * @since 1.2.0

@@ -735,8 +735,14 @@ Signatures are written as they appear in code; "Returns" is the docblock type
 where the code cannot declare it (`true|WP_Error`). "Since" lists the version
 that added the method, then each version that changed it.
 
-Global functions: `sit_cwm_container(): ?\Sit_Cwm\Core\Container` (1.2.0), null
-before the plugin has booted.
+Global functions:
+
+- `sit_cwm_container(): ?\Sit_Cwm\Core\Container` (1.2.0), null before the
+  plugin has booted.
+- `sit_cwm_fs(): Freemius` (1.2.0), the Freemius SDK instance of Free. It is
+  initialised when the main file loads, before `plugins_loaded`. The Pro add-on
+  names this product as its `parent` (F18). Free sells nothing in 1.2.0:
+  `has_addons` and `has_paid_plans` are `false` until the Pro launch release.
 
 #### `Core\Plugin`
 
@@ -987,6 +993,7 @@ Every `sit_cwm_*` hook, covered by the [stability rule](#stability-rule).
 
 | Kind | Name | Args | Since |
 |---|---|---|---|
+| action | `sit_cwm_fs_loaded` | none. Fires once, when the main file loads, right after `sit_cwm_fs()` initialised the Freemius SDK. The Pro add-on initialises its own SDK instance (parent: this product) here | 1.2.0 |
 | action | `sit_cwm_loaded` | `Plugin $plugin`. Fires once per request, at the end of `boot()`, after the core (and, in wp-admin, admin) services are registered. REST controllers register later, on `rest_api_init` | 1.2.0 |
 | action | `sit_cwm_status_changed` | `int $post_id, string $from, string $to, int $user_id` | 1.0.0 |
 | action | `sit_cwm_reviewer_assigned` | `int $post_id, int $reviewer_id, int $previous_id, int $user_id` | 1.0.0 |
@@ -1155,11 +1162,18 @@ compared on `plugins_loaded`, so an upgrade runs without reactivation.
 
 ### Uninstall
 
-`uninstall.php` (guarded by `WP_UNINSTALL_PLUGIN`) drops the activity table,
+`Core\Uninstaller::run()` (`@internal`, 1.2.0) is hooked to the Freemius SDK's
+`after_uninstall` action. It replaced `uninstall.php`, which Freemius requires
+gone: a present `uninstall.php` stops the SDK's uninstall event, and WordPress
+prefers that file over a registered hook. WordPress includes the main file
+before firing the hook, so the autoloader exists, but `plugins_loaded` has not
+fired and the class never touches the container.
+
+Only when `delete_data_on_uninstall` is on, it drops the activity table,
 deletes the options, removes all `_sit_cwm_*` post meta with a prepared `LIKE`
 delete, and strips the plugin's capabilities from **every** role — not just the four
 in `role_map()`, so grants a site owner added to custom roles are cleaned up
-too.
+too. On a network it runs for every site. Behaviour is unchanged from 1.1.
 
 ---
 
@@ -1492,8 +1506,8 @@ existence check, and applies to single and bulk requests alike.
 | | Table name only from `Database::table_name()` | ✅ |
 | | Every DB `phpcs:ignore` has a why-comment | ✅ all reviewed |
 | General | No `eval()`, variable `include`, `unserialize()` of stored data | ✅ exception E4 |
-| | ABSPATH guard on every PHP file | ✅ 31 of 31 in `includes/`, `admin/`, main file, `uninstall.php` (generated `assets/build/*.asset.php` excluded as build output) |
-| | `uninstall.php` guarded by `WP_UNINSTALL_PLUGIN` | ✅ |
+| | ABSPATH guard on every PHP file | ✅ every file in `includes/`, `admin/` and the main file (generated `assets/build/*.asset.php` excluded as build output; the vendored `freemius/` SDK is third-party code, excluded and never edited) |
+| | Uninstall cleanup only on the SDK's `after_uninstall`, only with the opt-in set | ✅ `Core\Uninstaller` (1.2.0; was `uninstall.php` guarded by `WP_UNINSTALL_PLUGIN`) |
 | | Nonces on non-REST forms/AJAX | ✅ only the settings form (Settings API nonce, `option_page_capability_sit_cwm_settings_group` → `sit_cwm_manage_workflows`); no `admin_post_`/AJAX handlers |
 | | No secrets in the bootstrap JS object | ✅ `restNamespace`, `statuses`, capability flags, `postTypes`, `adminUrl` |
 
@@ -1503,8 +1517,8 @@ existence check, and applies to single and bulk requests alike.
   `sapphireit-editorial-workflow.php`: decides only whether to show the
   "PHP too old" notice, runs before the autoloader, not a workflow decision.
 - **E2** `$wpdb->query()` in `Database::drop()` (`DROP TABLE` on the name from
-  `table_name()`) and `uninstall.php` (prepared `LIKE` delete of `_sit_cwm_*`
-  meta). Neither takes user input.
+  `table_name()`) and `Core\Uninstaller` (prepared `LIKE` delete of `_sit_cwm_*`
+  meta; `uninstall.php` before 1.2.0). Neither takes user input.
 - **E3** The bare `edit_posts` primitive in
   `PermissionManager::can_view_statuses()` and `can_attempt_batch()`: neither
   is a per-post decision, and every post in a batch is authorized again.

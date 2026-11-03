@@ -235,12 +235,14 @@ final class Dashboard implements Bootable {
 		echo '<div class="wrap sit-cwm-dashboard-wrap">';
 		$this->shell->render_header();
 
-		printf(
-			'<h1 class="wp-heading-inline">%1$s</h1><p class="sit-cwm-page-subtitle">%2$s</p><hr class="wp-header-end">%3$s<div id="%4$s"></div></div>',
-			esc_html__( 'Dashboard', 'sapphireit-editorial-workflow' ),
-			esc_html__( 'Everything moving through the editorial workflow.', 'sapphireit-editorial-workflow' ),
-			$this->export->render_form(), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- render_form() returns escaped markup.
-			esc_attr( self::ROOT_ID )
+		$head = $this->shell->page_head(
+			__( 'Dashboard', 'sapphireit-editorial-workflow' ),
+			__( 'Everything moving through the editorial workflow.', 'sapphireit-editorial-workflow' ),
+			$this->export->render_form()
 		);
+
+		echo $head; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- page_head() escapes the text; render_form() returns escaped markup.
+
+		printf( '<div id="%s"></div></div>', esc_attr( self::ROOT_ID ) );
 	}
 }

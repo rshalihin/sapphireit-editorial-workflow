@@ -77,6 +77,73 @@ if ( file_exists( SIT_CWM_PLUGIN_DIR . 'vendor/autoload.php' ) ) {
 	spl_autoload_register( 'sit_cwm_autoload' );
 }
 
+if ( ! function_exists( 'sit_cwm_fs' ) ) {
+	/**
+	 * Returns the Freemius SDK instance for this plugin, initialising it on
+	 * first call. The Pro add-on names this product as its parent.
+	 *
+	 * Free is WordPress.org compliant: nothing is sent unless an
+	 * administrator opts in, and nothing is sold until the Pro launch
+	 * release flips `has_addons` / `has_paid_plans` (F17, F18).
+	 *
+	 * @api
+	 * @since 1.2.0
+	 *
+	 * @return Freemius
+	 */
+	function sit_cwm_fs() {
+		global $sit_cwm_fs;
+
+		if ( ! isset( $sit_cwm_fs ) ) {
+			require_once SIT_CWM_PLUGIN_DIR . 'freemius/start.php';
+
+			$sit_cwm_fs = fs_dynamic_init(
+				array(
+					'id'                  => '43919',
+					'slug'                => 'sapphireit-editorial-workflow',
+					'type'                => 'plugin',
+					'public_key'          => 'pk_aad89809d49fcd9369c18ff7d1561',
+					'is_premium'          => false,
+					'has_premium_version' => false,
+					'has_addons'          => false,
+					'has_paid_plans'      => false,
+					'is_org_compliant'    => true,
+					'opt_in_moderation'   => array(
+						'new'       => 100,
+						'updates'   => false,
+						'localhost' => true,
+					),
+					'menu'                => array(
+						'slug'        => 'sit-cwm-dashboard',
+						'first-path'  => 'admin.php?page=sit-cwm-getting-started',
+						'account'     => true,
+						'contact'     => false,
+						'support'     => false,
+						'addons'      => false,
+						'pricing'     => false,
+						'affiliation' => false,
+					),
+				)
+			);
+		}
+
+		return $sit_cwm_fs;
+	}
+
+	sit_cwm_fs();
+
+	/**
+	 * Fires once the Freemius SDK is initialised for Free. The Pro add-on
+	 * initialises its own SDK instance (with this product as parent) here.
+	 *
+	 * @api
+	 * @since 1.2.0
+	 */
+	do_action( 'sit_cwm_fs_loaded' );
+
+	sit_cwm_fs()->add_action( 'after_uninstall', array( \Sit_Cwm\Core\Uninstaller::class, 'run' ) );
+}
+
 register_activation_hook( __FILE__, array( \Sit_Cwm\Core\Activator::class, 'activate' ) );
 register_deactivation_hook( __FILE__, array( \Sit_Cwm\Core\Deactivator::class, 'deactivate' ) );
 

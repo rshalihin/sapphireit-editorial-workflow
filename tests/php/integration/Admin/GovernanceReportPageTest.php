@@ -227,6 +227,8 @@ final class GovernanceReportPageTest extends TestCase {
 		$this->assertStringContainsString( '<h1 class="wp-heading-inline">Governance report</h1>', $html );
 		$this->assertStringContainsString( 'value="sit_cwm_export_activity"', $html );
 		$this->assertStringContainsString( '<div id="sit-cwm-report"></div>', $html );
+		$this->assertStringContainsString( '<p class="sit-cwm-page-subtitle">How content reached publication, from the activity log.</p>', $html );
+		$this->assertStringContainsString( '<div class="sit-cwm-page-actions"><div id="sit-cwm-report-period" class="sit-cwm-report-period"></div><form method="post"', $html );
 		$this->assertMatchesRegularExpression( '/page=sit-cwm-report"[^>]*aria-current="page"/', $html );
 		$this->assertLessThan( strpos( $html, '<hr class="wp-header-end">' ), strpos( $html, '<form method="post"' ) );
 		$this->assertLessThan( strpos( $html, 'id="sit-cwm-report"' ), strpos( $html, '<hr class="wp-header-end">' ) );

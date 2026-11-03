@@ -1,0 +1,288 @@
+// Settings screen: vertical tabs in a card on the left, the current section
+// in a card on the right. Markup from Sit_Cwm\Admin\Settings::render(), tabs
+// from settings-tabs.js; colours and spacing from tokens.scss only. Without
+// the script every section shows, one under the other.
+.sit-cwm-settings {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 32px;
+	max-width: 1200px;
+}
+
+.sit-cwm-settings__tabs {
+	position: sticky;
+	top: 48px; // Under the 32px admin bar.
+	flex: 1 1 220px;
+	max-width: 248px;
+	padding: 14px;
+
+	ul {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		margin: 0;
+	}
+
+	li {
+		margin: 0;
+	}
+}
+
+.sit-cwm-settings__tab {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: 44px;
+	padding: 0 14px;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	color: var(--sit-cwm-text);
+	font-size: 14px;
+	text-decoration: none;
+
+	.dashicons {
+		flex: none;
+		color: var(--sit-cwm-muted);
+		font-size: 18px;
+		width: 18px;
+		height: 18px;
+	}
+
+	&:hover {
+		background: var(--sit-cwm-page-bg);
+		color: var(--sit-cwm-accent);
+
+		.dashicons {
+			color: currentcolor;
+		}
+	}
+
+	&:focus {
+		box-shadow: none;
+		outline: 2px solid var(--sit-cwm-accent);
+		outline-offset: 1px;
+	}
+
+	&.is-current {
+		border-color: var(--sit-cwm-accent);
+		background: var(--sit-cwm-accent-soft);
+		color: var(--sit-cwm-accent);
+		font-weight: 600;
+
+		.dashicons {
+			color: currentcolor;
+		}
+	}
+}
+
+.sit-cwm-settings__panels {
+	flex: 999 1 520px;
+	min-width: 0;
+	padding: 8px 32px 28px;
+}
+
+.sit-cwm-settings__panel {
+	// Without tabs, sections are separated and jump links land below the bar.
+	scroll-margin-top: 48px;
+
+	& + & {
+		border-top: 1px solid var(--sit-cwm-border);
+	}
+
+	.has-tabs & + & {
+		border-top: 0;
+	}
+
+	&[hidden] {
+		display: none;
+	}
+
+	&:focus {
+		outline: none;
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--sit-cwm-accent);
+		outline-offset: 4px;
+	}
+}
+
+.sit-cwm-settings__panel-head {
+	padding: 20px 0 16px;
+	border-bottom: 1px solid var(--sit-cwm-divider);
+
+	h2 {
+		margin: 0;
+		color: var(--sit-cwm-text);
+		font-size: 18px;
+		font-weight: 600;
+	}
+
+	p {
+		max-width: 720px;
+		margin: 6px 0 0;
+		color: var(--sit-cwm-muted);
+		font-size: 13px;
+	}
+}
+
+.sit-cwm-settings__fields {
+	display: flex;
+	flex-direction: column;
+}
+
+// One row per field: title left, control right, a divider between rows.
+.sit-cwm-settings__field {
+	display: grid;
+	grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+	gap: 8px 32px;
+	padding: 20px 0;
+
+	& + & {
+		border-top: 1px solid var(--sit-cwm-divider);
+	}
+
+	&.is-wide {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+.sit-cwm-settings__label {
+	color: var(--sit-cwm-text);
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.sit-cwm-settings__control {
+	font-size: 13px;
+	line-height: 1.5;
+
+	fieldset {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	fieldset br {
+		display: none;
+	}
+
+	label {
+		vertical-align: baseline;
+	}
+
+	input[type="checkbox"] {
+		margin: 0 8px 0 0;
+		accent-color: var(--sit-cwm-accent);
+	}
+
+	p {
+		margin: 0 0 8px;
+	}
+
+	.description {
+		max-width: 640px;
+		margin: 6px 0 0;
+		color: var(--sit-cwm-muted);
+		font-size: 12px;
+
+		strong {
+			color: var(--sit-cwm-danger-text);
+		}
+	}
+
+	select {
+		min-width: 200px;
+		min-height: var(--sit-cwm-control-height);
+		border-color: var(--sit-cwm-field-border);
+		border-radius: var(--sit-cwm-radius-control);
+	}
+}
+
+// One select per enabled content type: type name, then its select.
+.sit-cwm-settings__select-row {
+	display: grid;
+	grid-template-columns: minmax(0, 120px) auto;
+	gap: 16px;
+	align-items: center;
+	justify-content: start;
+}
+
+// The uninstall warning is a caution in its own right.
+#sit-cwm-settings-sit-cwm-uninstall .description {
+	color: var(--sit-cwm-danger-text);
+}
+
+.sit-cwm-settings__preview {
+	max-width: 640px;
+	margin-top: 14px;
+	padding: 14px 16px;
+	border: 1px dashed var(--sit-cwm-border);
+	border-radius: 6px;
+	background: var(--sit-cwm-surface-muted);
+	color: var(--sit-cwm-text);
+	font-size: 13px;
+	line-height: 1.6;
+
+	p {
+		margin: 0;
+	}
+}
+
+.sit-cwm-settings__preview-label {
+	display: block;
+	margin-bottom: 6px;
+	color: var(--sit-cwm-muted);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.sit-cwm-settings__submit {
+	padding-top: 20px;
+	border-top: 1px solid var(--sit-cwm-divider);
+
+	.button-primary {
+		min-height: 40px;
+		padding: 0 20px;
+		border-color: var(--sit-cwm-accent);
+		border-radius: var(--sit-cwm-radius-control);
+		background: var(--sit-cwm-accent);
+		font-weight: 600;
+
+		&:hover,
+		&:focus {
+			border-color: var(--sit-cwm-accent-strong);
+			background: var(--sit-cwm-accent-strong);
+		}
+	}
+}
+
+@media (max-width: 782px) {
+
+	.sit-cwm-settings {
+		gap: var(--sit-cwm-gap);
+	}
+
+	// The tabs become a wrapping row above the panel.
+	.sit-cwm-settings__tabs {
+		position: static;
+		flex-basis: 100%;
+		max-width: none;
+		padding: 8px;
+
+		ul {
+			flex-flow: row wrap;
+		}
+	}
+
+	.sit-cwm-settings__panels {
+		padding: 4px 16px 20px;
+	}
+
+	.sit-cwm-settings__field {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

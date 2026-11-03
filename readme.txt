@@ -301,11 +301,18 @@ export is a CSV of the whole log, with spreadsheet formulas neutralised.
 
 = Does the plugin contact any external service? =
 
-No. It makes no remote requests, loads nothing from a CDN, sets no cookies of
-its own and collects no usage data. Everything stays in your WordPress
-database. Email notifications, when you turn them on, go out through
-WordPress's own `wp_mail()`, the same way your site sends password-reset
-emails.
+Only if you choose to. Your workflow data (statuses, reviewers, comments,
+history) always stays in your WordPress database. The plugin loads nothing from
+a CDN and sets no cookies of its own.
+
+It includes the Freemius SDK. When an administrator first activates the
+plugin, it asks whether to share some usage data with Freemius; you can click
+**Skip** and the plugin works exactly the same. Nothing is sent unless an
+administrator opts in, or chooses to fill in the optional feedback form when
+deactivating. See **Privacy** below for exactly what is shared.
+
+Email notifications, when you turn them on, go out through WordPress's own
+`wp_mail()`, the same way your site sends password-reset emails.
 
 = Where is the source code for the JavaScript? =
 
@@ -322,13 +329,32 @@ workflow change, the user ID of the assigned reviewer, the text of workflow
 comments and the time of each action. It also stores the user ID of whoever
 publishes or unpublishes managed content, or tries to publish it while the
 publish gate blocks them. This information is visible to users who have the
-`sit_cwm_view_activity` capability. Apart from the notification emails
-described below, nothing is sent off your site.
+`sit_cwm_view_activity` capability. None of it is sent off your site.
 
 When email notifications are turned on, the plugin sends email to the
 registered email addresses of your site's users, through WordPress's own
-`wp_mail()`. No external service is contacted by the plugin; mail is delivered
-however your site already sends email.
+`wp_mail()`. Mail is delivered however your site already sends email.
+
+**Usage data (opt-in).** The plugin uses the Freemius SDK. On first activation
+an administrator is asked whether to share usage data with Freemius; nothing
+is sent unless they opt in, and **Skip** leaves every feature working. Opting
+in shares:
+
+* your WordPress user's first and last name and email address;
+* the site's homepage URL and title, WordPress and PHP versions and site
+  language;
+* the plugin and SDK versions, and whether the plugin is active or uninstalled;
+* the names, slugs and versions of your installed plugins and themes, and
+  whether each is active (this item can be switched off on the opt-in screen).
+
+You can opt out at any time from the **Opt Out** link under the plugin on the
+Plugins screen, or from **Workflow → Account**.
+
+When you deactivate the plugin you may be offered a short, optional feedback
+form. If you answer it, your answer is sent to Freemius, anonymously unless
+you choose otherwise, even if you never opted in.
+
+Freemius's privacy policy: https://freemius.com/privacy/
 
 == Screenshots ==
 

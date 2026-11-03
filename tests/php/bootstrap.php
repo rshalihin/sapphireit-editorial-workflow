@@ -42,6 +42,15 @@ if ( ! defined( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH' ) ) {
 	define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', $sit_cwm_root . '/vendor/yoast/phpunit-polyfills' ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Name required by the WP test library.
 }
 
+if ( ! defined( 'WP_PLUGIN_DIR' ) ) {
+	/*
+	 * The test WordPress may live outside the folder holding this plugin. The
+	 * Freemius SDK finds its host plugin by scanning WP_PLUGIN_DIR, as on a
+	 * real site, so point it at the folder that really contains the plugin.
+	 */
+	define( 'WP_PLUGIN_DIR', dirname( $sit_cwm_root ) ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Core constant, defined before WordPress boots.
+}
+
 require_once $sit_cwm_tests_dir . '/includes/functions.php';
 
 tests_add_filter(

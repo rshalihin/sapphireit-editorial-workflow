@@ -333,7 +333,7 @@ final class SettingsPageTest extends TestCase {
 
 		$this->page->register_settings();
 
-		$this->assertArrayHasKey( 'sit_cwm_self_approval', $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION_GATE ] );
+		$this->assertArrayHasKey( 'sit_cwm_self_approval', $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION ] );
 
 		ob_start();
 		$this->page->render_self_approval_field();
@@ -394,11 +394,11 @@ final class SettingsPageTest extends TestCase {
 
 		$this->page->register_settings();
 
-		$fields = array_keys( $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION_GATE ] );
+		$fields = $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION_ATTESTATION ];
 
-		$this->assertContains( 'sit_cwm_attestation', $fields );
-		$this->assertSame( array_search( 'sit_cwm_self_approval', $fields, true ) + 1, array_search( 'sit_cwm_attestation', $fields, true ) );
-		$this->assertSame( 'Review attestation', $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION_GATE ]['sit_cwm_attestation']['title'] );
+		$this->assertSame( array( 'sit_cwm_attestation' ), array_keys( $fields ) );
+		$this->assertSame( 'Review attestation', $fields['sit_cwm_attestation']['title'] );
+		$this->assertSame( SettingsPage::WIDE_FIELD, $fields['sit_cwm_attestation']['args']['class'] );
 
 		ob_start();
 		$this->page->render_attestation_field();
@@ -712,7 +712,7 @@ final class SettingsPageTest extends TestCase {
 		wp_set_current_user( self::fixture_user( 'admin' ) );
 		$this->page->register_settings();
 
-		$this->assertArrayHasKey( 'sit_cwm_ai_origin_defaults', $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION ] );
+		$this->assertArrayHasKey( 'sit_cwm_ai_origin_defaults', $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION_AI_ORIGIN ] );
 
 		ob_start();
 		$this->page->render_ai_origin_defaults_field();
@@ -1020,17 +1020,109 @@ final class SettingsPageTest extends TestCase {
 		$this->assertMatchesRegularExpression( '/name="sit_cwm_settings\[post_types\]\[\]" value="page"\s+checked=\'checked\'/', $html );
 		$this->assertDoesNotMatchRegularExpression( '/value="post"\s+checked/', $html );
 		$this->assertStringContainsString( 'name="sit_cwm_settings[delete_data_on_uninstall]"', $html );
-		$this->assertStringContainsString( '<h2>Publish gate</h2>', $html );
-		$this->assertStringContainsString( '<h2>Email notifications</h2>', $html );
+		$this->assertStringContainsString( '<h2 id="sit-cwm-publish-gate-title">Publish gate</h2>', $html );
+		$this->assertStringContainsString( '<h2 id="sit-cwm-settings-sit-cwm-notifications-title">Email notifications</h2>', $html );
 		$this->assertStringContainsString( 'name="sit_cwm_settings[publish_gate][page]"', $html );
 		$this->assertStringNotContainsString( 'name="sit_cwm_settings[publish_gate][post]"', $html );
 		$this->assertStringContainsString( 'name="sit_cwm_settings[notifications][approved]"', $html );
-		$this->assertStringContainsString( '<div id="sit-cwm-publish-gate"><h2>Publish gate</h2>', $html );
+		$this->assertStringContainsString( '<section id="sit-cwm-publish-gate" class="sit-cwm-settings__panel"', $html );
+		$this->assertStringContainsString( 'id="sit-cwm-publish-gate-tab" href="#sit-cwm-publish-gate"><span class="dashicons dashicons-lock"', $html );
+		$this->assertStringContainsString( 'class="button button-primary" value="Save changes"', $html );
+	}
+
+	/**
+	 * Each section is a card, in design A's order, with an index link to its
+	 * anchor; single-checkbox cards have no label column (20b).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_render_prints_one_card_per_section_in_order() {
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+		$this->page->register_settings();
+
+		ob_start();
+		$this->page->render();
+		$html = ob_get_clean();
+
+		preg_match_all( '/<section id="([^"]+)" class="sit-cwm-settings__panel"/', $html, $cards );
+		preg_match_all( '/<li><a class="sit-cwm-settings__tab" id="[^"]+-tab" href="#([^"]+)">/', $html, $links );
+
+		$expected = array(
+			'sit-cwm-settings-sit-cwm-general',
+			'sit-cwm-publish-gate',
+			'sit-cwm-settings-sit-cwm-notifications',
+			'sit-cwm-settings-sit-cwm-ai-origin',
+			'sit-cwm-settings-sit-cwm-attestation',
+			'sit-cwm-settings-sit-cwm-disclosure',
+			'sit-cwm-settings-sit-cwm-uninstall',
+		);
+
+		$this->assertSame( $expected, $cards[1] );
+		$this->assertSame( $expected, $links[1] );
+		$this->assertStringContainsString( '<div class="sit-cwm-settings__field is-wide"><div class="sit-cwm-settings__control"><label><input type="checkbox" name="sit_cwm_settings[require_attestation]"', $html );
+		$this->assertStringContainsString( '<div class="sit-cwm-settings__label">Enabled content types</div>', $html );
+		$this->assertSame( 1, substr_count( $html, '<form ' ) );
+	}
+
+	/**
+	 * A section an add-on registers on the page gets a card and an index link
+	 * like ours, and its `label_for` field gets a real label.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_render_prints_an_addon_section_as_a_card() {
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+		$this->page->register_settings();
+
+		add_settings_section( 'acme_extra', 'Acme <em>extra</em>', '__return_false', SettingsPage::MENU_SLUG );
+		add_settings_field(
+			'acme_field',
+			'Acme field',
+			static function () {
+				echo '<input id="acme-input" type="text" />';
+			},
+			SettingsPage::MENU_SLUG,
+			'acme_extra',
+			array( 'label_for' => 'acme-input' )
+		);
+
+		ob_start();
+		$this->page->render();
+		$html = ob_get_clean();
+
+		$this->assertStringContainsString( '<li><a class="sit-cwm-settings__tab" id="sit-cwm-settings-acme-extra-tab" href="#sit-cwm-settings-acme-extra"><span class="dashicons dashicons-admin-generic" aria-hidden="true"></span>Acme extra</a></li>', $html );
+		$this->assertStringContainsString( '<h2 id="sit-cwm-settings-acme-extra-title">Acme extra</h2>', $html );
+		$this->assertStringContainsString( '<label class="sit-cwm-settings__label" for="acme-input">Acme field</label><div class="sit-cwm-settings__control"><input id="acme-input" type="text" /></div>', $html );
+	}
+
+	/**
+	 * The disclosure card previews the real sentences with the current user
+	 * and today's date in the site's format.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_disclosure_field_prints_a_preview() {
+		$user_id = self::fixture_user( 'admin' );
+		wp_set_current_user( $user_id );
+
+		ob_start();
+		$this->page->render_disclosure_field();
+		$html = ob_get_clean();
+
+		$this->assertStringContainsString( '<span class="sit-cwm-settings__preview-label">Preview</span>', $html );
+		$this->assertStringContainsString( '<p>Reviewed by ' . esc_html( get_userdata( $user_id )->display_name ) . ' on ' . esc_html( wp_date( (string) get_option( 'date_format' ) ) ) . '.</p>', $html );
+		$this->assertStringContainsString( '<p>This content was created with AI assistance and reviewed by a person.</p>', $html );
 	}
 
 	/**
 	 * On its own screen the page prints the shared header first in `.wrap`,
-	 * before the unchanged title.
+	 * then the title row.
 	 *
 	 * @return void
 	 */
@@ -1045,8 +1137,8 @@ final class SettingsPageTest extends TestCase {
 
 		$GLOBALS['plugin_page'] = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restores the global.
 
-		$this->assertStringStartsWith( '<div class="wrap"><div class="sit-cwm-shell">', $html );
-		$this->assertStringContainsString( '</div><h1>Editorial Workflow Settings</h1>', $html );
+		$this->assertStringStartsWith( '<div class="wrap sit-cwm-settings-wrap"><div class="sit-cwm-shell">', $html );
+		$this->assertStringContainsString( '</div><div class="sit-cwm-page-head"><div class="sit-cwm-page-title"><h1 class="wp-heading-inline">Settings</h1>', $html );
 	}
 
 	/**

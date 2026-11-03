@@ -130,11 +130,11 @@ class ActivityExport implements Bootable {
 		}
 
 		return sprintf(
-			'<form method="post" action="%1$s" class="sit-cwm-export-form">%2$s<input type="hidden" name="action" value="%3$s" />%4$s</form>',
+			'<form method="post" action="%1$s" class="sit-cwm-export-form">%2$s<input type="hidden" name="action" value="%3$s" /><button type="submit" class="button"><span class="dashicons dashicons-download" aria-hidden="true"></span>%4$s</button></form>',
 			esc_url( admin_url( 'admin-post.php' ) ),
 			wp_nonce_field( self::ACTION, self::NONCE_FIELD, true, false ),
 			esc_attr( self::ACTION ),
-			get_submit_button( __( 'Export activity log (CSV)', 'sapphireit-editorial-workflow' ), 'secondary', 'submit', false )
+			esc_html__( 'Export activity log (CSV)', 'sapphireit-editorial-workflow' )
 		);
 	}
 

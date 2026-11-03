@@ -32,7 +32,8 @@ keep working unchanged.
 - **New error codes**: `sit_cwm_attestation_required` (422) and
   `sit_cwm_invalid_ai_origin` (400). Extensions can now veto a transition with
   [their own code and message](#extension-vetoes).
-- **New route**: [`GET /reports/governance`](#get-reportsgovernance).
+- **New routes**: [`GET /reports/governance`](#get-reportsgovernance) and
+  [`GET /posts/summary`](#get-postssummary) (the dashboard tiles' counts).
 - **Core routes**: workflow-enabled types get a `sit_cwm_ai_origin` field on
   `wp/v2` ([Declaring AI use](#declaring-ai-use)).
 - **Agents**: a step-by-step recipe for an AI agent or automation that submits
@@ -74,6 +75,7 @@ HTTPS unless the site defines `WP_ENVIRONMENT_TYPE` as `local`.
 | `POST` | [`/posts/{post_id}/comments`](#post-postspost_idcomments) | Add a workflow comment |
 | `GET` | [`/statuses`](#get-statuses) | Status registry + transition map |
 | `GET` | [`/posts`](#get-posts) | Dashboard collection |
+| `GET` | [`/posts/summary`](#get-postssummary) | Dashboard tile counts (since 1.2) |
 | `POST` | [`/posts/batch`](#post-postsbatch) | Bulk status / reviewer / due date |
 | `GET` | [`/users`](#get-users) | Assignable reviewers |
 | `GET` | [`/reports/governance`](#get-reportsgovernance) | Governance report (auditors only, since 1.2) |
@@ -602,6 +604,35 @@ declared; unlike the workflow route it is a bare string, with no label or hint.
 
 One page costs a fixed number of queries regardless of its size: the reviewer,
 author and last-activity lookups are batch-loaded, not per row.
+
+---
+
+## `GET /posts/summary`
+
+Since 1.2. The counts behind the dashboard's summary tiles. Same permission
+and scoping as [`GET /posts`](#get-posts): the user's workflow-enabled post
+types and, for users who cannot see all of them, only content they author or
+review. Takes no arguments; the `sit_cwm_posts_query_args` filter does not
+apply.
+
+| Field | Meaning |
+|---|---|
+| `in_review` | Content in Review |
+| `in_review_mine` | Content in Review with the current user as reviewer |
+| `needs_changes` | Content in Needs Changes |
+| `overdue` | Content past its due date and not in a final status |
+| `approved` | Content Approved and not yet Published in the workflow |
+
+```bash
+curl -sS -u "$CWM_AUTH" "$CWM_SITE/wp-json/sit-cwm/v1/posts/summary" | jq
+```
+
+```json
+{ "in_review": 12, "in_review_mine": 3, "needs_changes": 4, "overdue": 3, "approved": 5 }
+```
+
+Errors: `rest_forbidden` (401) when logged out, `sit_cwm_forbidden` (403)
+without dashboard access.
 
 ---
 

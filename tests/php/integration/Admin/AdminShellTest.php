@@ -246,6 +246,25 @@ final class AdminShellTest extends TestCase {
 	}
 
 	/**
+	 * The title row escapes its text, omits empty parts and ends with the
+	 * marker core moves notices below.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_page_head_builds_the_title_row() {
+		$this->assertSame(
+			'<div class="sit-cwm-page-head"><div class="sit-cwm-page-title"><h1 class="wp-heading-inline">A &amp; B</h1></div></div><hr class="wp-header-end">',
+			$this->shell->page_head( 'A & B' )
+		);
+		$this->assertSame(
+			'<div class="sit-cwm-page-head"><div class="sit-cwm-page-title"><h1 class="wp-heading-inline">Title</h1><p class="sit-cwm-page-subtitle">&lt;b&gt;Sub&lt;/b&gt;</p></div><div class="sit-cwm-page-actions"><a href="#">Act</a></div></div><hr class="wp-header-end">',
+			$this->shell->page_head( 'Title', '<b>Sub</b>', '<a href="#">Act</a>' )
+		);
+	}
+
+	/**
 	 * The shipped logo is a copy of the listing icon.
 	 *
 	 * @return void

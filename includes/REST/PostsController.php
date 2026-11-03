@@ -153,6 +153,97 @@ class PostsController extends AbstractController {
 				'schema' => array( $this, 'get_public_item_schema' ),
 			)
 		);
+
+		register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/summary',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_summary' ),
+					'permission_callback' => array( $this, 'get_items_permissions_check' ),
+					'args'                => array(),
+				),
+				'schema' => array( $this, 'get_summary_schema' ),
+			)
+		);
+	}
+
+	/**
+	 * Dashboard summary counts (20b): what the tiles above the table show.
+	 *
+	 * Scoped exactly like the collection: the user's dashboard post types and,
+	 * for users who cannot see all of them, only content they author or
+	 * review. Each count is one bounded `query_posts()` call (one id fetched,
+	 * `found_posts` read), so the cost does not grow with the number of posts
+	 * shown. The `sit_cwm_posts_query_args` view filter does not apply: the
+	 * tiles summarise the whole workflow, not one view.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response
+	 */
+	public function get_summary( $request ) {
+		unset( $request );
+
+		$user_id    = get_current_user_id();
+		$post_types = $this->permissions->dashboard_post_types( $user_id );
+		$base       = array(
+			'post_types' => $post_types,
+			'page'       => 1,
+			'per_page'   => 1,
+			'visible_to' => $this->permissions->can_see_all_posts( $post_types, $user_id ) ? 0 : $user_id,
+		);
+
+		$count = function ( array $filter ) use ( $base ): int {
+			$result = $this->posts->query_posts( array_merge( $base, $filter ) );
+
+			return (int) $result['total'];
+		};
+
+		return rest_ensure_response(
+			array(
+				'in_review'      => $count( array( 'statuses' => array( 'review' ) ) ),
+				'in_review_mine' => $count(
+					array(
+						'statuses'    => array( 'review' ),
+						'reviewer_id' => $user_id,
+					)
+				),
+				'needs_changes'  => $count( array( 'statuses' => array( 'needs_changes' ) ) ),
+				'overdue'        => $count( array( 'overdue' => true ) ),
+				'approved'       => $count( array( 'statuses' => array( 'approved' ) ) ),
+			)
+		);
+	}
+
+	/**
+	 * Dashboard summary schema.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return array
+	 */
+	public function get_summary_schema(): array {
+		$count = array(
+			'type'    => 'integer',
+			'minimum' => 0,
+			'context' => array( 'view' ),
+		);
+
+		return array(
+			'$schema'    => 'http://json-schema.org/draft-04/schema#',
+			'title'      => 'sit-cwm-posts-summary',
+			'type'       => 'object',
+			'properties' => array(
+				'in_review'      => $count + array( 'description' => __( 'Content in Review.', 'sapphireit-editorial-workflow' ) ),
+				'in_review_mine' => $count + array( 'description' => __( 'Content in Review with the current user as reviewer.', 'sapphireit-editorial-workflow' ) ),
+				'needs_changes'  => $count + array( 'description' => __( 'Content in Needs Changes.', 'sapphireit-editorial-workflow' ) ),
+				'overdue'        => $count + array( 'description' => __( 'Content past its due date and not in a final status.', 'sapphireit-editorial-workflow' ) ),
+				'approved'       => $count + array( 'description' => __( 'Content Approved in the workflow and not yet Published.', 'sapphireit-editorial-workflow' ) ),
+			),
+		);
 	}
 
 	/**

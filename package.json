@@ -15,7 +15,7 @@
     "test:e2e": "wp-scripts test-playwright",
     "test:e2e:local": "node bin/e2e-local.js",
     "env:start": "wp-env start",
-    "makepot": "wp i18n make-pot . languages/sapphireit-editorial-workflow.pot --domain=sapphireit-editorial-workflow --slug=sapphireit-editorial-workflow --exclude=tests,bin,artifacts,.github,.claude",
+    "makepot": "wp i18n make-pot . languages/sapphireit-editorial-workflow.pot --domain=sapphireit-editorial-workflow --slug=sapphireit-editorial-workflow --exclude=tests,bin,artifacts,.github,.claude,freemius",
     "screenshots": "node bin/capture-screenshots.js",
     "build:zip": "php bin/build-zip.php --out=dist",
     "check:version": "php bin/check-version.php"
@@ -27,6 +27,7 @@
     "@testing-library/user-event": "^14.6.7",
     "@wordpress/a11y": "^4.55.0",
     "@wordpress/api-fetch": "^7.55.0",
+    "@wordpress/blocks": "^16.0.0",
     "@wordpress/components": "^40.1.0",
     "@wordpress/compose": "^8.8.0",
     "@wordpress/core-data": "^8.0.0",

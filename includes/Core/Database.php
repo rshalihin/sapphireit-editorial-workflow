@@ -148,7 +148,7 @@ KEY action (action)
 	/**
 	 * Drops the activity table and forgets the schema version.
 	 *
-	 * For `uninstall.php` and tests only.
+	 * For `Uninstaller` and tests only.
 	 *
 	 * @since 1.0.0
 	 *

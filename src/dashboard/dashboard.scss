@@ -7,13 +7,172 @@
 // into that unloaded chunk.
 @use "@wordpress/dataviews/build-style/style";
 
+// Design A (20b). Colours come from the F15 tokens on the `sit-cwm-admin`
+// body class; the fallbacks keep the screen usable if they are missing.
 .sit-cwm-dashboard {
-	margin-top: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	max-width: 1400px;
 }
 
+// Summary tiles: buttons that filter the table to what they count.
+.sit-cwm-summary {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+	gap: var(--sit-cwm-gap, 16px);
+	margin: 0;
+
+	li {
+		margin: 0;
+	}
+}
+
+.sit-cwm-summary__tile {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	width: 100%;
+	height: 100%;
+	padding: 16px 18px;
+	border: 1px solid var(--sit-cwm-border, #dcdcde);
+	border-radius: var(--sit-cwm-radius, 8px);
+	background: var(--sit-cwm-surface, #fff);
+	color: var(--sit-cwm-text, #1e1e1e);
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+
+	&:hover {
+		border-color: var(--sit-cwm-accent, #2145b8);
+	}
+
+	&:focus-visible {
+		border-color: var(--sit-cwm-accent, #2145b8);
+		outline: 2px solid var(--sit-cwm-accent, #2145b8);
+		outline-offset: 1px;
+	}
+}
+
+.sit-cwm-summary__label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--sit-cwm-muted, #50575e);
+	font-size: 13px;
+
+	svg {
+		flex: none;
+		color: var(--sit-cwm-danger, #b32d2e);
+	}
+}
+
+.sit-cwm-summary__dot {
+	flex: none;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+}
+
+.sit-cwm-summary__value {
+	font-size: 32px;
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+	line-height: 1.1;
+
+	.is-danger & {
+		color: var(--sit-cwm-danger, #b32d2e);
+	}
+}
+
+.sit-cwm-summary__help {
+	color: var(--sit-cwm-muted, #50575e);
+	font-size: 12px;
+}
+
+// The table card.
 .sit-cwm-dashboard-body {
-	border: 1px solid #dcdcde;
-	background: #fff;
+	overflow: hidden;
+	border: 1px solid var(--sit-cwm-border, #dcdcde);
+	border-radius: var(--sit-cwm-radius, 8px);
+	background: var(--sit-cwm-surface, #fff);
+
+	&:focus {
+		outline: 2px solid var(--sit-cwm-accent, #2145b8);
+		outline-offset: 2px;
+	}
+
+	.dataviews-view-table tbody tr:hover td {
+		background: var(--sit-cwm-row-hover, #f8f9fc);
+	}
+
+	.dataviews-view-table thead th {
+		color: var(--sit-cwm-muted, #50575e);
+		font-size: 12px;
+	}
+
+	.dataviews-search .components-input-control__backdrop,
+	.dataviews-view-config .components-button,
+	.dataviews-filters__visibility-toggle {
+		border-color: var(--sit-cwm-field-border, #949494);
+	}
+}
+
+// Getting Started callout in the empty state.
+.sit-cwm-gs-callout {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 16px 24px;
+	max-width: 880px;
+	margin: 0 auto 32px;
+	padding: 18px 22px;
+	border: 1px solid var(--sit-cwm-accent-soft-border, #c5d2f3);
+	border-radius: var(--sit-cwm-radius, 8px);
+	background: var(--sit-cwm-accent-soft, #eef2fc);
+	text-align: start;
+
+	.sit-cwm-dashboard-empty & p {
+		margin: 0;
+		color: var(--sit-cwm-muted, #50575e);
+		font-size: 13px;
+	}
+
+	.sit-cwm-dashboard-empty & .sit-cwm-gs-callout__title {
+		color: var(--sit-cwm-text, #1e1e1e);
+		font-size: 15px;
+		font-weight: 600;
+	}
+
+	.button-primary {
+		border-color: var(--sit-cwm-accent, #2145b8);
+		background: var(--sit-cwm-accent, #2145b8);
+
+		&:hover,
+		&:focus {
+			border-color: var(--sit-cwm-accent-strong, #183590);
+			background: var(--sit-cwm-accent-strong, #183590);
+		}
+	}
+}
+
+.sit-cwm-gs-callout__icon {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	background: var(--sit-cwm-surface, #fff);
+	color: var(--sit-cwm-accent, #2145b8);
+}
+
+.sit-cwm-gs-callout__text {
+	display: flex;
+	flex: 1 1 320px;
+	flex-direction: column;
+	gap: 2px;
 }
 
 // Our own DataViews header (see WorkflowDataViews), laid out like the default
@@ -49,7 +208,7 @@
 }
 
 .sit-cwm-dashboard-empty {
-	padding: 32px 16px;
+	padding: 32px 16px 48px;
 	text-align: center;
 
 	p {
@@ -78,11 +237,12 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	padding: 2px 8px;
-	border: 1px solid #ddd;
-	border-radius: 2px;
+	padding: 3px 10px 3px 8px;
+	border: 1px solid #dcdcde;
+	border-radius: 999px;
 	background: #fff;
 	color: #1e1e1e;
+	font-size: 12px;
 	font-weight: 500;
 	white-space: nowrap;
 }

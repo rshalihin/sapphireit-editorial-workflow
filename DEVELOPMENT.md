@@ -181,6 +181,40 @@ with every `src/` change.
   Without the alias, `@wordpress/eslint-plugin` hoists stock Prettier, which
   rejects WordPress' spaces-inside-parentheses style.
 
+### Updating the Freemius SDK
+
+`freemius/` is the vendored Freemius WordPress SDK, shipped in the release zip
+(F18). It is third-party code: never edit a file in it, and it is excluded from
+phpcs, ESLint, Stylelint and `makepot`. It is not a Composer dependency,
+because `vendor/` is dev-only and left out of the zip.
+
+**Current:** tag `2.13.5` (2026-10-22), from
+`https://github.com/Freemius/wordpress-sdk/archive/refs/tags/2.13.5.zip`
+(SHA-256 `7f88237b71fa4703fda51bb5b374add0242e8bd29d552553b1999e03354afe2b`),
+vendored 2026-11-03. Never ship anything older than 2.13.5, a security release.
+
+To update:
+
+1. Download the release zip of the new **stable** tag from
+   `Freemius/wordpress-sdk` and extract it in an empty folder outside the
+   plugin.
+2. Replace `freemius/` wholesale with the extracted folder. Do not merge.
+3. Record the tag, date and SHA-256 above, and the version in F18.
+4. Run `composer lint`, the unit and integration suites (including
+   `FreemiusIntegrationTest`), Plugin Check and `npm run build:zip`, and confirm
+   the zip contains `freemius/start.php`.
+5. Re-run the manual admin checks: activation redirect, editors never see the
+   opt-in, Account page, deactivation feedback and uninstall with and without
+   "Delete all workflow data".
+
+`.distignore` names without a slash match at any depth, so it already drops
+the SDK's `README.md` and `composer.json` from the zip. Neither is used at
+runtime. Check that a new SDK version adds no folder named like a `.distignore`
+entry (`src`, `tests`, `bin`, `docs`, `vendor`, …).
+
+The integration bootstrap defines `WP_PLUGIN_DIR` as the folder that holds this
+plugin, because the SDK finds its host plugin by scanning `WP_PLUGIN_DIR`.
+
 ## Testing
 
 | Suite | Command | Location |

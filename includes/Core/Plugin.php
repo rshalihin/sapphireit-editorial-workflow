@@ -8,6 +8,10 @@
 
 namespace Sit_Cwm\Core;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 use Sit_Cwm\Activity\ActivityLogger;
 use Sit_Cwm\Admin\ActivityExport;
 use Sit_Cwm\Admin\AdminFooter;
@@ -56,10 +60,6 @@ use Sit_Cwm\Workflow\PermissionManager;
 use Sit_Cwm\Workflow\StatusManager;
 use Sit_Cwm\Workflow\TransitionManager;
 use Sit_Cwm\Workflow\WorkflowManager;
-
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
 
 /**
  * Wires services into the container and registers them at the right time.

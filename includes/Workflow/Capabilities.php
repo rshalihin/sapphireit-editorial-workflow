@@ -211,7 +211,7 @@ final class Capabilities {
 	 * Removes every plugin capability from every role on the current site.
 	 *
 	 * Walks all roles, not just `role_map()`, so grants a site owner added to
-	 * custom roles are cleaned up too. Called from `uninstall.php` only.
+	 * custom roles are cleaned up too. Called from `Uninstaller` only.
 	 *
 	 * @since 1.0.0
 	 * @internal

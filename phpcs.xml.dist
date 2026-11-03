@@ -11,6 +11,8 @@
 	<exclude-pattern>/coverage/*</exclude-pattern>
 	<exclude-pattern>/artifacts/*</exclude-pattern>
 	<exclude-pattern>/dist/*</exclude-pattern>
+	<!-- Vendored Freemius SDK: third-party, never edited (F18). -->
+	<exclude-pattern>/freemius/*</exclude-pattern>
 
 	<arg name="extensions" value="php"/>
 	<arg name="colors"/>

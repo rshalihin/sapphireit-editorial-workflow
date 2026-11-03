@@ -15,7 +15,7 @@ import {
 	SelectControl,
 	Spinner,
 } from '@wordpress/components';
-import { useEffect, useState } from '@wordpress/element';
+import { createPortal, useEffect, useState } from '@wordpress/element';
 import { __, _n, sprintf } from '@wordpress/i18n';
 
 /**
@@ -23,6 +23,7 @@ import { __, _n, sprintf } from '@wordpress/i18n';
  */
 import { getGovernanceReport, isAbortError } from '../api/client';
 import Breakdown from './Breakdown';
+import HeadlineTile from './HeadlineTile';
 import KpiTile from './KpiTile';
 
 /**
@@ -45,6 +46,14 @@ export const DEFAULT_PERIOD = 90;
  * @type {string}
  */
 const PERIOD_ARG = 'period';
+
+/**
+ * Id of the title-row slot (printed by GovernanceReportPage) the Period
+ * control is portalled into. Without it the control stays in the app.
+ *
+ * @type {string}
+ */
+export const PERIOD_SLOT_ID = 'sit-cwm-report-period';
 
 /**
  * The period named in the current URL, or the default.
@@ -152,22 +161,28 @@ export default function App() {
 		}
 	};
 
+	const slot = document.getElementById( PERIOD_SLOT_ID );
+	const toolbar = (
+		<div className="sit-cwm-report__toolbar">
+			{ isLoading && <Spinner /> }
+			<SelectControl
+				__next40pxDefaultSize
+				__nextHasNoMarginBottom
+				className="sit-cwm-report__period"
+				label={ __( 'Period', 'sapphireit-editorial-workflow' ) }
+				value={ String( period ) }
+				options={ periodOptions() }
+				onChange={ changePeriod }
+			/>
+		</div>
+	);
+
 	const numberFormat = new Intl.NumberFormat();
 	const formatNumber = ( value ) => numberFormat.format( value );
 
 	return (
 		<div className="sit-cwm-report">
-			<div className="sit-cwm-report__toolbar">
-				<SelectControl
-					__next40pxDefaultSize
-					__nextHasNoMarginBottom
-					label={ __( 'Period', 'sapphireit-editorial-workflow' ) }
-					value={ String( period ) }
-					options={ periodOptions() }
-					onChange={ changePeriod }
-				/>
-				{ isLoading && <Spinner /> }
-			</div>
+			{ slot ? createPortal( toolbar, slot ) : toolbar }
 			{ error && (
 				<Notice
 					className="sit-cwm-report__error"
@@ -234,7 +249,7 @@ function Figures( { report, formatNumber } ) {
 	return (
 		<>
 			<div className="sit-cwm-report__tiles">
-				<KpiTile
+				<HeadlineTile
 					label={ __(
 						'Published after approval',
 						'sapphireit-editorial-workflow'
@@ -245,6 +260,22 @@ function Figures( { report, formatNumber } ) {
 							: '—'
 					}
 					help={ approvedHelp }
+					approved={ approved }
+					total={ total }
+					formatNumber={ formatNumber }
+				/>
+				<KpiTile
+					label={ __(
+						'Published without approval',
+						'sapphireit-editorial-workflow'
+					) }
+					value={ formatNumber(
+						sum(
+							bypassed.log_only,
+							bypassed.capability,
+							bypassed.error
+						)
+					) }
 				/>
 				<KpiTile
 					label={ __(
@@ -264,23 +295,11 @@ function Figures( { report, formatNumber } ) {
 				/>
 				<KpiTile
 					label={ __(
-						'Published without approval',
-						'sapphireit-editorial-workflow'
-					) }
-					value={ formatNumber(
-						sum(
-							bypassed.log_only,
-							bypassed.capability,
-							bypassed.error
-						)
-					) }
-				/>
-				<KpiTile
-					label={ __(
 						'Overdue reviews',
 						'sapphireit-editorial-workflow'
 					) }
 					value={ formatNumber( sum( report.overdue?.count ) ) }
+					tone="danger"
 				/>
 			</div>
 			<div className="sit-cwm-report__breakdowns">
@@ -292,6 +311,18 @@ function Figures( { report, formatNumber } ) {
 								'sapphireit-editorial-workflow'
 							) }
 							counts={ aiOrigin.current }
+							totalLabel={ ( count ) =>
+								sprintf(
+									/* translators: %s: number of workflow items. */
+									_n(
+										'%s item',
+										'%s items',
+										count,
+										'sapphireit-editorial-workflow'
+									),
+									formatNumber( count )
+								)
+							}
 							formatNumber={ formatNumber }
 						/>
 					</CardBody>
@@ -304,6 +335,18 @@ function Figures( { report, formatNumber } ) {
 								'sapphireit-editorial-workflow'
 							) }
 							counts={ aiOrigin.published }
+							totalLabel={ ( count ) =>
+								sprintf(
+									/* translators: %s: number of publications. */
+									_n(
+										'%s publication',
+										'%s publications',
+										count,
+										'sapphireit-editorial-workflow'
+									),
+									formatNumber( count )
+								)
+							}
 							formatNumber={ formatNumber }
 							withNotRecorded
 							empty={

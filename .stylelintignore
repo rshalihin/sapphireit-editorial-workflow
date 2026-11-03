@@ -7,3 +7,6 @@ vendor
 coverage
 artifacts
 dist
+
+# Vendored Freemius SDK: third-party, never edited (F18).
+freemius
