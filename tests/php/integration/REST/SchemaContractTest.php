@@ -9,6 +9,7 @@
 namespace Sit_Cwm\Tests\Integration\REST;
 
 use Sit_Cwm\Governance\AiOrigin;
+use Sit_Cwm\Governance\GovernanceReport;
 use Sit_Cwm\Publishing\GateDecision;
 use Sit_Cwm\Publishing\PublishGate;
 use Sit_Cwm\Tests\TestCase;
@@ -261,6 +262,64 @@ final class SchemaContractTest extends TestCase {
 		$this->assertArrayHasKey( 'self_approval_blocked', $schema['properties'] );
 		$this->assertSame( 'boolean', $schema['properties']['self_approval_blocked']['type'] );
 		$this->assertTrue( $schema['properties']['self_approval_blocked']['readonly'] );
+	}
+
+	/**
+	 * The governance report route has a real permission callback, a closed
+	 * integer `period`, and a schema declaring every F12 key; a real report
+	 * matches it.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @covers \Sit_Cwm\REST\ReportsController::get_item_schema
+	 *
+	 * @return void
+	 */
+	public function test_governance_report_matches_its_schema() {
+		$route  = '/sit-cwm/v1/reports/governance';
+		$routes = rest_get_server()->get_routes( 'sit-cwm/v1' );
+
+		$this->assertArrayHasKey( $route, $routes );
+
+		foreach ( $routes[ $route ] as $handler ) {
+			$this->assertNotEmpty( $handler['permission_callback'] );
+			$this->assertNotSame( '__return_true', $handler['permission_callback'] );
+			$this->assertSame( 'integer', $handler['args']['period']['type'] );
+			$this->assertSame( GovernanceReport::PERIODS, $handler['args']['period']['enum'] );
+		}
+
+		$schema = $this->schema( $route );
+		$props  = $schema['properties'];
+
+		$this->assertSame( array( 'period_days', 'since', 'generated_at', 'publication', 'gate', 'ai_origin', 'overdue' ), array_keys( $props ) );
+		$this->assertSame( array( 'total', 'approved', 'approved_share', 'by_gate_mode' ), array_keys( $props['publication']['properties'] ) );
+		$this->assertSame( array( 'off', 'log_only', 'enforce', 'unknown' ), array_keys( $props['publication']['properties']['by_gate_mode']['properties'] ) );
+		$this->assertSame( array( 'refused', 'bypassed' ), array_keys( $props['gate']['properties'] ) );
+		$this->assertSame( array( 'log_only', 'capability', 'error' ), array_keys( $props['gate']['properties']['bypassed']['properties'] ) );
+		$this->assertSame( array( 'human', 'ai_assisted', 'ai_generated', 'not_declared' ), array_keys( $props['ai_origin']['properties']['current']['properties'] ) );
+		$this->assertSame( array( 'human', 'ai_assisted', 'ai_generated', 'not_declared', 'not_recorded' ), array_keys( $props['ai_origin']['properties']['published']['properties'] ) );
+		$this->assertSame( array( 'count' ), array_keys( $props['overdue']['properties'] ) );
+
+		foreach ( $props as $key => $property ) {
+			$this->assertTrue( $property['readonly'], $key );
+		}
+
+		$this->activity->log_publication_event(
+			$this->post_id,
+			'post_published',
+			'draft',
+			'publish',
+			array(
+				'workflow_status' => 'approved',
+				'gate_mode'       => 'enforce',
+				'ai_origin'       => 'human',
+			)
+		);
+
+		$response = $this->rest_request( 'GET', $route );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assert_matches_schema( $response->get_data(), $schema, $route );
 	}
 
 	/**

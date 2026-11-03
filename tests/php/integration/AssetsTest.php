@@ -78,6 +78,35 @@ final class AssetsTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * `register_script()` registers the handle, with translations, without
+	 * enqueueing it (block `editorScript`).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_register_script_registers_without_enqueueing() {
+		$assets = $this->make_assets( 'build' );
+
+		$this->assertTrue( $assets->register_script( 'review-disclosure' ) );
+
+		$handle = 'sit-cwm-review-disclosure-js';
+		$script = wp_scripts()->registered[ $handle ];
+
+		$this->assertSame( $handle, $assets->script_handle( 'review-disclosure' ) );
+		$this->assertTrue( wp_script_is( $handle, 'registered' ) );
+		$this->assertFalse( wp_script_is( $handle, 'enqueued' ) );
+		$this->assertSame( self::build_url() . 'review-disclosure.js', $script->src );
+		$this->assertSame( array( 'wp-blocks', 'wp-block-editor', 'wp-i18n' ), $script->deps );
+		$this->assertSame( 'fixture-review-disclosure', $script->ver );
+		$this->assertSame( 'sapphireit-editorial-workflow', $script->textdomain );
+		$this->assertSame( '/languages', $script->translations_path );
+
+		$this->assertFalse( $assets->register_script( 'settings' ) );
+		$this->assertFalse( $this->make_assets( 'missing' )->register_script( 'review-disclosure' ) );
+	}
+
+	/**
 	 * A stylesheet is enqueued only when the build emitted one.
 	 *
 	 * @return void

@@ -601,6 +601,71 @@ final class ActivityLoggerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * `latest_for_post()` returns the newest matching row (by `created_at`,
+	 * then id), filters by `new_value` when given, and is null when nothing
+	 * matches or the action is unknown.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_latest_for_post() {
+		$user = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		$this->assertNull( $this->activity->latest_for_post( $this->post, 'status_changed' ) );
+
+		$newest = $this->activity->log(
+			$this->post,
+			'status_changed',
+			array(
+				'old_value'  => 'review',
+				'new_value'  => 'approved',
+				'user_id'    => $user,
+				'created_at' => '2026-10-25 09:00:00',
+			)
+		);
+		$this->activity->log(
+			$this->post,
+			'status_changed',
+			array(
+				'old_value'  => 'review',
+				'new_value'  => 'approved',
+				'created_at' => '2026-10-20 09:00:00',
+			)
+		);
+		$this->activity->log(
+			$this->post,
+			'status_changed',
+			array(
+				'old_value'  => 'approved',
+				'new_value'  => 'published',
+				'created_at' => '2026-10-26 09:00:00',
+			)
+		);
+		$later = $this->activity->log(
+			$this->post,
+			'status_changed',
+			array(
+				'old_value'  => 'published',
+				'new_value'  => 'writing',
+				'created_at' => '2026-10-26 09:00:00',
+			)
+		);
+		$this->activity->log_comment( $this->post, 'newer, other action', $user );
+
+		$approved = $this->activity->latest_for_post( $this->post, 'status_changed', 'approved' );
+		$this->assertSame( $newest, $approved->get_id() );
+		$this->assertSame( $user, $approved->get_user_id() );
+		$this->assertSame( '2026-10-25 09:00:00', $approved->get_created_at() );
+
+		$this->assertSame( $later, $this->activity->latest_for_post( $this->post, 'status_changed' )->get_id(), 'Same created_at: the higher id wins.' );
+		$this->assertNull( $this->activity->latest_for_post( $this->post, 'status_changed', 'needs_changes' ) );
+		$this->assertNull( $this->activity->latest_for_post( $this->post, 'not_an_action' ) );
+		$this->assertNull( $this->activity->latest_for_post( 0, 'status_changed' ) );
+		$this->assertNull( $this->activity->latest_for_post( self::factory()->post->create(), 'status_changed', 'approved' ) );
+	}
+
+	/**
 	 * Raw activity row by id.
 	 *
 	 * @param int $id Activity id.

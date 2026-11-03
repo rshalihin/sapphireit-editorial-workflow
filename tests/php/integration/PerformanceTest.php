@@ -11,6 +11,7 @@ namespace Sit_Cwm\Tests\Integration;
 use Sit_Cwm\Audit\ActivityExporter;
 use Sit_Cwm\Core\Database;
 use Sit_Cwm\Core\Settings;
+use Sit_Cwm\Governance\GovernanceReport;
 use Sit_Cwm\REST\ActivityFormatter;
 use Sit_Cwm\REST\UserSummaries;
 use Sit_Cwm\Tests\TestCase;
@@ -235,6 +236,48 @@ final class PerformanceTest extends TestCase {
 		$this->assertLessThan( 16 * MB_IN_BYTES, memory_get_peak_usage() - $baseline );
 
 		fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Spill-to-disk stream.
+	}
+
+	/**
+	 * The governance report reads activity in batches of 1,000: 2,500 rows
+	 * cost at most the batches, a terminating batch, the AI query and the
+	 * overdue query (with margin for its `WP_Query`), never one per row.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @covers \Sit_Cwm\Governance\GovernanceReport
+	 *
+	 * @return void
+	 */
+	public function test_governance_report_query_budget() {
+		global $wpdb;
+
+		$post    = $this->create_managed_post( array( 'post_status' => 'draft' ) );
+		$created = gmdate( 'Y-m-d H:i:s' );
+		$values  = array();
+
+		for ( $i = 0; $i < 2500; $i++ ) {
+			$values[] = $wpdb->prepare( '(%d, %d, %s, %s, %s)', $post, 0, 'post_published', '{"workflow_status":"approved","gate_mode":"enforce","ai_origin":"human"}', $created );
+		}
+
+		$table = ( new Database() )->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Test fixture; every value tuple is prepared above.
+		$wpdb->query( "INSERT INTO {$table} (post_id, user_id, action, context, created_at) VALUES " . implode( ', ', $values ) );
+		unset( $values );
+
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+
+		$report = new GovernanceReport( $this->activity, $this->posts, new Settings() );
+		$result = null;
+		$count  = $this->count_queries(
+			function () use ( $report, &$result ) {
+				$result = $report->build( 90 );
+			}
+		);
+
+		$this->assertGreaterThanOrEqual( 2500, $result['publication']['total'] );
+		$this->assertLessThanOrEqual( (int) ceil( 2500 / GovernanceReport::BATCH ) + 1 + 4, $count, 'The governance report exceeded its query budget.' );
 	}
 
 	/**

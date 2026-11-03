@@ -58,6 +58,7 @@ final class SettingsTest extends WP_UnitTestCase {
 			'prevent_self_approval'    => false,
 			'ai_origin_defaults'       => array(),
 			'require_attestation'      => false,
+			'disclosure_enabled'       => false,
 		);
 
 		$this->assertSame( $expected, $this->settings->defaults() );
@@ -98,6 +99,7 @@ final class SettingsTest extends WP_UnitTestCase {
 				'prevent_self_approval'    => false,
 				'ai_origin_defaults'       => array(),
 				'require_attestation'      => false,
+				'disclosure_enabled'       => false,
 			),
 			get_option( Settings::OPTION )
 		);
@@ -381,6 +383,33 @@ final class SettingsTest extends WP_UnitTestCase {
 
 		$this->assertTrue( $settings->update( array( 'require_attestation' => 'false' ) ) );
 		$this->assertFalse( $settings->requires_attestation() );
+	}
+
+	/**
+	 * Front-end disclosure is off by default and after upgrading from 1.1,
+	 * and `is_disclosure_enabled()` reads the stored boolean (F14).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_disclosure_enabled_defaults_off_and_sanitizes_to_bool() {
+		$this->assertFalse( ( new Settings() )->defaults()['disclosure_enabled'] );
+
+		update_option( Settings::OPTION, array( 'post_types' => array( 'post' ) ) ); // 1.1 option.
+
+		$settings = new Settings();
+		$this->assertFalse( $settings->is_disclosure_enabled() );
+
+		foreach ( array( 'yes', 1, true ) as $value ) {
+			$this->assertTrue( $settings->update( array( 'disclosure_enabled' => false ) ) );
+			$this->assertTrue( $settings->update( array( 'disclosure_enabled' => $value ) ) );
+			$this->assertTrue( $settings->get( 'disclosure_enabled' ) );
+			$this->assertTrue( $settings->is_disclosure_enabled() );
+		}
+
+		$this->assertTrue( $settings->update( array( 'disclosure_enabled' => 'false' ) ) );
+		$this->assertFalse( $settings->is_disclosure_enabled() );
 	}
 
 	/**

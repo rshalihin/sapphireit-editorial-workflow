@@ -18,10 +18,14 @@ use Sit_Cwm\Audit\ActivityExporter;
 use Sit_Cwm\Content\PostMeta;
 use Sit_Cwm\Content\PostRepository;
 use Sit_Cwm\Core\Interfaces\Bootable;
+use Sit_Cwm\Disclosure\DisclosureBlock;
+use Sit_Cwm\Disclosure\DisclosureShortcode;
+use Sit_Cwm\Disclosure\ReviewDisclosure;
 use Sit_Cwm\Editor\ClassicMetaBox;
 use Sit_Cwm\Editor\SidebarAssets;
 use Sit_Cwm\Governance\AiOriginStamper;
 use Sit_Cwm\Governance\Attestation;
+use Sit_Cwm\Governance\GovernanceReport;
 use Sit_Cwm\Notifications\Deduplicator;
 use Sit_Cwm\Notifications\MessageBuilder;
 use Sit_Cwm\Notifications\Notifier;
@@ -39,6 +43,7 @@ use Sit_Cwm\REST\AiOriginField;
 use Sit_Cwm\REST\ActivityFormatter;
 use Sit_Cwm\REST\BatchController;
 use Sit_Cwm\REST\PostsController;
+use Sit_Cwm\REST\ReportsController;
 use Sit_Cwm\REST\UserController;
 use Sit_Cwm\REST\UserSummaries;
 use Sit_Cwm\REST\WorkflowController;
@@ -95,6 +100,8 @@ final class Plugin {
 			'publish_gate.layer.schedule',
 			'notifications',
 			'governance.ai_stamper',
+			'disclosure.shortcode',
+			'disclosure.block',
 		),
 		'admin' => array(
 			'admin.dashboard',
@@ -112,6 +119,7 @@ final class Plugin {
 			'rest.posts',
 			'rest.batch',
 			'rest.ai_origin_field',
+			'rest.reports',
 		),
 	);
 
@@ -427,6 +435,27 @@ final class Plugin {
 		);
 
 		$this->container->set(
+			'disclosure',
+			static function ( Container $c ) {
+				return new ReviewDisclosure( $c->get( 'settings' ), $c->get( 'post_repository' ), $c->get( 'activity_logger' ) );
+			}
+		);
+
+		$this->container->set(
+			'disclosure.shortcode',
+			static function ( Container $c ) {
+				return new DisclosureShortcode( $c->get( 'disclosure' ) );
+			}
+		);
+
+		$this->container->set(
+			'disclosure.block',
+			static function ( Container $c ) {
+				return new DisclosureBlock( $c->get( 'disclosure' ), $c->get( 'assets' ), $c->get( 'settings' ) );
+			}
+		);
+
+		$this->container->set(
 			'bulk_processor',
 			static function ( Container $c ) {
 				return new BulkProcessor( $c->get( 'workflow_manager' ) );
@@ -518,6 +547,20 @@ final class Plugin {
 			'rest.ai_origin_field',
 			static function ( Container $c ) {
 				return new AiOriginField( $c->get( 'workflow_manager' ), $c->get( 'post_repository' ), $c->get( 'settings' ) );
+			}
+		);
+
+		$this->container->set(
+			'governance_report',
+			static function ( Container $c ) {
+				return new GovernanceReport( $c->get( 'activity_logger' ), $c->get( 'post_repository' ), $c->get( 'settings' ) );
+			}
+		);
+
+		$this->container->set(
+			'rest.reports',
+			static function ( Container $c ) {
+				return new ReportsController( $c->get( 'permission_manager' ), $c->get( 'post_repository' ), $c->get( 'governance_report' ) );
 			}
 		);
 

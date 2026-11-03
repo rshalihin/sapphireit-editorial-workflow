@@ -370,7 +370,7 @@ final class PluginTest extends WP_UnitTestCase {
 	 * 1.1 core service and hooks the three 1.0 workflow actions at 20.
 	 *
 	 * @since 1.1.0
-	 * @since 1.2.0 Only the AI-origin stamper follows it.
+	 * @since 1.2.0 Only the AI-origin stamper and the disclosure shortcode and block follow it.
 	 *
 	 * @return void
 	 */
@@ -389,7 +389,7 @@ final class PluginTest extends WP_UnitTestCase {
 		$this->assertSame( 20, has_action( 'sit_cwm_comment_added', array( $notifier, 'on_comment_added' ) ) );
 
 		$core = Plugin::BOOT_PHASES['core'];
-		$this->assertSame( array( 'notifications', 'governance.ai_stamper' ), array_slice( $core, -2 ) );
+		$this->assertSame( array( 'notifications', 'governance.ai_stamper', 'disclosure.shortcode', 'disclosure.block' ), array_slice( $core, -4 ) );
 	}
 
 	/**

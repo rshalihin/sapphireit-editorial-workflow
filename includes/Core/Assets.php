@@ -38,7 +38,7 @@ final class Assets {
 	 * @since 1.0.0
 	 * @var string[]
 	 */
-	const ENTRIES = array( 'sidebar', 'dashboard', 'classic' );
+	const ENTRIES = array( 'sidebar', 'dashboard', 'classic', 'review-disclosure' );
 
 	/**
 	 * REST namespace exposed to scripts (D9).
@@ -178,7 +178,7 @@ final class Assets {
 	 * @return bool False when the entry is unknown or has not been built.
 	 */
 	public function enqueue( string $entry ): bool {
-		$asset = $this->asset( $entry );
+		$asset = $this->register( $entry );
 
 		if ( null === $asset ) {
 			return false;
@@ -186,8 +186,7 @@ final class Assets {
 
 		$handle = $this->script_handle( $entry );
 
-		wp_enqueue_script( $handle, $this->build_url . $entry . '.js', $asset['dependencies'], $asset['version'], true );
-		wp_set_script_translations( $handle, 'sapphireit-editorial-workflow', $this->languages_dir );
+		wp_enqueue_script( $handle );
 
 		if ( is_readable( $this->build_dir . $entry . '.css' ) ) {
 			wp_enqueue_style( $this->style_handle( $entry ), $this->build_url . $entry . '.css', array( 'wp-components' ), $asset['version'] );
@@ -201,6 +200,21 @@ final class Assets {
 		$this->add_bootstrap( $handle );
 
 		return true;
+	}
+
+	/**
+	 * Registers a build entry's script and translations without enqueueing
+	 * it, for handles WordPress enqueues itself (a block's `editorScript`).
+	 *
+	 * No stylesheet and no bootstrap object: those come with `enqueue()`.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param string $entry Entry name from `ENTRIES`.
+	 * @return bool False when the entry is unknown or has not been built.
+	 */
+	public function register_script( string $entry ): bool {
+		return null !== $this->register( $entry );
 	}
 
 	/**
@@ -246,6 +260,33 @@ final class Assets {
 			'requireAttestation'   => $this->settings->requires_attestation(),
 			'attestationStatement' => $this->attestation->statement(),
 		);
+	}
+
+	/**
+	 * Registers an entry's script from its asset file and sets its
+	 * translations.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param string $entry Entry name.
+	 * @return array{dependencies: string[], version: string}|null The asset
+	 *                                                           data; null when
+	 *                                                           nothing was
+	 *                                                           registered.
+	 */
+	private function register( string $entry ): ?array {
+		$asset = $this->asset( $entry );
+
+		if ( null === $asset ) {
+			return null;
+		}
+
+		$handle = $this->script_handle( $entry );
+
+		wp_register_script( $handle, $this->build_url . $entry . '.js', $asset['dependencies'], $asset['version'], true );
+		wp_set_script_translations( $handle, 'sapphireit-editorial-workflow', $this->languages_dir );
+
+		return $asset;
 	}
 
 	/**

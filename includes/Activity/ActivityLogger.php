@@ -628,6 +628,54 @@ final class ActivityLogger implements Bootable {
 	}
 
 	/**
+	 * A post's newest entry of one action, optionally with a given new value
+	 * (e.g. its latest approval: `status_changed` to `approved`).
+	 *
+	 * Newest means latest `created_at`, then highest id, as in `get_for_post()`.
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @param int         $post_id   Post id.
+	 * @param string      $action    Registered action slug.
+	 * @param string|null $new_value Only entries with exactly this new value; null for any.
+	 * @return ActivityEntry|null Null when nothing matches or the action is unknown.
+	 */
+	public function latest_for_post( int $post_id, string $action, ?string $new_value = null ): ?ActivityEntry {
+		global $wpdb;
+
+		if ( $post_id <= 0 || ! $this->is_valid_action( $action ) ) {
+			return null;
+		}
+
+		$table = $this->database->table_name();
+
+		// Literal SQL per variant: nothing is interpolated.
+		if ( null === $new_value ) {
+			$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin's own table; caching is a documented follow-up.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE post_id = %d AND action = %s ORDER BY created_at DESC, id DESC LIMIT 1',
+					$table,
+					$post_id,
+					$action
+				)
+			);
+		} else {
+			$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin's own table; caching is a documented follow-up.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE post_id = %d AND action = %s AND new_value = %s ORDER BY created_at DESC, id DESC LIMIT 1',
+					$table,
+					$post_id,
+					$action,
+					$new_value
+				)
+			);
+		}
+
+		return is_object( $row ) ? ActivityEntry::from_row( $row ) : null;
+	}
+
+	/**
 	 * Latest entries for many posts in a single query, for the dashboard's
 	 * "last activity" column.
 	 *

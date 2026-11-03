@@ -187,6 +187,14 @@ never moves the workflow.
 | Class | Responsibility |
 |---|---|
 | `AiOrigin` | The closed set of declared AI-origin values (`human`, `ai_assisted`, `ai_generated`), their labels and the strict sanitizer. Declared, never detected: nothing inspects content. |
+| `GovernanceReport` | The read-only governance figures for 30, 90 or 365 days (F12): approved share and gate modes of publications, gate refusals and bypasses, declared AI use (current and at publication) and overdue reviews. Reads activity in keyset batches of 1,000 and runs one grouped SQL count for current AI use. Site-wide; callers check `can_audit()`. |
+
+### `includes/Disclosure/`
+
+| Class | Responsibility |
+|---|---|
+| `ReviewDisclosure` | The opt-in front-end disclosure: "Reviewed by X on date" from the latest approval row (`ActivityLogger::latest_for_post()`), plus the declared AI-use line. Says nothing unless the setting is on and the post is workflow-managed, published, still Approved or Published, and has an approval row. Late-escaped markup, no stylesheet. |
+| `DisclosureShortcode` | `[sit_cwm_review_disclosure reviewer="1" ai="1"]`, always registered (prints `''` while off) and bound to the current post: there is no `post_id` attribute. |
 
 ### `includes/Audit/`
 
@@ -205,6 +213,7 @@ never moves the workflow.
 | `PostsController` | `GET /posts` — the dashboard collection, batch-loaded. |
 | `BatchController` | `POST /posts/batch`, delegating to `BulkProcessor`. |
 | `UserController` | `GET /users` — assignable reviewers, deliberately narrow. |
+| `ReportsController` | `GET /reports/governance` — the governance report, auditors only (`can_audit()`), delegating to `GovernanceReport`. |
 | `AiOriginField` | The `sit_cwm_ai_origin` field on `wp/v2` routes of workflow-enabled types (edit context only), writing through `WorkflowManager::set_ai_origin()` with via `post_api`. |
 | `ActivityFormatter` | Turns an `ActivityEntry` into its REST shape, resolving slugs and user IDs to labels. |
 | `UserSummaries` | Batch user loading. One `get_users()` field-list query for every author, reviewer and activity actor on a page. |
@@ -583,6 +592,7 @@ before the plugin has booted.
 | `Core\Settings::prevents_self_approval(` | `prevents_self_approval(): bool` | `bool` | 1.1.0 |
 | `Core\Settings::ai_origin_default(` | `ai_origin_default( string $post_type ): string` | `string` | 1.2.0 |
 | `Core\Settings::requires_attestation(` | `requires_attestation(): bool` | `bool` | 1.2.0 |
+| `Core\Settings::is_disclosure_enabled(` | `is_disclosure_enabled(): bool` | `bool` | 1.2.0 |
 | `Core\Settings::enabled_post_types(` | `enabled_post_types(): array` | `string[]` | 1.0.0 |
 | `Core\Settings::is_post_type_enabled(` | `is_post_type_enabled( string $post_type ): bool` | `bool` | 1.0.0 |
 
@@ -688,6 +698,7 @@ Constants (`@api`): `META_STATUS`, `META_REVIEWER`, `META_DUE_DATE`, `META_PUBLI
 | `Activity\ActivityLogger::log(` | `log( int $post_id, string $action, array $args = array() ): int` | `int` | 1.0.0 |
 | `Activity\ActivityLogger::get(` | `get( int $id ): ?ActivityEntry` | `ActivityEntry\|null` | 1.0.0 |
 | `Activity\ActivityLogger::get_for_post(` | `get_for_post( int $post_id, array $args = array() ): array` | `ActivityEntry[]` | 1.0.0 |
+| `Activity\ActivityLogger::latest_for_post(` | `latest_for_post( int $post_id, string $action, ?string $new_value = null ): ?ActivityEntry` | `ActivityEntry\|null` | 1.2.0 |
 | `Activity\ActivityLogger::count_for_post(` | `count_for_post( int $post_id, array $args = array() ): int` | `int` | 1.0.0 |
 | `Activity\ActivityLogger::get_for_posts(` | `get_for_posts( array $post_ids, int $per_post = 1 ): array` | `array<int,` | 1.0.0 |
 | `Activity\ActivityLogger::get_batch(` | `get_batch( array $args = array() ): array` | `ActivityEntry[]` | 1.2.0 |
@@ -728,6 +739,21 @@ reviewed this" (the `require_attestation` setting, then the
 |---|---|---|---|
 | `Governance\Attestation::is_required(` | `is_required( int $post_id ): bool` | `bool` | 1.2.0 |
 | `Governance\Attestation::statement(` | `statement(): string` | `string` | 1.2.0 |
+
+#### `Governance\GovernanceReport`
+
+Service id `governance_report`. Computes the site-wide governance figures for
+a period (F12): approved share of publications, publications by gate mode,
+gate refusals and bypasses, declared AI use and overdue reviews. Read-only;
+callers must check `PermissionManager::can_audit()`. Activity is read in
+keyset batches of `BATCH` through `ActivityLogger::get_batch()`; nothing is
+cached. Served by `GET /sit-cwm/v1/reports/governance` (`rest.reports`).
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Governance\GovernanceReport::build(` | `build( int $period_days, ?DateTimeImmutable $now = null ): array` | `array` (F12 shape) | 1.2.0 |
+
+Constants (`@api`): `PERIODS` (`30, 90, 365`), `BATCH` (`1000`).
 
 #### `Publishing\PublishGate`
 

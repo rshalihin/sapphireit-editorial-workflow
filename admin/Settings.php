@@ -24,7 +24,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * "Editorial Workflow → Settings": the post types the workflow applies to,
  * the uninstall data preference, (since 1.1.0) the publish gate mode per
  * enabled post type and the email notification toggles, and (since 1.2.0) the
- * AI use default per enabled post type.
+ * AI use default per enabled post type, review attestation and the front-end
+ * disclosure toggle.
  *
  * Built on the Settings API: the form posts to `options.php`, which verifies
  * the nonce printed by `settings_fields()` and the capability returned for the
@@ -77,6 +78,14 @@ final class Settings implements Bootable {
 	 * @var string
 	 */
 	const SECTION_NOTIFICATIONS = 'sit_cwm_notifications';
+
+	/**
+	 * Front-end disclosure settings section id.
+	 *
+	 * @since 1.2.0
+	 * @var string
+	 */
+	const SECTION_DISCLOSURE = 'sit_cwm_disclosure';
 
 	/**
 	 * Contextual help tab id.
@@ -197,7 +206,7 @@ final class Settings implements Bootable {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Adds the publish gate and email notifications sections.
-	 * @since 1.2.0 Adds the AI use default field.
+	 * @since 1.2.0 Adds the AI use default and attestation fields and the Front-end disclosure section.
 	 *
 	 * @return void
 	 */
@@ -290,6 +299,21 @@ final class Settings implements Bootable {
 			self::MENU_SLUG,
 			self::SECTION_NOTIFICATIONS
 		);
+
+		add_settings_section(
+			self::SECTION_DISCLOSURE,
+			__( 'Front-end disclosure', 'sapphireit-editorial-workflow' ),
+			'__return_false',
+			self::MENU_SLUG
+		);
+
+		add_settings_field(
+			'sit_cwm_disclosure',
+			__( 'Review disclosure', 'sapphireit-editorial-workflow' ),
+			array( $this, 'render_disclosure_field' ),
+			self::MENU_SLUG,
+			self::SECTION_DISCLOSURE
+		);
 	}
 
 	/**
@@ -308,10 +332,10 @@ final class Settings implements Bootable {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Sanitizes `publish_gate`, `notifications` and `prevent_self_approval`.
-	 * @since 1.2.0 Sanitizes `ai_origin_defaults` and `require_attestation`.
+	 * @since 1.2.0 Sanitizes `ai_origin_defaults`, `require_attestation` and `disclosure_enabled`.
 	 *
 	 * @param mixed $input Submitted value.
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool, ai_origin_defaults: array<string, string>, require_attestation: bool}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool, ai_origin_defaults: array<string, string>, require_attestation: bool, disclosure_enabled: bool}
 	 */
 	public function sanitize( $input ): array {
 		$current = $this->settings->all();
@@ -342,6 +366,9 @@ final class Settings implements Bootable {
 		$clean['require_attestation']      = ! empty( $input['require_attestation'] )
 			&& is_scalar( $input['require_attestation'] )
 			&& rest_sanitize_boolean( $input['require_attestation'] );
+		$clean['disclosure_enabled']       = ! empty( $input['disclosure_enabled'] )
+			&& is_scalar( $input['disclosure_enabled'] )
+			&& rest_sanitize_boolean( $input['disclosure_enabled'] );
 
 		return $clean;
 	}
@@ -611,6 +638,27 @@ final class Settings implements Bootable {
 		printf(
 			'<p class="description">%s</p>',
 			esc_html__( 'When this is on, approving needs an explicit confirmation, which is stored with the approval in the activity log.', 'sapphireit-editorial-workflow' )
+		);
+	}
+
+	/**
+	 * Prints the "show review disclosures" checkbox (F11, F16).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function render_disclosure_field(): void {
+		printf(
+			'<label><input type="checkbox" name="%1$s" value="1" %2$s /> %3$s</label>',
+			esc_attr( SettingsStore::OPTION . '[disclosure_enabled]' ),
+			checked( $this->settings->is_disclosure_enabled(), true, false ),
+			esc_html__( 'Show review disclosures on published content', 'sapphireit-editorial-workflow' )
+		);
+
+		printf(
+			'<p class="description">%s</p>',
+			esc_html__( 'Enables the Review disclosure block and the [sit_cwm_review_disclosure] shortcode. They show who approved the content and when, plus its declared AI use.', 'sapphireit-editorial-workflow' )
 		);
 	}
 

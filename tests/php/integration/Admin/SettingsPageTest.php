@@ -208,6 +208,7 @@ final class SettingsPageTest extends TestCase {
 				'prevent_self_approval'    => false,
 				'ai_origin_defaults'       => array(),
 				'require_attestation'      => false,
+				'disclosure_enabled'       => false,
 			),
 			$clean
 		);
@@ -249,6 +250,7 @@ final class SettingsPageTest extends TestCase {
 				'prevent_self_approval'    => false,
 				'ai_origin_defaults'       => array(),
 				'require_attestation'      => false,
+				'disclosure_enabled'       => false,
 			),
 			$this->page->sanitize( null )
 		);
@@ -267,7 +269,7 @@ final class SettingsPageTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( array( 'post_types', 'delete_data_on_uninstall', 'publish_gate', 'notifications', 'prevent_self_approval', 'ai_origin_defaults', 'require_attestation' ), array_keys( $clean ) );
+		$this->assertSame( array( 'post_types', 'delete_data_on_uninstall', 'publish_gate', 'notifications', 'prevent_self_approval', 'ai_origin_defaults', 'require_attestation', 'disclosure_enabled' ), array_keys( $clean ) );
 	}
 
 	/**
@@ -415,6 +417,44 @@ final class SettingsPageTest extends TestCase {
 		$this->assertTrue( $this->page->sanitize( array( 'require_attestation' => '1' ) )['require_attestation'] );
 		$this->assertFalse( $this->page->sanitize( array( 'post_types' => array( 'post' ) ) )['require_attestation'], 'A missing box is off.' );
 		$this->assertFalse( $this->page->sanitize( array( 'require_attestation' => array( '1' ) ) )['require_attestation'], 'A non-scalar value is off.' );
+	}
+
+	/**
+	 * The Front-end disclosure section holds one checkbox with the F16 copy,
+	 * renders its state and saves as a boolean (F11).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_disclosure_section_renders_and_saves() {
+		global $wp_settings_sections, $wp_settings_fields;
+
+		$this->page->register_settings();
+
+		$this->assertSame( 'sit_cwm_disclosure', SettingsPage::SECTION_DISCLOSURE );
+		$this->assertSame( 'Front-end disclosure', $wp_settings_sections[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION_DISCLOSURE ]['title'] );
+		$this->assertSame( array( 'sit_cwm_disclosure' ), array_keys( $wp_settings_fields[ SettingsPage::MENU_SLUG ][ SettingsPage::SECTION_DISCLOSURE ] ) );
+
+		ob_start();
+		$this->page->render_disclosure_field();
+		$html = ob_get_clean();
+
+		$this->assertMatchesRegularExpression( '/<label><input type="checkbox" name="sit_cwm_settings\[disclosure_enabled\]" value="1"\s*\/> Show review disclosures on published content<\/label>/', $html );
+		$this->assertStringContainsString( '<p class="description">Enables the Review disclosure block and the [sit_cwm_review_disclosure] shortcode. They show who approved the content and when, plus its declared AI use.</p>', $html );
+		$this->assertStringNotContainsString( 'checked', $html );
+
+		$this->assertTrue( $this->store->update( array( 'disclosure_enabled' => true ) ) );
+
+		ob_start();
+		$this->page->render_disclosure_field();
+		$html = ob_get_clean();
+
+		$this->assertMatchesRegularExpression( '/name="sit_cwm_settings\[disclosure_enabled\]" value="1"\s+checked=/', $html );
+
+		$this->assertTrue( $this->page->sanitize( array( 'disclosure_enabled' => '1' ) )['disclosure_enabled'] );
+		$this->assertFalse( $this->page->sanitize( array( 'post_types' => array( 'post' ) ) )['disclosure_enabled'], 'A missing box is off.' );
+		$this->assertFalse( $this->page->sanitize( array( 'disclosure_enabled' => array( '1' ) ) )['disclosure_enabled'], 'A non-scalar value is off.' );
 	}
 
 	/**

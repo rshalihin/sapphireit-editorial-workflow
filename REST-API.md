@@ -3,8 +3,8 @@
 Namespace: **`sit-cwm/v1`** — every route lives under
 `https://example.com/wp-json/sit-cwm/v1/`.
 
-Everything the Gutenberg sidebar and the admin dashboard do goes through these
-eight endpoints. There is no private AJAX action and no hidden path: the React
+Everything the Gutenberg sidebar, the admin dashboard and the governance report
+do goes through these nine endpoints. There is no private AJAX action and no hidden path: the React
 app is a client of this API, and so can you be.
 
 **Nothing here is public.** Every route has a real `permission_callback`; there
@@ -50,6 +50,7 @@ HTTPS unless the site defines `WP_ENVIRONMENT_TYPE` as `local`.
 | `GET` | [`/posts`](#get-posts) | Dashboard collection |
 | `POST` | [`/posts/batch`](#post-postsbatch) | Bulk status / reviewer / due date |
 | `GET` | [`/users`](#get-users) | Assignable reviewers |
+| `GET` | [`/reports/governance`](#get-reportsgovernance) | Governance report (auditors only, since 1.2) |
 
 ---
 
@@ -647,6 +648,83 @@ curl -sS -u "$CWM_AUTH" -G \
   { "id": 4, "name": "Dana Okafor", "avatar": "https://secure.gravatar.com/avatar/…?s=48" }
 ]
 ```
+
+---
+
+## `GET /reports/governance`
+
+Since 1.2. Site-wide governance figures for a period: how much of what was
+published had passed approval, how much went out while the publish gate was
+off or in log-only mode, gate refusals and bypasses, declared AI use and
+overdue reviews. Read-only; nothing is cached.
+
+**Permissions** — logged in (`401`) → `sit_cwm_view_activity` **and**
+`sit_cwm_manage_workflows` (`403` `sit_cwm_forbidden`). Administrators only by
+default — the same rule as the activity CSV export.
+
+### Arguments
+
+| Name | Type | Constraints |
+|---|---|---|
+| `period` | integer | `30`, `90` or `365` days, default `90`. Anything else is `400` `rest_invalid_param` |
+
+### Example
+
+```sh
+curl -sS -u "$CWM_AUTH" -G --data-urlencode 'period=90' \
+  "$CWM_SITE/wp-json/sit-cwm/v1/reports/governance" | jq
+```
+
+```json
+{
+  "period_days": 90,
+  "since": "2026-07-31T00:00:00Z",
+  "generated_at": "2026-10-29T10:00:00Z",
+  "publication": {
+    "total": 4,
+    "approved": 2,
+    "approved_share": 0.5,
+    "by_gate_mode": { "off": 1, "log_only": 1, "enforce": 1, "unknown": 1 }
+  },
+  "gate": {
+    "refused": 1,
+    "bypassed": { "log_only": 2, "capability": 1, "error": 0 }
+  },
+  "ai_origin": {
+    "current":   { "human": 12, "ai_assisted": 3, "ai_generated": 1, "not_declared": 40 },
+    "published": { "human": 1, "ai_assisted": 0, "ai_generated": 1, "not_declared": 1, "not_recorded": 1 }
+  },
+  "overdue": { "count": 2 }
+}
+```
+
+### Definitions
+
+- **In the period** means the activity row's `created_at >= since`, where
+  `since` is midnight UTC `period_days` days ago. All times are UTC.
+- `publication.total`: `post_published` rows in the period.
+- `publication.approved`: those whose workflow status at publication was
+  `approved` or `published`.
+- `publication.approved_share`: `approved / total`, rounded to 4 decimals;
+  `null` when `total` is 0.
+- `publication.by_gate_mode`: the gate mode at publication. Rows written
+  before 1.1 carry none and count as `unknown`. "Published while the gate was
+  off or in log-only mode" is `off + log_only`.
+- `gate.refused`: `publish_gate_refused` rows in the period.
+- `gate.bypassed`: `publish_gate_bypassed` rows in the period, by reason.
+  Unknown reasons are not counted.
+- `ai_origin.current`: the declared AI origin of every post of a
+  workflow-enabled type right now, except trashed posts and auto-drafts.
+  Undeclared posts are `not_declared`.
+- `ai_origin.published`: the declaration recorded on each `post_published`
+  row in the period. `not_declared` means nothing was declared at the time;
+  `not_recorded` means the row predates 1.2 and recorded nothing. Neither is
+  ever counted as a declaration.
+- `overdue.count`: workflow-managed posts past their due date and not in a
+  final status, site-wide (not limited to the viewer's own posts).
+
+AI origin is **declared, not detected**: these counts report what people said,
+never an analysis of the content.
 
 ---
 

@@ -56,9 +56,10 @@ final class Settings {
 	 * @since 1.1.0 Added `publish_gate`, `notifications` and `prevent_self_approval`.
 	 * @since 1.2.0 Added `ai_origin_defaults` (no type has a default, F14).
 	 * @since 1.2.0 Added `require_attestation` (off, F14).
+	 * @since 1.2.0 Added `disclosure_enabled` (off, F14).
 	 * @internal
 	 *
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool, ai_origin_defaults: array<string, string>, require_attestation: bool}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool, ai_origin_defaults: array<string, string>, require_attestation: bool, disclosure_enabled: bool}
 	 */
 	public function defaults(): array {
 		return array(
@@ -69,6 +70,7 @@ final class Settings {
 			'prevent_self_approval'    => false,
 			'ai_origin_defaults'       => array(),
 			'require_attestation'      => false,
+			'disclosure_enabled'       => false,
 		);
 	}
 
@@ -78,9 +80,10 @@ final class Settings {
 	 * @since 1.0.0
 	 * @since 1.2.0 Includes `ai_origin_defaults`.
 	 * @since 1.2.0 Includes `require_attestation`.
+	 * @since 1.2.0 Includes `disclosure_enabled`.
 	 * @api
 	 *
-	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool, ai_origin_defaults: array<string, string>, require_attestation: bool}
+	 * @return array{post_types: string[], delete_data_on_uninstall: bool, publish_gate: array<string, string>, notifications: array<string, bool>, prevent_self_approval: bool, ai_origin_defaults: array<string, string>, require_attestation: bool, disclosure_enabled: bool}
 	 */
 	public function all(): array {
 		$defaults = $this->defaults();
@@ -127,6 +130,7 @@ final class Settings {
 	 * @since 1.1.0 Accepts `publish_gate`, `notifications` and `prevent_self_approval`.
 	 * @since 1.2.0 Accepts `ai_origin_defaults`.
 	 * @since 1.2.0 Accepts `require_attestation`.
+	 * @since 1.2.0 Accepts `disclosure_enabled`.
 	 * @internal
 	 *
 	 * @param mixed $partial Partial settings, e.g. `[ 'post_types' => [ 'post' ] ]`.
@@ -159,6 +163,10 @@ final class Settings {
 
 		if ( array_key_exists( 'require_attestation', $partial ) ) {
 			$settings['require_attestation'] = rest_sanitize_boolean( $partial['require_attestation'] );
+		}
+
+		if ( array_key_exists( 'disclosure_enabled', $partial ) ) {
+			$settings['disclosure_enabled'] = rest_sanitize_boolean( $partial['disclosure_enabled'] );
 		}
 
 		if ( array_key_exists( 'publish_gate', $partial ) ) {
@@ -280,6 +288,18 @@ final class Settings {
 	 */
 	public function requires_attestation(): bool {
 		return true === (bool) $this->get( 'require_attestation', false );
+	}
+
+	/**
+	 * Whether the front-end review disclosure (shortcode and block) is on (F11).
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @return bool
+	 */
+	public function is_disclosure_enabled(): bool {
+		return true === (bool) $this->get( 'disclosure_enabled', false );
 	}
 
 	/**
