@@ -743,6 +743,11 @@ Global functions:
   initialised when the main file loads, before `plugins_loaded`. The Pro add-on
   names this product as its `parent` (F18). Free sells nothing in 1.2.0:
   `has_addons` and `has_paid_plans` are `false` until the Pro launch release.
+  Its menu slug is Settings (`sit-cwm-settings`, under `Workflow`), because
+  the SDK shows the opt-in in place of that page for anyone who can open it,
+  and only managers can open Settings; the Dashboard is never replaced. The
+  internal `sit_cwm_fs_pricing_url()` filter points the SDK's pricing link at
+  the Dashboard, so its hidden pricing page is never loaded (R10).
 
 #### `Core\Plugin`
 

@@ -113,8 +113,13 @@ if ( ! function_exists( 'sit_cwm_fs' ) ) {
 						'updates'   => false,
 						'localhost' => true,
 					),
+					// The SDK shows its opt-in in place of the page `slug` names,
+					// to anyone who can open that page. Settings is for managers
+					// only, so the Dashboard every workflow user works in is never
+					// replaced (F18).
 					'menu'                => array(
-						'slug'        => 'sit-cwm-dashboard',
+						'slug'        => 'sit-cwm-settings',
+						'parent'      => array( 'slug' => 'sit-cwm-dashboard' ),
 						'first-path'  => 'admin.php?page=sit-cwm-getting-started',
 						'account'     => true,
 						'contact'     => false,
@@ -131,6 +136,27 @@ if ( ! function_exists( 'sit_cwm_fs' ) ) {
 	}
 
 	sit_cwm_fs();
+
+	if ( ! function_exists( 'sit_cwm_fs_pricing_url' ) ) {
+		/**
+		 * Points the SDK's pricing link at the Dashboard.
+		 *
+		 * Nothing is sold in 1.2.0 (R10), but the SDK still registers a hidden
+		 * pricing page. With a pricing URL set it adds a link instead, and
+		 * its page URL redirects here rather than loading the pricing app.
+		 * The Pro launch release removes this filter.
+		 *
+		 * @internal
+		 * @since 1.2.0
+		 *
+		 * @return string Dashboard URL.
+		 */
+		function sit_cwm_fs_pricing_url() {
+			return admin_url( 'admin.php?page=sit-cwm-dashboard' );
+		}
+	}
+
+	sit_cwm_fs()->add_filter( 'pricing_url', 'sit_cwm_fs_pricing_url' );
 
 	/**
 	 * Fires once the Freemius SDK is initialised for Free. The Pro add-on

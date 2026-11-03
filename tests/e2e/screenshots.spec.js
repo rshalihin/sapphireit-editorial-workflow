@@ -1,6 +1,6 @@
 /**
  * Captures the documentation and WordPress.org screenshots in docs/screenshots/
- * as `screenshot-1.png` … `screenshot-5.png`, one per caption in `readme.txt`'s
+ * as `screenshot-1.png` … `screenshot-7.png`, one per caption in `readme.txt`'s
  * Screenshots section, in that order.
  *
  * Skipped unless CWM_CAPTURE is set, so it never runs in the CI end-to-end job:
@@ -30,9 +30,11 @@ import { expect, test } from '@wordpress/e2e-test-utils-playwright';
  */
 import {
 	allNotifications,
+	daysAgo,
 	loginAs,
 	openWorkflowSidebar,
 	rawPublish,
+	seedActivity,
 	setSettings,
 } from './utils';
 
@@ -78,30 +80,34 @@ async function settled( container ) {
  * Titles read like a real editorial queue: a screenshot full of "Test post 1"
  * tells a reader nothing about what the plugin is for.
  *
- * @type {Array<{title: string, status: string, due: string, reviewer: boolean}>}
+ * @type {Array<{title: string, status: string, due: string, reviewer: boolean, ai?: string}>}
  */
 const POSTS = [
 	{
 		title: 'Q3 launch announcement',
 		status: 'review',
+		ai: 'human',
 		due: '2030-03-04',
 		reviewer: true,
 	},
 	{
 		title: 'Migrating to block themes',
 		status: 'review',
+		ai: 'ai_assisted',
 		due: '2030-03-06',
 		reviewer: true,
 	},
 	{
 		title: 'Accessibility audit findings',
 		status: 'needs_changes',
+		ai: 'human',
 		due: '2030-02-20',
 		reviewer: true,
 	},
 	{
 		title: 'Customer story: Northwind',
 		status: 'approved',
+		ai: 'ai_generated',
 		due: '2030-03-11',
 		reviewer: true,
 	},
@@ -175,7 +181,11 @@ test.describe( 'Documentation screenshots', () => {
 			const created = await requestUtils.rest( {
 				method: 'POST',
 				path: '/wp/v2/posts',
-				data: { title: post.title, status: 'draft' },
+				data: {
+					title: post.title,
+					status: 'draft',
+					...( post.ai ? { sit_cwm_ai_origin: post.ai } : {} ),
+				},
 			} );
 			const route = `/sit-cwm/v1/posts/${ created.id }/workflow`;
 
@@ -240,12 +250,87 @@ test.describe( 'Documentation screenshots', () => {
 			},
 		} );
 		await rawPublish( requestUtils, story );
+
+		// The governance report shot (6): a quarter of publication history,
+		// most of it approved first, logged against the seeded posts.
+		const published = ( title, days, workflowStatus, gateMode, ai ) => ( {
+			post_id: ids[ title ],
+			action: 'post_published',
+			old_value: 'draft',
+			new_value: 'publish',
+			created_at: daysAgo( days ),
+			context: {
+				workflow_status: workflowStatus,
+				gate_mode: gateMode,
+				ai_origin: ai,
+			},
+		} );
+
+		await seedActivity( requestUtils, [
+			published(
+				'Customer story: Northwind',
+				3,
+				'approved',
+				'enforce',
+				'ai_generated'
+			),
+			published(
+				'Accessibility audit findings',
+				9,
+				'approved',
+				'enforce',
+				'human'
+			),
+			published(
+				'Release notes 4.2',
+				16,
+				'approved',
+				'enforce',
+				'ai_assisted'
+			),
+			published(
+				'Migrating to block themes',
+				24,
+				'approved',
+				'log_only',
+				'ai_assisted'
+			),
+			published(
+				'Editorial calendar for spring',
+				33,
+				'approved',
+				'enforce',
+				'none'
+			),
+			published( 'Release notes 4.2', 41, 'review', 'log_only', 'human' ),
+			published(
+				'Customer story: Northwind',
+				55,
+				'approved',
+				'enforce',
+				'human'
+			),
+			published(
+				'Accessibility audit findings',
+				68,
+				'approved',
+				'enforce',
+				'ai_assisted'
+			),
+			{
+				post_id: ids[ 'Release notes 4.2' ],
+				action: 'publish_gate_bypassed',
+				created_at: daysAgo( 41 ),
+				context: { gate_mode: 'log_only', reason: 'log_only' },
+			},
+		] );
 	} );
 
 	test.afterAll( async ( { requestUtils } ) => {
 		await setSettings( requestUtils, {
 			publish_gate: {},
 			notifications: allNotifications( false ),
+			require_attestation: false,
 		} );
 		await requestUtils.deleteAllPosts();
 	} );
@@ -303,20 +388,20 @@ test.describe( 'Documentation screenshots', () => {
 		await timeline.screenshot( { path: shot( 2 ) } );
 	} );
 
-	test( '3: settings with the publish gate and notifications', async ( {
+	test( '3: settings, open at the publish gate', async ( {
 		admin,
 		page,
 	} ) => {
 		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-settings' );
 
+		// 1.2.0: the settings sections are tabs (phase 20b).
+		await page.getByRole( 'tab', { name: 'Publish gate' } ).click();
 		await expect(
-			page.getByRole( 'heading', { name: 'Publish gate' } )
-		).toBeVisible();
-		await expect(
-			page.getByRole( 'heading', { name: 'Email notifications' } )
+			page.getByRole( 'tabpanel' ).getByRole( 'heading', {
+				name: 'Publish gate',
+			} )
 		).toBeVisible();
 
-		// Both new sections sit below the fold at 900 px.
 		await page.screenshot( { path: shot( 3 ), fullPage: true } );
 	} );
 
@@ -358,5 +443,56 @@ test.describe( 'Documentation screenshots', () => {
 		} finally {
 			await requestUtils.deactivatePlugin( 'classic-editor' );
 		}
+	} );
+
+	test( '6: governance report', async ( { admin, page } ) => {
+		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-report' );
+
+		await expect(
+			page.locator( '.sit-cwm-report__headline-value' )
+		).not.toHaveText( '—' );
+		await expect( page.locator( '.sit-cwm-shell' ) ).toBeVisible();
+		await expect(
+			page.locator( '.sit-cwm-report__breakdowns' )
+		).toBeVisible();
+
+		await page.screenshot( { path: shot( 6 ), fullPage: true } );
+	} );
+
+	test( '7: sidebar with AI use and the review confirmation', async ( {
+		page,
+		requestUtils,
+	} ) => {
+		await setSettings( requestUtils, { require_attestation: true } );
+		await loginAs( page, REVIEWER.username, REVIEWER.password );
+
+		const panel = await openWorkflowSidebar(
+			page,
+			ids[ 'Migrating to block themes' ]
+		);
+
+		await expect(
+			panel.getByRole( 'combobox', { name: 'AI use' } )
+		).toHaveValue( 'ai_assisted' );
+		await expect(
+			panel.getByRole( 'checkbox', {
+				name: 'I confirm I have reviewed this content and approve it for publication.',
+			} )
+		).toBeVisible();
+		await settled( panel );
+
+		// Clipped like shot 1: the panel's box runs past the viewport.
+		const box = await panel.boundingBox();
+		const viewport = page.viewportSize();
+
+		await page.screenshot( {
+			path: shot( 7 ),
+			clip: {
+				x: box.x,
+				y: box.y,
+				width: box.width,
+				height: Math.min( box.height, viewport.height - box.y ),
+			},
+		} );
 	} );
 } );

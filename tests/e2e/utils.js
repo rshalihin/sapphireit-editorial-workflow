@@ -11,6 +11,7 @@ import { expect } from '@wordpress/e2e-test-utils-playwright';
  * External dependencies
  */
 import AxeBuilder from '@axe-core/playwright';
+import { request as playwrightRequest } from '@playwright/test';
 
 /**
  * Password of every user the specs create.
@@ -239,7 +240,12 @@ export async function moveTo( page, panel, label, { confirm = false } = {} ) {
 			.click();
 	}
 
-	await expect( statusBadge( panel ) ).toHaveText( label );
+	// The move is queued behind the editor's own start-up requests, which on
+	// a slow local server (opcache off, ~0.5 s per boot) can take several
+	// seconds; the same allowance as the panel's first load.
+	await expect( statusBadge( panel ) ).toHaveText( label, {
+		timeout: 20000,
+	} );
 }
 
 /**
@@ -474,10 +480,10 @@ export async function postStatus( requestUtils, id, type = 'posts' ) {
  */
 export async function apiAsBrowserUser( page, { path, method = 'GET', data } ) {
 	const nonce = await page.request.get(
-		'/wp-admin/admin-ajax.php?action=rest-nonce'
+		'./wp-admin/admin-ajax.php?action=rest-nonce'
 	);
 	const response = await page.request.fetch(
-		`/index.php?rest_route=${ encodeURIComponent( path ) }`,
+		`./index.php?rest_route=${ encodeURIComponent( path ) }`,
 		{
 			method,
 			data,
@@ -486,4 +492,202 @@ export async function apiAsBrowserUser( page, { path, method = 'GET', data } ) {
 	);
 
 	return { status: response.status(), body: await response.json() };
+}
+
+/**
+ * Sets the probe add-on (`tests/fixtures/sit-cwm-probe`) active or inactive.
+ *
+ * Found by its folder: `requestUtils.activatePlugin()` keys plugins by a
+ * slug of their name, which for the probe is not `sit-cwm-probe`.
+ *
+ * @param {Object}  requestUtils Request utils fixture.
+ * @param {boolean} active       Whether it should be active.
+ * @return {Promise<void>}
+ */
+async function setProbeActive( requestUtils, active ) {
+	const plugins = await requestUtils.rest( { path: '/wp/v2/plugins' } );
+	const probe = plugins.find( ( plugin ) =>
+		plugin.plugin.startsWith( 'sit-cwm-probe/' )
+	);
+
+	if ( ! probe ) {
+		throw new Error(
+			'The probe add-on is not installed. Run `php bin/setup-e2e-site.php` (or map it in .wp-env.json).'
+		);
+	}
+
+	const status = active ? 'active' : 'inactive';
+
+	if ( probe.status !== status ) {
+		await requestUtils.rest( {
+			method: 'PUT',
+			path: `/wp/v2/plugins/${ probe.plugin }`,
+			data: { status },
+		} );
+	}
+}
+
+/**
+ * Activates the probe add-on.
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @return {Promise<void>}
+ */
+export function activateProbe( requestUtils ) {
+	return setProbeActive( requestUtils, true );
+}
+
+/**
+ * Deactivates the probe add-on.
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @return {Promise<void>}
+ */
+export function deactivateProbe( requestUtils ) {
+	return setProbeActive( requestUtils, false );
+}
+
+/**
+ * Sets or clears the probe add-on's legal checklist flag on a post.
+ *
+ * @param {Object}  requestUtils Request utils fixture.
+ * @param {number}  postId       Post id.
+ * @param {boolean} done         Whether the checklist is complete.
+ * @return {Promise<{done: boolean}>} The flag afterwards.
+ */
+export function setProbeChecklist( requestUtils, postId, done ) {
+	return requestUtils.rest( {
+		method: 'POST',
+		path: `${ E2E_NAMESPACE }/probe-checklist`,
+		data: { post_id: postId, done },
+	} );
+}
+
+/**
+ * Inserts activity rows through the plugin's own logger, each with an
+ * explicit `created_at` (UTC `Y-m-d H:i:s`) and `context`.
+ *
+ * @param {Object}   requestUtils Request utils fixture.
+ * @param {Object[]} rows         `{ post_id, action, context?, created_at?, user_id?, old_value?, new_value? }`.
+ * @return {Promise<number[]>} Inserted ids, in order.
+ */
+export async function seedActivity( requestUtils, rows ) {
+	const ids = [];
+
+	for ( const row of rows ) {
+		const { id } = await requestUtils.rest( {
+			method: 'POST',
+			path: `${ E2E_NAMESPACE }/activity`,
+			data: row,
+		} );
+		ids.push( id );
+	}
+
+	return ids;
+}
+
+/**
+ * A UTC `Y-m-d H:i:s` timestamp some days ago, for `seedActivity()`.
+ *
+ * @param {number} days Days before now.
+ * @return {string} Timestamp.
+ */
+export function daysAgo( days ) {
+	return new Date( Date.now() - days * 86400000 )
+		.toISOString()
+		.slice( 0, 19 )
+		.replace( 'T', ' ' );
+}
+
+/**
+ * The Freemius opt-in state, or sets it: `'show'` keeps the opt-in showing
+ * (open the returned `reconnect_url` to reset the skip), `'skip'` skips it.
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @param {string} [optin]      `'show'` or `'skip'`; omit to only read.
+ * @return {Promise<{registered: boolean, anonymous: boolean, keep_optin: boolean, reconnect_url: string}>} State.
+ */
+export function freemiusOptin( requestUtils, optin ) {
+	return requestUtils.rest(
+		optin
+			? {
+					method: 'POST',
+					path: `${ E2E_NAMESPACE }/freemius`,
+					data: { optin },
+				}
+			: { path: `${ E2E_NAMESPACE }/freemius` }
+	);
+}
+
+/**
+ * Creates an Application Password for a user, as the administrator.
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @param {Object} user         User `{ id, username }` (or `name`).
+ * @return {Promise<{user: string, password: string}>} Basic auth credentials.
+ */
+export async function createAppPassword( requestUtils, user ) {
+	const { password } = await requestUtils.rest( {
+		method: 'POST',
+		path: `/wp/v2/users/${ user.id }/application-passwords`,
+		data: { name: 'E2E agent' },
+	} );
+
+	return { user: user.username || user.name, password };
+}
+
+/**
+ * Calls the REST API the way `docs/AGENTS.md` tells an agent to: HTTP Basic
+ * auth with an Application Password, no cookies, no nonce.
+ *
+ * Uses a request context of its own with no cookies: with the
+ * administrator's cookies (which the `request` fixture and, by default, any
+ * new context carry) WordPress would take the cookie user, skip the
+ * Application Password, then drop to logged out for want of a nonce.
+ *
+ * @param {Object} credentials `{ user, password }` from `createAppPassword()`.
+ * @param {string} method      HTTP method.
+ * @param {string} path        Path under `/wp-json`, e.g. `/wp/v2/posts`.
+ * @param {Object} [data]      JSON body.
+ * @return {Promise<{status: number, body: Object}>} Response.
+ */
+export async function agentRequest( credentials, method, path, data ) {
+	const auth = Buffer.from(
+		`${ credentials.user }:${ credentials.password }`
+	).toString( 'base64' );
+	const context = await playwrightRequest.newContext( {
+		baseURL: process.env.WP_BASE_URL || 'http://localhost:8889',
+		// Inside the test runner a new context inherits the project's
+		// `storageState` (the admin's cookies) unless given an empty one.
+		storageState: { cookies: [], origins: [] },
+		extraHTTPHeaders: { Authorization: `Basic ${ auth }` },
+	} );
+
+	try {
+		const response = await context.fetch(
+			`./index.php?rest_route=${ encodeURIComponent( path ) }`,
+			{ method, data }
+		);
+
+		return { status: response.status(), body: await response.json() };
+	} finally {
+		await context.dispose();
+	}
+}
+
+/**
+ * Grants or explicitly denies one `sit_cwm_*` capability to a single user.
+ *
+ * @param {Object}  requestUtils Request utils fixture.
+ * @param {number}  userId       User id.
+ * @param {string}  cap          Capability, e.g. `sit_cwm_change_workflow`.
+ * @param {boolean} grant        `false` denies it even if the role has it.
+ * @return {Promise<{has_cap: boolean}>} Whether the user has it afterwards.
+ */
+export function setUserCap( requestUtils, userId, cap, grant ) {
+	return requestUtils.rest( {
+		method: 'POST',
+		path: `${ E2E_NAMESPACE }/user-cap`,
+		data: { user_id: userId, cap, grant },
+	} );
 }

@@ -324,9 +324,273 @@ function sit_cwm_e2e_activity( WP_REST_Request $request ) {
 }
 
 /**
+ * Option that keeps the Freemius opt-in showing (set by `freemius-optin.spec.js`).
+ *
+ * @since 1.2.0
+ * @var string
+ */
+const SIT_CWM_E2E_KEEP_OPTIN_OPTION = 'sit_cwm_e2e_keep_optin';
+
+/**
+ * Meta key the probe add-on's veto reads (`tests/fixtures/sit-cwm-probe`).
+ *
+ * @since 1.2.0
+ * @var string
+ */
+const SIT_CWM_E2E_PROBE_CHECKLIST_META = '_sit_cwm_probe_checklist';
+
+/**
+ * Skips the Freemius opt-in, as its Skip button does, so the opt-in screen
+ * never sits in front of the dashboard in the specs. wp-env never runs
+ * `bin/setup-e2e-site.php`, so this is what skips it there.
+ *
+ * Does nothing while `freemius-optin.spec.js` keeps the opt-in showing, or
+ * once the site has opted in.
+ *
+ * @since 1.2.0
+ *
+ * @return void
+ */
+function sit_cwm_e2e_skip_optin() {
+	if ( ! function_exists( 'sit_cwm_fs' ) || get_option( SIT_CWM_E2E_KEEP_OPTIN_OPTION ) ) {
+		return;
+	}
+
+	$fs = sit_cwm_fs();
+
+	if ( ! $fs->is_registered() && ! $fs->is_anonymous() ) {
+		$fs->skip_connection();
+	}
+}
+add_action( 'plugins_loaded', 'sit_cwm_e2e_skip_optin', 1 );
+
+/**
+ * Makes Application Passwords available on the plain-HTTP test sites.
+ *
+ * Core offers them only over HTTPS or on a `local` environment type. The
+ * Laragon scratch sites are neither, and `agent-flow.spec.js` authenticates
+ * the agent with one, as `docs/AGENTS.md` tells real agents to.
+ *
+ * @since 1.2.0
+ */
+add_filter( 'wp_is_application_passwords_available', '__return_true' );
+
+/**
+ * Answers WordPress.org update checks with an empty JSON body instead of
+ * going online. Plugin information lookups are refused through the
+ * `plugins_api` filter below instead: an empty body there would lack the
+ * `name` core's plugin-dependency code reads.
+ *
+ * Local test sites often cannot reach WordPress.org over HTTPS (no CA
+ * bundle). Core then prints "An unexpected error occurred" warnings into the
+ * admin page with WP_DEBUG_DISPLAY on, and the e2e utils fail on any PHP
+ * warning in page content. The specs never need those responses.
+ *
+ * @since 1.2.0
+ *
+ * @param false|array|WP_Error $preempt Earlier short-circuit value.
+ * @param array                $args    Request arguments.
+ * @param string               $url     Request URL.
+ * @return false|array
+ */
+function sit_cwm_e2e_offline_wporg( $preempt, $args, $url ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Filter signature.
+	if ( false !== $preempt || 'api.wordpress.org' !== wp_parse_url( $url, PHP_URL_HOST ) || ! preg_match( '#/(update-check|version-check)/#', (string) wp_parse_url( $url, PHP_URL_PATH ) ) ) {
+		return $preempt;
+	}
+
+	return array(
+		'headers'  => array(),
+		'body'     => '{}',
+		'response' => array(
+			'code'    => 200,
+			'message' => 'OK',
+		),
+		'cookies'  => array(),
+		'filename' => null,
+	);
+}
+add_filter( 'pre_http_request', 'sit_cwm_e2e_offline_wporg', 10, 3 );
+
+/**
+ * Refuses WordPress.org plugin information lookups offline, quietly: core
+ * skips a `WP_Error` from `plugins_api()` without printing a warning.
+ *
+ * @since 1.2.0
+ *
+ * @param false|object|array $result Earlier result.
+ * @return false|object|array|WP_Error
+ */
+function sit_cwm_e2e_offline_plugins_api( $result ) {
+	return false === $result ? new WP_Error( 'sit_cwm_e2e_offline', 'WordPress.org is not reachable from the test site.' ) : $result;
+}
+add_filter( 'plugins_api', 'sit_cwm_e2e_offline_plugins_api' );
+
+/**
+ * Prints a test admin notice when the URL has `sit_cwm_e2e_notice=1`, so
+ * `admin-shell.spec.js` can check where core places notices on the
+ * plugin's screens.
+ *
+ * @since 1.2.0
+ *
+ * @return void
+ */
+function sit_cwm_e2e_admin_notice() {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only test flag.
+	if ( isset( $_GET['sit_cwm_e2e_notice'] ) ) {
+		echo '<div class="notice notice-info sit-cwm-e2e-notice"><p>E2E test notice.</p></div>';
+	}
+}
+add_action( 'admin_notices', 'sit_cwm_e2e_admin_notice' );
+
+/**
+ * `GET /freemius`: the Freemius opt-in state of this site.
+ *
+ * @since 1.2.0
+ *
+ * @return WP_REST_Response|WP_Error
+ */
+function sit_cwm_e2e_freemius_state() {
+	if ( ! function_exists( 'sit_cwm_fs' ) ) {
+		return new WP_Error( 'sit_cwm_e2e_inactive', 'The plugin is not active.', array( 'status' => 500 ) );
+	}
+
+	$fs = sit_cwm_fs();
+
+	return rest_ensure_response(
+		array(
+			'registered'    => (bool) $fs->is_registered(),
+			'anonymous'     => (bool) $fs->is_anonymous(),
+			'keep_optin'    => (bool) get_option( SIT_CWM_E2E_KEEP_OPTIN_OPTION ),
+			'reconnect_url' => $fs->get_reconnect_url(),
+		)
+	);
+}
+
+/**
+ * `POST /freemius`: `{ "optin": "show" }` keeps the opt-in showing and
+ * returns the SDK's reconnect URL (opening it resets the skip);
+ * `{ "optin": "skip" }` skips it again.
+ *
+ * @since 1.2.0
+ *
+ * @param WP_REST_Request $request Request.
+ * @return WP_REST_Response|WP_Error
+ */
+function sit_cwm_e2e_freemius_set( WP_REST_Request $request ) {
+	if ( ! function_exists( 'sit_cwm_fs' ) ) {
+		return new WP_Error( 'sit_cwm_e2e_inactive', 'The plugin is not active.', array( 'status' => 500 ) );
+	}
+
+	if ( 'show' === $request['optin'] ) {
+		update_option( SIT_CWM_E2E_KEEP_OPTIN_OPTION, 1, false );
+	} else {
+		delete_option( SIT_CWM_E2E_KEEP_OPTIN_OPTION );
+		sit_cwm_fs()->skip_connection();
+	}
+
+	return sit_cwm_e2e_freemius_state();
+}
+
+/**
+ * `POST /activity`: inserts one activity row with an explicit `created_at`
+ * and `context`, so the governance report specs can arrange history.
+ *
+ * Goes through the plugin's own logger, so unknown actions are refused.
+ *
+ * @since 1.2.0
+ *
+ * @param WP_REST_Request $request Request.
+ * @return WP_REST_Response|WP_Error
+ */
+function sit_cwm_e2e_insert_activity( WP_REST_Request $request ) {
+	if ( ! class_exists( '\Sit_Cwm\Activity\ActivityLogger' ) ) {
+		return new WP_Error( 'sit_cwm_e2e_inactive', 'The plugin is not active.', array( 'status' => 500 ) );
+	}
+
+	$post = get_post( absint( $request['post_id'] ) );
+
+	if ( ! $post instanceof WP_Post ) {
+		return new WP_Error( 'sit_cwm_e2e_no_post', 'No such post.', array( 'status' => 404 ) );
+	}
+
+	$args = array(
+		'context' => is_array( $request['context'] ) ? $request['context'] : array(),
+		'user_id' => null === $request['user_id'] ? get_current_user_id() : absint( $request['user_id'] ),
+	);
+
+	foreach ( array( 'old_value', 'new_value', 'created_at' ) as $key ) {
+		if ( null !== $request[ $key ] ) {
+			$args[ $key ] = sanitize_text_field( (string) $request[ $key ] );
+		}
+	}
+
+	$logger = new \Sit_Cwm\Activity\ActivityLogger( new \Sit_Cwm\Core\Database() );
+	$id     = $logger->log( $post->ID, sanitize_key( (string) $request['action'] ), $args );
+
+	if ( 0 === $id ) {
+		return new WP_Error( 'sit_cwm_e2e_activity_refused', 'The activity row was refused.', array( 'status' => 400 ) );
+	}
+
+	return rest_ensure_response( array( 'id' => $id ) );
+}
+
+/**
+ * `POST /probe-checklist`: sets (`done: true`) or removes the probe add-on's
+ * checklist flag on a post.
+ *
+ * @since 1.2.0
+ *
+ * @param WP_REST_Request $request Request.
+ * @return WP_REST_Response|WP_Error
+ */
+function sit_cwm_e2e_probe_checklist( WP_REST_Request $request ) {
+	$post = get_post( absint( $request['post_id'] ) );
+
+	if ( ! $post instanceof WP_Post ) {
+		return new WP_Error( 'sit_cwm_e2e_no_post', 'No such post.', array( 'status' => 404 ) );
+	}
+
+	if ( rest_sanitize_boolean( $request['done'] ) ) {
+		update_post_meta( $post->ID, SIT_CWM_E2E_PROBE_CHECKLIST_META, '1' );
+	} else {
+		delete_post_meta( $post->ID, SIT_CWM_E2E_PROBE_CHECKLIST_META );
+	}
+
+	return rest_ensure_response( array( 'done' => '1' === get_post_meta( $post->ID, SIT_CWM_E2E_PROBE_CHECKLIST_META, true ) ) );
+}
+
+/**
+ * `POST /user-cap`: grants (`grant: true`) or explicitly denies
+ * (`grant: false`) one of the plugin's `sit_cwm_*` capabilities to a single
+ * user, on top of their role.
+ *
+ * @since 1.2.0
+ *
+ * @param WP_REST_Request $request Request.
+ * @return WP_REST_Response|WP_Error
+ */
+function sit_cwm_e2e_user_cap( WP_REST_Request $request ) {
+	$user = get_userdata( absint( $request['user_id'] ) );
+	$cap  = sanitize_key( (string) $request['cap'] );
+
+	if ( ! $user instanceof WP_User ) {
+		return new WP_Error( 'sit_cwm_e2e_no_user', 'No such user.', array( 'status' => 404 ) );
+	}
+
+	if ( 0 !== strpos( $cap, 'sit_cwm_' ) ) {
+		return new WP_Error( 'sit_cwm_e2e_bad_cap', 'Only sit_cwm_* capabilities.', array( 'status' => 400 ) );
+	}
+
+	$user->add_cap( $cap, rest_sanitize_boolean( $request['grant'] ) );
+
+	return rest_ensure_response( array( 'has_cap' => user_can( $user, $cap ) ) );
+}
+
+/**
  * Registers the fixture routes.
  *
  * @since 1.1.0
+ * @since 1.2.0 Adds `/freemius`, `/activity` (POST) and `/probe-checklist`.
  *
  * @return void
  */
@@ -397,6 +661,108 @@ function sit_cwm_e2e_register_routes() {
 			'callback'            => 'sit_cwm_e2e_activity',
 			'permission_callback' => 'sit_cwm_e2e_can_use',
 			'args'                => $id_args,
+		)
+	);
+
+	register_rest_route(
+		$namespace,
+		'/freemius',
+		array(
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => 'sit_cwm_e2e_freemius_state',
+				'permission_callback' => 'sit_cwm_e2e_can_use',
+			),
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => 'sit_cwm_e2e_freemius_set',
+				'permission_callback' => 'sit_cwm_e2e_can_use',
+				'args'                => array(
+					'optin' => array(
+						'type'     => 'string',
+						'enum'     => array( 'show', 'skip' ),
+						'required' => true,
+					),
+				),
+			),
+		)
+	);
+
+	register_rest_route(
+		$namespace,
+		'/activity',
+		array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => 'sit_cwm_e2e_insert_activity',
+			'permission_callback' => 'sit_cwm_e2e_can_use',
+			'args'                => array(
+				'post_id'    => array(
+					'type'     => 'integer',
+					'minimum'  => 1,
+					'required' => true,
+				),
+				'action'     => array(
+					'type'     => 'string',
+					'required' => true,
+				),
+				'context'    => array( 'type' => 'object' ),
+				'user_id'    => array(
+					'type'    => 'integer',
+					'minimum' => 0,
+				),
+				'old_value'  => array( 'type' => 'string' ),
+				'new_value'  => array( 'type' => 'string' ),
+				'created_at' => array(
+					'type'    => 'string',
+					'pattern' => '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$',
+				),
+			),
+		)
+	);
+
+	register_rest_route(
+		$namespace,
+		'/probe-checklist',
+		array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => 'sit_cwm_e2e_probe_checklist',
+			'permission_callback' => 'sit_cwm_e2e_can_use',
+			'args'                => array(
+				'post_id' => array(
+					'type'     => 'integer',
+					'minimum'  => 1,
+					'required' => true,
+				),
+				'done'    => array(
+					'type'     => 'boolean',
+					'required' => true,
+				),
+			),
+		)
+	);
+
+	register_rest_route(
+		$namespace,
+		'/user-cap',
+		array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => 'sit_cwm_e2e_user_cap',
+			'permission_callback' => 'sit_cwm_e2e_can_use',
+			'args'                => array(
+				'user_id' => array(
+					'type'     => 'integer',
+					'minimum'  => 1,
+					'required' => true,
+				),
+				'cap'     => array(
+					'type'     => 'string',
+					'required' => true,
+				),
+				'grant'   => array(
+					'type'     => 'boolean',
+					'required' => true,
+				),
+			),
 		)
 	);
 }

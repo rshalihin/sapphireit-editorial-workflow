@@ -13,6 +13,7 @@
       "mappings": {
         "wp-content/plugins/sapphireit-editorial-workflow/tests": "./tests",
         "wp-content/plugins/classic-editor": "https://downloads.wordpress.org/plugin/classic-editor.zip",
+        "wp-content/plugins/sit-cwm-probe": "./tests/fixtures/sit-cwm-probe",
         "wp-content/mu-plugins/sit-cwm-e2e-helpers.php": "./tests/e2e/fixtures/sit-cwm-e2e-helpers.php"
       }
     }

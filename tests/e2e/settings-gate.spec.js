@@ -57,29 +57,39 @@ test.describe( 'Settings: publish gate and notifications', () => {
 	} ) => {
 		await page.goto( SETTINGS );
 
+		// 1.2.0 (phase 20b): each section is a tab with its own panel, all in
+		// one form, so one Save keeps the values of every tab.
+		const tab = ( name ) => page.getByRole( 'tab', { name } ).click();
+
+		await tab( 'Publish gate' );
 		await page
 			.getByRole( 'combobox', { name: 'Posts', exact: true } )
 			.selectOption( { label: 'Enforce' } );
 		await page
 			.getByRole( 'combobox', { name: 'Pages', exact: true } )
 			.selectOption( { label: 'Log only' } );
+		await tab( 'Email notifications' );
 		await page.getByRole( 'checkbox', { name: APPROVED_EVENT } ).check();
+		await tab( 'Workflow' );
 		await page.getByRole( 'checkbox', { name: SELF_APPROVAL } ).check();
-		await page.getByRole( 'button', { name: 'Save Changes' } ).click();
+		await page.getByRole( 'button', { name: 'Save changes' } ).click();
 
 		await expect( page.getByText( 'Settings saved.' ) ).toBeVisible();
 
 		await page.reload();
 
+		await tab( 'Publish gate' );
 		await expect(
 			page.getByRole( 'combobox', { name: 'Posts', exact: true } )
 		).toHaveValue( 'enforce' );
 		await expect(
 			page.getByRole( 'combobox', { name: 'Pages', exact: true } )
 		).toHaveValue( 'log_only' );
+		await tab( 'Email notifications' );
 		await expect(
 			page.getByRole( 'checkbox', { name: APPROVED_EVENT } )
 		).toBeChecked();
+		await tab( 'Workflow' );
 		await expect(
 			page.getByRole( 'checkbox', { name: SELF_APPROVAL } )
 		).toBeChecked();

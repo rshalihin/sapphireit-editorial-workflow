@@ -68,6 +68,36 @@ final class FreemiusIntegrationTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The SDK's opt-in replaces the page its `menu.slug` names, for anyone
+	 * who can open it. It names Settings, which only managers can open, so
+	 * the Dashboard every workflow user works in is never replaced (F18).
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_opt_in_lives_on_the_manager_only_settings_page() {
+		$this->assertSame( \Sit_Cwm\Admin\Settings::MENU_SLUG, sit_cwm_fs()->get_menu_slug() );
+		$this->assertNotSame( \Sit_Cwm\Admin\Dashboard::MENU_SLUG, sit_cwm_fs()->get_menu_slug() );
+	}
+
+	/**
+	 * Nothing is sold in 1.2.0 (R10): the SDK's hidden pricing page is
+	 * replaced by a link to the Dashboard, so its URL redirects there
+	 * instead of loading the pricing app.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_pricing_url_points_to_the_dashboard() {
+		$this->assertSame(
+			admin_url( 'admin.php?page=' . \Sit_Cwm\Admin\Dashboard::MENU_SLUG ),
+			sit_cwm_fs()->apply_filters( 'pricing_url', null )
+		);
+	}
+
+	/**
 	 * Free is updated by WordPress.org only: the SDK's updater is not
 	 * started for a non-premium build, so nothing of Freemius hooks the
 	 * plugin update transient.

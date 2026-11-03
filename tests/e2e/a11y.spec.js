@@ -17,17 +17,37 @@ import { expect, test } from '@wordpress/e2e-test-utils-playwright';
  */
 import {
 	axeViolations as violations,
+	createWorkflowUser,
+	loginAs,
 	openWorkflowSidebar,
 	setSettings,
 } from './utils';
 
 const TITLE = 'E2E a11y post';
+const EDITOR = 'e2e_a11y_editor';
+
+/**
+ * The settings tabs, in order (phase 20b).
+ *
+ * @type {string[]}
+ */
+const SETTINGS_SECTIONS = [
+	'Workflow',
+	'Publish gate',
+	'Email notifications',
+	'AI use default',
+	'Review attestation',
+	'Front-end disclosure',
+	'Uninstall',
+];
 
 test.describe( 'Accessibility', () => {
 	let post;
 
 	test.beforeAll( async ( { requestUtils } ) => {
 		await requestUtils.deleteAllPosts();
+		await requestUtils.deleteAllUsers();
+		await createWorkflowUser( requestUtils, EDITOR, 'editor' );
 
 		post = await requestUtils.rest( {
 			method: 'POST',
@@ -52,6 +72,7 @@ test.describe( 'Accessibility', () => {
 	test.afterAll( async ( { requestUtils } ) => {
 		await setSettings( requestUtils, { publish_gate: {} } );
 		await requestUtils.deleteAllPosts();
+		await requestUtils.deleteAllUsers();
 	} );
 
 	test( 'dashboard table and a row action modal', async ( {
@@ -93,19 +114,93 @@ test.describe( 'Accessibility', () => {
 		);
 	} );
 
-	test( 'settings screen with the publish gate and notifications sections', async ( {
+	// 1.2.0 (phase 20b): the sections are vertical tabs, one panel at a time,
+	// so each tab is opened and its panel scanned.
+	test( 'settings screen, every section tab', async ( { admin, page } ) => {
+		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-settings' );
+
+		const tabs = page.getByRole( 'tab' );
+
+		await expect( tabs ).toHaveText( SETTINGS_SECTIONS );
+
+		for ( const name of SETTINGS_SECTIONS ) {
+			await page.getByRole( 'tab', { name } ).click();
+			await expect(
+				page.getByRole( 'tabpanel' ).getByRole( 'heading', { name } )
+			).toBeVisible();
+			expect( await violations( page, '.wrap form' ), name ).toEqual(
+				[]
+			);
+		}
+	} );
+
+	test( 'Getting Started, as an admin and as an editor', async ( {
 		admin,
 		page,
 	} ) => {
-		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-settings' );
+		await admin.visitAdminPage(
+			'admin.php',
+			'page=sit-cwm-getting-started'
+		);
+		await expect(
+			page.getByText( 'Set up your editorial workflow' )
+		).toBeVisible();
+		expect( await violations( page, '.sit-cwm-getting-started' ) ).toEqual(
+			[]
+		);
+
+		await loginAs( page, EDITOR );
+		await page.goto( '/wp-admin/admin.php?page=sit-cwm-getting-started' );
+		await expect(
+			page.getByRole( 'heading', { name: 'Getting Started', level: 1 } )
+		).toBeVisible();
+		expect( await violations( page, '.sit-cwm-getting-started' ) ).toEqual(
+			[]
+		);
+	} );
+
+	test( 'shell header at 360px wide', async ( { admin, page } ) => {
+		await page.setViewportSize( { width: 360, height: 800 } );
+		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-dashboard' );
+
+		await expect( page.locator( '.sit-cwm-shell' ) ).toBeVisible();
+		expect( await violations( page, '.sit-cwm-shell' ) ).toEqual( [] );
+	} );
+
+	test( 'governance report screen', async ( { admin, page } ) => {
+		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-report' );
 
 		await expect(
-			page.getByRole( 'heading', { name: 'Publish gate' } )
+			page.locator( '.sit-cwm-report__headline' )
 		).toBeVisible();
-		await expect(
-			page.getByRole( 'heading', { name: 'Email notifications' } )
-		).toBeVisible();
-		expect( await violations( page, '.wrap form' ) ).toEqual( [] );
+		expect( await violations( page, '.sit-cwm-report-wrap' ) ).toEqual(
+			[]
+		);
+	} );
+
+	test( 'editor sidebar with AI use and the attestation checkbox', async ( {
+		page,
+		requestUtils,
+	} ) => {
+		await setSettings( requestUtils, { require_attestation: true } );
+
+		try {
+			const panel = await openWorkflowSidebar( page, post.id );
+
+			await expect(
+				panel.getByRole( 'combobox', { name: 'AI use' } )
+			).toBeVisible();
+			await expect(
+				panel.getByRole( 'checkbox', {
+					name: 'I confirm I have reviewed this content and approve it for publication.',
+				} )
+			).toBeVisible();
+			expect( await violations( page, '.sit-cwm-sidebar' ) ).toEqual(
+				[]
+			);
+		} finally {
+			await setSettings( requestUtils, { require_attestation: false } );
+		}
 	} );
 
 	test( 'editor sidebar with the gate notice', async ( {

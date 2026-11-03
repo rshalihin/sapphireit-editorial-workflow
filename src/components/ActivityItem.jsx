@@ -161,6 +161,24 @@ function sentenceTemplate( entry ) {
 				actor
 			);
 
+		case 'ai_origin_changed':
+			// The logger records only real AI-use values, so a label is
+			// expected. Without one (an older or unexpected row), keep the
+			// generic "actor: AI use declared".
+			if ( ! entry.new_label ) {
+				break;
+			}
+
+			return sprintf(
+				/* translators: 1: user name, 2: declared AI use, e.g. "AI-generated" */
+				__(
+					'%1$s: AI use declared as %2$s',
+					'sapphireit-editorial-workflow'
+				),
+				actor,
+				to
+			);
+
 		case 'due_date_set':
 			return sprintf(
 				/* translators: 1: user name, 2: due date */

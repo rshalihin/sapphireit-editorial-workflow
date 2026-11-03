@@ -6,7 +6,9 @@
  *
  * It loads the target site through `wp-load.php` and then: activates this
  * plugin, installs the test-only helper mu-plugin
- * (`tests/e2e/fixtures/sit-cwm-e2e-helpers.php`), switches plain permalinks to
+ * (`tests/e2e/fixtures/sit-cwm-e2e-helpers.php`), installs the probe add-on
+ * (`tests/fixtures/sit-cwm-probe`, left inactive), skips the Freemius opt-in
+ * (1.2.0), switches plain permalinks to
  * post-name permalinks, and makes sure the administrator account the specs log
  * in as exists with a known password.
  *
@@ -235,6 +237,54 @@ if ( is_link( $sit_cwm_mu_file ) && realpath( $sit_cwm_mu_file ) === realpath( $
 		sit_cwm_say( 'Copied the E2E helper mu-plugin into ' . WPMU_PLUGIN_DIR . '.' );
 	} else {
 		sit_cwm_fail( 'Cannot install the E2E helper mu-plugin into ' . WPMU_PLUGIN_DIR . '.' );
+	}
+}
+
+// 2c. The probe add-on (tests/fixtures/sit-cwm-probe), the same folder
+// wp-env maps in. Installed but left inactive: `probe-addon.spec.js`
+// activates it for its own tests and deactivates it afterwards.
+$sit_cwm_probe_src  = $sit_cwm_root . '/tests/fixtures/sit-cwm-probe';
+$sit_cwm_probe_dest = WP_PLUGIN_DIR . '/sit-cwm-probe';
+
+$sit_cwm_probe_file = '/sit-cwm-probe.php';
+
+if ( is_link( $sit_cwm_probe_dest ) ) {
+	sit_cwm_say( 'Probe add-on already linked (' . $sit_cwm_probe_dest . ').' );
+} elseif ( is_dir( $sit_cwm_probe_dest ) ) {
+	// An earlier copy: refresh it, so fixture edits reach the site.
+	if ( ! copy( $sit_cwm_probe_src . $sit_cwm_probe_file, $sit_cwm_probe_dest . $sit_cwm_probe_file ) ) {
+		sit_cwm_fail( 'Cannot refresh the probe add-on in ' . $sit_cwm_probe_dest . '.' );
+	}
+	sit_cwm_say( 'Refreshed the probe add-on copy in ' . $sit_cwm_probe_dest . '.' );
+	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Unprivileged Windows shells cannot symlink; copied below.
+} elseif ( @symlink( $sit_cwm_probe_src, $sit_cwm_probe_dest ) ) {
+	sit_cwm_say( 'Linked the probe add-on into ' . $sit_cwm_probe_dest . ' (inactive).' );
+} elseif ( mkdir( $sit_cwm_probe_dest, 0755, true ) && copy( $sit_cwm_probe_src . $sit_cwm_probe_file, $sit_cwm_probe_dest . $sit_cwm_probe_file ) ) {
+	sit_cwm_say( 'Copied the probe add-on into ' . $sit_cwm_probe_dest . ' (inactive). Rerun this script after changing it.' );
+} else {
+	sit_cwm_fail( 'Cannot install the probe add-on into ' . $sit_cwm_probe_dest . '.' );
+}
+
+$sit_cwm_probe_plugin = 'sit-cwm-probe/sit-cwm-probe.php';
+
+if ( is_plugin_active( $sit_cwm_probe_plugin ) ) {
+	deactivate_plugins( $sit_cwm_probe_plugin );
+	sit_cwm_say( 'Deactivated the probe add-on (the specs activate it themselves).' );
+}
+
+// 2d. Freemius opt-in. Skipped the way the opt-in screen's Skip button does,
+// so the screen never sits in front of the dashboard in the specs.
+// `freemius-optin.spec.js` resets it for its own tests and skips again.
+if ( function_exists( 'sit_cwm_fs' ) ) {
+	$sit_cwm_fs_instance = sit_cwm_fs();
+
+	if ( $sit_cwm_fs_instance->is_registered() ) {
+		sit_cwm_say( 'Freemius: this site is opted in; the opt-in specs expect a site that is not.' );
+	} elseif ( $sit_cwm_fs_instance->is_anonymous() ) {
+		sit_cwm_say( 'Freemius opt-in already skipped.' );
+	} else {
+		$sit_cwm_fs_instance->skip_connection();
+		sit_cwm_say( 'Freemius opt-in skipped.' );
 	}
 }
 

@@ -457,3 +457,43 @@ describe( 'ActivityItem publication sentences', () => {
 		expect( screen.queryByText( 'Review confirmed' ) ).toBeNull();
 	} );
 } );
+
+describe( 'ActivityItem AI use sentences', () => {
+	it( 'names the declared AI use', () => {
+		const { container } = render(
+			<ul>
+				<ActivityItem
+					entry={ entry( 1, {
+						action: 'ai_origin_changed',
+						action_label: 'AI use declared',
+						old_value: 'none',
+						old_label: null,
+						new_value: 'ai_generated',
+						new_label: 'AI-generated',
+					} ) }
+				/>
+			</ul>
+		);
+
+		expect( itemTexts( container ) ).toEqual( [
+			'Jane: AI use declared as AI-generated',
+		] );
+	} );
+
+	it( 'falls back to the label when the value is unknown', () => {
+		const { container } = render(
+			<ul>
+				<ActivityItem
+					entry={ entry( 1, {
+						action: 'ai_origin_changed',
+						action_label: 'AI use declared',
+						new_value: 'something_else',
+						new_label: null,
+					} ) }
+				/>
+			</ul>
+		);
+
+		expect( itemTexts( container ) ).toEqual( [ 'Jane: AI use declared' ] );
+	} );
+} );

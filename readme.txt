@@ -362,9 +362,13 @@ Freemius's privacy policy: https://freemius.com/privacy/
    not approved yet, so the gate blocks publishing.
 2. The activity timeline, showing content published while it was still at
    Review, and a publish the gate blocked.
-3. The settings screen, with the Publish gate and Email notifications sections.
+3. The settings screen, open at the Publish gate section.
 4. The admin dashboard, with server-side filtering, sorting and search.
 5. The workflow box in the classic editor.
+6. The governance report: how much was published after approval, publishing
+   the gate blocked or let through, and declared AI use.
+7. The editor sidebar with declared AI use and the review confirmation an
+   approver ticks before approving.
 
 == Changelog ==
 

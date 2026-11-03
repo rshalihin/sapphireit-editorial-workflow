@@ -136,7 +136,9 @@ test.describe( 'Keyboard-only workflow', () => {
 		await keyboard.press( 'Enter' );
 		await expect( calendar ).toBeHidden();
 		await expect(
-			panel.getByRole( 'button', { name: /^Change due date: (?!No)/ } )
+			panel.getByRole( 'button', {
+				name: /^Change due date: (?!No due date)/,
+			} )
 		).toBeVisible();
 
 		// Review, then Approve through the confirmation dialog.

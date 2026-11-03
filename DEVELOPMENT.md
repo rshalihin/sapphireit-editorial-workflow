@@ -258,7 +258,9 @@ npm run test:e2e:local -- --base-url=http://flow-manager.test
   at a dev site running a different WordPress version. Options: `--wp`, `--dir`,
   `--db`, `--user`, `--pass`, `--host`, `--prefix`, `--force`.
 - **`bin/setup-e2e-site.php`** prepares an existing local site: activates the
-  plugin, switches plain permalinks to post-name permalinks, writes the
+  plugin, installs the test mu-plugin and the probe add-on
+  (`tests/fixtures/sit-cwm-probe`, left inactive), skips the Freemius opt-in
+  (1.2.0), switches plain permalinks to post-name permalinks, writes the
   WordPress rewrite rules to `.htaccess` (the CLI cannot detect `mod_rewrite`,
   so WordPress skips that itself, and `/wp-json/` 404s without it), and makes
   sure the administrator the specs log in as exists (`--admin-user`,
@@ -343,11 +345,35 @@ These specs, `a11y.spec.js` and `screenshots.spec.js` need the test-only
 mu-plugin `tests/e2e/fixtures/sit-cwm-e2e-helpers.php`. It captures every
 `wp_mail()` call instead of sending it and adds routes under `sit-cwm-e2e/v1`
 (captured mails, settings, a cron go-live, a raw `wp_publish_post()`, raw
-activity rows), each limited to `manage_options`. wp-env maps it into
+activity rows; from 1.2.0 also seeded activity rows, the probe's checklist
+flag, a per-user `sit_cwm_*` capability and the Freemius opt-in state), each
+limited to `manage_options`. From 1.2.0 it also skips the Freemius opt-in on
+every request (unless `freemius-optin.spec.js` is showing it), so wp-env,
+which never runs the setup script, does not get the opt-in screen either, and
+turns on Application Passwords over plain HTTP for `agent-flow.spec.js`. wp-env maps it into
 `wp-content/mu-plugins/` (`.wp-env.json`), and `php bin/setup-e2e-site.php`
 links it into a local site. It lives under `tests/`, so the release zip never
 contains it. Classic Editor must be installed (not active) on a local site, as
 for `classic-editor.spec.js`.
+
+### 1.2 acceptance E2E
+
+The 1.2 acceptance matrix (`.claude/.plan/v-1.2.0/23-e2e-and-acceptance.md`)
+is proven end to end by these specs in `tests/e2e/`. The probe add-on must be
+installed but inactive on the target site (`.wp-env.json` maps it; the setup
+script installs it); `probe-addon.spec.js` activates it for its own tests.
+
+| Spec | Covers |
+|---|---|
+| `admin-shell.spec.js` | The design A header and tabs per role, the current tab, Getting Started (setup steps for managers only, links open in a new tab, no third-party request), the empty dashboard's Getting Started link, admin notices under the header |
+| `freemius-optin.spec.js` | The opt-in for admins only, Skip landing on Getting Started, no redirect on bulk activation, no Contact/Support/Add-Ons/Pricing pages, a skippable deactivation form |
+| `probe-addon.spec.js` | An injected status and its colour in the sidebar and dashboard, a veto's reason in the sidebar (on load and on click) and the classic box, the rewired transition map |
+| `audit-export.spec.js` | The CSV download (name, BOM, F8 header, neutralised formula cells); no button and a 403 for non-auditors |
+| `ai-origin.spec.js` | Declaring AI use in both editors, the per-type default stamped on new posts, the dashboard column, read-only for users without the workflow capability |
+| `attestation.spec.js` | Approve disabled until the statement is ticked, in the sidebar and in bulk; no checkbox when off; the settings toggle |
+| `disclosure.spec.js` | Shortcode and block silent while off, rendered when on, the block's inserter visibility, nothing for content published without approval |
+| `governance-report.spec.js` | Report figures from seeded activity, the period in the URL, 403 for editors, the export button |
+| `agent-flow.spec.js` | `docs/AGENTS.md` run as written over Application Passwords; the agent cannot approve, nor publish when the gate enforces |
 
 They run with the rest of the suite (`npm run test:e2e`, or
 `npm run test:e2e:local` without Docker), except `cli-matrix.spec.js`. That

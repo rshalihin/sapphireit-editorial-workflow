@@ -156,7 +156,8 @@ curl -sS -u "$CWM_AUTH" "$CWM_SITE/wp-json/sit-cwm/v1/posts/131/workflow" | jq '
 
 | `status` | Meaning | What the agent does |
 |---|---|---|
-| `review` | Still waiting | Poll again later. Every few minutes is plenty. || `needs_changes` | The reviewer sent it back | Read the comments (`GET /wp-json/sit-cwm/v1/posts/131/activity`), revise the post through `wp/v2`, then send `{"from":"needs_changes","status":"writing"}` and repeat step 3 |
+| `review` | Still waiting | Poll again later. Every few minutes is plenty. |
+| `needs_changes` | The reviewer sent it back | Read the comments (`GET /wp-json/sit-cwm/v1/posts/131/activity`), revise the post through `wp/v2`, then send `{"from":"needs_changes","status":"writing"}` and repeat step 3 |
 | `approved` | A person approved it | Done. Publishing is a person's decision unless your setup says otherwise. |
 | `published` | It went live | Done. |
 
