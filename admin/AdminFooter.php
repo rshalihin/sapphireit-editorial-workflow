@@ -15,14 +15,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Replaces core's footer text and version on the dashboard and settings screens.
+ * Replaces core's footer text and version on the plugin's screens.
  *
  * The left side asks for a WordPress.org review; the right side shows the
  * plugin's version instead of WordPress's. Every other admin screen keeps
  * core's footer untouched.
  *
- * Screens are matched against the hook suffixes the pages registered, so the
- * check survives a translated menu title (which changes the settings screen id).
+ * Screens are matched by `AdminShell::is_plugin_screen()` (the requested page
+ * slug against the tab allow-list), so the check survives a translated menu
+ * title, which changes the screen id.
  *
  * @since 1.1.0
  * @internal
@@ -48,32 +49,23 @@ final class AdminFooter implements Bootable {
 	const VERSION_PRIORITY = 11;
 
 	/**
-	 * Dashboard screen.
+	 * Shared admin header, which knows the plugin screens.
 	 *
-	 * @since 1.1.0
-	 * @var Dashboard
+	 * @since 1.2.0
+	 * @var AdminShell
 	 */
-	private $dashboard;
-
-	/**
-	 * Settings screen.
-	 *
-	 * @since 1.1.0
-	 * @var Settings
-	 */
-	private $settings;
+	private $shell;
 
 	/**
 	 * Constructor.
 	 *
 	 * @since 1.1.0
+	 * @since 1.2.0 Takes the shell instead of the dashboard and settings pages.
 	 *
-	 * @param Dashboard $dashboard Dashboard screen.
-	 * @param Settings  $settings  Settings screen.
+	 * @param AdminShell $shell Shared admin header.
 	 */
-	public function __construct( Dashboard $dashboard, Settings $settings ) {
-		$this->dashboard = $dashboard;
-		$this->settings  = $settings;
+	public function __construct( AdminShell $shell ) {
+		$this->shell = $shell;
 	}
 
 	/**
@@ -137,21 +129,15 @@ final class AdminFooter implements Bootable {
 	}
 
 	/**
-	 * Whether the current admin screen is the dashboard or the settings page.
+	 * Whether the current admin screen is one of the plugin's own screens.
 	 *
 	 * @since 1.1.0
+	 * @since 1.2.0 Asks the shell, so every tab (Getting Started included) matches
+	 *              and pages others add under the menu (Freemius's Account) do not.
 	 *
 	 * @return bool
 	 */
 	private function is_plugin_screen(): bool {
-		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-
-		if ( null === $screen ) {
-			return false;
-		}
-
-		$suffixes = array_filter( array( $this->dashboard->hook_suffix(), $this->settings->hook_suffix() ) );
-
-		return in_array( $screen->id, $suffixes, true );
+		return $this->shell->is_plugin_screen();
 	}
 }

@@ -392,3 +392,20 @@ export function getUsers( args = {}, { signal } = {} ) {
 		signal,
 	} );
 }
+
+/**
+ * Site-wide governance figures for a period (F12).
+ *
+ * @param {number}      period         Days: 30, 90 or 365.
+ * @param {Object}      [options]      Options.
+ * @param {AbortSignal} options.signal Cancels the request.
+ * @return {Promise<Object>} The governance report.
+ */
+export function getGovernanceReport( period, { signal } = {} ) {
+	return request( {
+		path: withQuery( `/${ namespace() }/reports/governance`, {
+			period: parseInt( period, 10 ),
+		} ),
+		signal,
+	} );
+}

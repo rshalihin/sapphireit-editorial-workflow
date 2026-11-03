@@ -112,6 +112,14 @@ final class Settings implements Bootable {
 	private $permissions;
 
 	/**
+	 * Shared admin header.
+	 *
+	 * @since 1.2.0
+	 * @var AdminShell
+	 */
+	private $shell;
+
+	/**
 	 * Hook suffix of the registered page; empty until the menu is added.
 	 *
 	 * @since 1.0.0
@@ -123,13 +131,16 @@ final class Settings implements Bootable {
 	 * Constructor.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Added $shell.
 	 *
 	 * @param SettingsStore     $settings    Settings store.
 	 * @param PermissionManager $permissions Workflow authorization.
+	 * @param AdminShell        $shell       Shared admin header.
 	 */
-	public function __construct( SettingsStore $settings, PermissionManager $permissions ) {
+	public function __construct( SettingsStore $settings, PermissionManager $permissions, AdminShell $shell ) {
 		$this->settings    = $settings;
 		$this->permissions = $permissions;
+		$this->shell       = $shell;
 	}
 
 	/**
@@ -254,11 +265,16 @@ final class Settings implements Bootable {
 			self::SECTION
 		);
 
+		// The wrapper id is the anchor Getting Started links to.
 		add_settings_section(
 			self::SECTION_GATE,
 			__( 'Publish gate', 'sapphireit-editorial-workflow' ),
 			array( $this, 'render_gate_section' ),
-			self::MENU_SLUG
+			self::MENU_SLUG,
+			array(
+				'before_section' => '<div id="' . GettingStartedPage::GATE_ANCHOR . '">',
+				'after_section'  => '</div>',
+			)
 		);
 
 		add_settings_field(
@@ -377,6 +393,7 @@ final class Settings implements Bootable {
 	 * Prints the settings screen.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Prints the shared header first.
 	 *
 	 * @return void
 	 */
@@ -386,6 +403,7 @@ final class Settings implements Bootable {
 		}
 
 		echo '<div class="wrap">';
+		$this->shell->render_header();
 		printf( '<h1>%s</h1>', esc_html__( 'Editorial Workflow Settings', 'sapphireit-editorial-workflow' ) );
 
 		// Only options-general.php screens print settings errors automatically.

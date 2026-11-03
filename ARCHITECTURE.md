@@ -222,9 +222,40 @@ never moves the workflow.
 
 | Class | Responsibility |
 |---|---|
-| `Dashboard` | Registers the top-level menu and prints an empty React root (plus, for auditors, the activity export form above it). |
+| `AdminShell` | The shared header on every plugin screen: logo, plugin name, version chip and one tab per Workflow page. Adds the `sit-cwm-admin` body class (the design tokens hang on it) and enqueues the `admin-shell` stylesheet on plugin screens only. |
+| `Dashboard` | Registers the top-level menu and prints the shell header, the page heading and an empty React root (plus, for auditors, the activity export form above it). |
+| `GovernanceReportPage` | `Workflow → Governance report`, the tab after Dashboard, for auditors only (`can_audit()`; 403 otherwise). Prints the shell header, the heading, the export form and an empty React root; the `report` bundle (period selector, five KPI tiles, two AI-use breakdowns) reads `GET /sit-cwm/v1/reports/governance` and only formats its numbers. |
 | `ActivityExport` | The "Export activity log (CSV)" form and its `admin_post_sit_cwm_export_activity` handler: nonce, then `can_audit()`, then the stream. |
 | `Settings` | The settings screen, via the Settings API only — `options.php` handles the nonce, and `option_page_capability_sit_cwm_settings_group` makes it require `sit_cwm_manage_workflows` instead of `manage_options`. |
+| `GettingStartedPage` | `Workflow → Getting Started`, the last tab: setup steps (managers only, worked out from real settings and content on every render), video tour, tutorials, docs, help links and "How content moves". Plain PHP; no React, no embed, no remote request. Freemius's `first-path` lands here. |
+| `AdminFooter` | The review request and plugin version in the footer, on plugin screens only (asks `AdminShell`). |
+
+### The admin shell
+
+- **Plugin screens are an allow-list.** `AdminShell::TAB_SLUGS` (Dashboard,
+  Settings, Getting Started, in tab order) is compared with the global
+  `$plugin_page`, which WordPress sets from `?page=` before `admin_menu`. The
+  value is only compared, never printed. Pages others add under our menu
+  (Freemius's Account) are not plugin screens: no header, no body class, no
+  footer text.
+- **The shell does not depend on the pages.** Every page calls
+  `render_header()`, so the shell takes only `Assets`; depending on the pages
+  would put a cycle in the container. `admin.shell` boots first in the `admin`
+  phase.
+- **Tabs mirror the submenu.** A tab shows when its slug is in `TAB_SLUGS`, is
+  registered under `sit-cwm-dashboard` in `$submenu`, and `current_user_can()`
+  passes for the capability that submenu item was registered with — the same
+  check core uses to print the menu. Editors see Dashboard and Getting Started;
+  managers see every tab. The tabs are a `<nav>` of links with
+  `aria-current="page"` on the current one, not ARIA tabs, since each loads a
+  page.
+- **Tokens.** `src/admin-shell/tokens.scss` declares every colour and spacing
+  value as `--sit-cwm-*` on `.sit-cwm-admin`; the shell, Getting Started and
+  later screens use only those variables.
+- **Getting Started access.** Anyone who can open the dashboard, plus managers
+  (with no content type enabled nobody can open the dashboard, and the setup
+  steps are what tells a manager so). A URL constant or list left empty hides
+  its card or link rather than linking nowhere.
 
 ---
 

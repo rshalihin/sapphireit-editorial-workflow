@@ -10,6 +10,7 @@ namespace Sit_Cwm\Tests\Integration\Admin;
 
 use Sit_Cwm\Activity\ActivityLogger;
 use Sit_Cwm\Admin\ActivityExport;
+use Sit_Cwm\Admin\AdminShell;
 use Sit_Cwm\Admin\Dashboard;
 use Sit_Cwm\Audit\ActivityExporter;
 use Sit_Cwm\Content\PostRepository;
@@ -85,7 +86,7 @@ final class DashboardTest extends WP_UnitTestCase {
 
 		$exporter = new ActivityExporter( new ActivityLogger( new Database() ), new ActivityFormatter( $statuses ), new UserSummaries() );
 
-		$this->dashboard = new Dashboard( $assets, $permissions, new ActivityExport( $permissions, $exporter ) );
+		$this->dashboard = new Dashboard( $assets, $permissions, new ActivityExport( $permissions, $exporter ), new AdminShell( $assets ) );
 	}
 
 	/**
@@ -242,7 +243,9 @@ final class DashboardTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The page is a static shell: a screen-reader heading and the React root.
+	 * The page is static markup: a visible heading, the F16 subtitle and the
+	 * React root. Off the plugin screen (no `$plugin_page`) the shell header
+	 * prints nothing.
 	 *
 	 * @return void
 	 */
@@ -254,9 +257,30 @@ final class DashboardTest extends WP_UnitTestCase {
 		$html = ob_get_clean();
 
 		$this->assertSame(
-			'<div class="wrap sit-cwm-dashboard-wrap"><h1 class="screen-reader-text">Editorial Workflow</h1><div id="sit-cwm-dashboard"></div></div>',
+			'<div class="wrap sit-cwm-dashboard-wrap"><h1 class="wp-heading-inline">Dashboard</h1><p class="sit-cwm-page-subtitle">Everything moving through the editorial workflow.</p><hr class="wp-header-end"><div id="sit-cwm-dashboard"></div></div>',
 			$html
 		);
+	}
+
+	/**
+	 * On its own screen the shared header comes first, before the heading.
+	 *
+	 * @return void
+	 */
+	public function test_render_prints_the_shell_header_before_the_heading() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
+		$this->dashboard->add_menu();
+		$GLOBALS['plugin_page'] = Dashboard::MENU_SLUG; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Simulates the requested page.
+
+		ob_start();
+		$this->dashboard->render();
+		$html = ob_get_clean();
+
+		$GLOBALS['plugin_page'] = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restores the global.
+
+		$this->assertStringStartsWith( '<div class="wrap sit-cwm-dashboard-wrap"><div class="sit-cwm-shell">', $html );
+		$this->assertLessThan( strpos( $html, '<h1' ), strpos( $html, 'sit-cwm-shell__tabs' ) );
+		$this->assertStringContainsString( 'aria-current="page"', $html );
 	}
 
 	/**

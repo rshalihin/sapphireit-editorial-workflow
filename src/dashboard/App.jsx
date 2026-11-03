@@ -3,11 +3,6 @@
  */
 
 /**
- * WordPress dependencies
- */
-import { __ } from '@wordpress/i18n';
-
-/**
  * Internal dependencies
  */
 import Snackbars from '../components/Snackbars';
@@ -19,10 +14,7 @@ import WorkflowDataViews from './WorkflowDataViews';
 export default function App() {
 	return (
 		<div className="sit-cwm-dashboard">
-			{ /* The page's <h1> is printed by PHP for screen readers. */ }
-			<div className="sit-cwm-dashboard-header" aria-hidden="true">
-				{ __( 'Editorial Workflow', 'sapphireit-editorial-workflow' ) }
-			</div>
+			{ /* The page's header and <h1> are printed by PHP (AdminShell). */ }
 			<div className="sit-cwm-dashboard-body">
 				<WorkflowDataViews />
 			</div>

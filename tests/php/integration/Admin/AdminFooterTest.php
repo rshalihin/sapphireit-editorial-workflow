@@ -8,17 +8,15 @@
 
 namespace Sit_Cwm\Tests\Integration\Admin;
 
-use Sit_Cwm\Admin\ActivityExport;
 use Sit_Cwm\Admin\AdminFooter;
+use Sit_Cwm\Admin\AdminShell;
 use Sit_Cwm\Admin\Dashboard;
+use Sit_Cwm\Admin\GettingStartedPage;
 use Sit_Cwm\Admin\Settings as SettingsPage;
-use Sit_Cwm\Audit\ActivityExporter;
 use Sit_Cwm\Core\Assets;
 use Sit_Cwm\Core\Container;
 use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
-use Sit_Cwm\REST\ActivityFormatter;
-use Sit_Cwm\REST\UserSummaries;
 use Sit_Cwm\Tests\TestCase;
 use Sit_Cwm\Tests\Traits\RestoresPluginInstance;
 use Sit_Cwm\Workflow\PermissionManager;
@@ -28,31 +26,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
 /**
- * The dashboard and settings screens' footer asks for a review and shows the
- * plugin's version; every other admin screen keeps core's footer.
+ * The plugin screens' footer asks for a review and shows the plugin's
+ * version; every other admin screen keeps core's footer.
  *
  * @since 1.1.0
+ * @since 1.2.0 Plugin screens are the shell's tabs, Getting Started included.
  *
  * @covers \Sit_Cwm\Admin\AdminFooter
  */
 final class AdminFooterTest extends TestCase {
 
 	use RestoresPluginInstance;
-
-	/**
-	 * Dashboard screen.
-	 *
-	 * @var Dashboard
-	 */
-	private $dashboard;
-
-	/**
-	 * Settings screen.
-	 *
-	 * @var SettingsPage
-	 */
-	private $page;
 
 	/**
 	 * Service under test.
@@ -62,46 +48,28 @@ final class AdminFooterTest extends TestCase {
 	private $footer;
 
 	/**
-	 * Loads the admin APIs, registers both menus as an administrator and builds the service.
+	 * Builds the service.
 	 *
 	 * @return void
 	 */
 	public function set_up() {
 		parent::set_up();
 
-		require_once ABSPATH . 'wp-admin/includes/plugin.php';
-		require_once ABSPATH . 'wp-admin/includes/screen.php';
-
 		$this->remember_plugin_instance();
-		$this->reset_admin_state();
 
-		$statuses    = new StatusManager();
 		$settings    = new Settings();
 		$permissions = new PermissionManager( $this->posts, $settings );
-		$assets      = new Assets(
-			$statuses,
-			$permissions,
-			dirname( __DIR__, 2 ) . '/fixtures/build',
-			'http://example.org/build/',
-			'/languages'
-		);
 
-		$this->dashboard = new Dashboard( $assets, $permissions, $this->export_form( $permissions ) );
-		$this->page      = new SettingsPage( $settings, $permissions );
-		$this->footer    = new AdminFooter( $this->dashboard, $this->page );
-
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
-		$this->dashboard->add_menu();
-		$this->page->add_menu();
+		$this->footer = new AdminFooter( new AdminShell( new Assets( new StatusManager(), $permissions, '', '', '' ) ) );
 	}
 
 	/**
-	 * Restores global admin state.
+	 * Restores `$plugin_page`.
 	 *
 	 * @return void
 	 */
 	public function tear_down() {
-		$this->reset_admin_state();
+		$GLOBALS['plugin_page'] = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolates the requested page between tests.
 		$this->restore_plugin_instance();
 
 		parent::tear_down();
@@ -124,26 +92,25 @@ final class AdminFooterTest extends TestCase {
 	}
 
 	/**
-	 * On both plugin screens the footer names the plugin, links to its review
+	 * On every plugin screen the footer names the plugin, links to its review
 	 * form and shows the plugin's version.
 	 *
 	 * @return void
 	 */
 	public function test_plugin_screens_ask_for_a_review_and_show_the_version() {
-		foreach ( array( $this->dashboard->hook_suffix(), $this->page->hook_suffix() ) as $screen ) {
-			$this->assertNotSame( '', $screen );
-			set_current_screen( $screen );
+		foreach ( array( Dashboard::MENU_SLUG, SettingsPage::MENU_SLUG, GettingStartedPage::MENU_SLUG ) as $page ) {
+			$GLOBALS['plugin_page'] = $page; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Simulates the requested page.
 
 			$text = $this->footer->filter_footer_text( 'core text' );
 
-			$this->assertStringContainsString( '<strong>SapphireIT Editorial Workflow</strong>', $text, $screen );
-			$this->assertStringContainsString( 'href="' . esc_url( AdminFooter::REVIEW_URL ) . '"', $text, $screen );
-			$this->assertStringContainsString( 'class="sit-cwm-rating-link"', $text, $screen );
-			$this->assertStringContainsString( 'rel="noopener noreferrer"', $text, $screen );
-			$this->assertStringContainsString( '>review<span class="screen-reader-text"> (opens in a new tab)</span></a>', $text, $screen );
-			$this->assertStringNotContainsString( 'core text', $text, $screen );
+			$this->assertStringContainsString( '<strong>SapphireIT Editorial Workflow</strong>', $text, $page );
+			$this->assertStringContainsString( 'href="' . esc_url( AdminFooter::REVIEW_URL ) . '"', $text, $page );
+			$this->assertStringContainsString( 'class="sit-cwm-rating-link"', $text, $page );
+			$this->assertStringContainsString( 'rel="noopener noreferrer"', $text, $page );
+			$this->assertStringContainsString( '>review<span class="screen-reader-text"> (opens in a new tab)</span></a>', $text, $page );
+			$this->assertStringNotContainsString( 'core text', $text, $page );
 
-			$this->assertSame( 'Version ' . SIT_CWM_VERSION, $this->footer->filter_version( 'Version 6.8' ), $screen );
+			$this->assertSame( 'Version ' . SIT_CWM_VERSION, $this->footer->filter_version( 'Version 6.8' ), $page );
 		}
 	}
 
@@ -153,7 +120,7 @@ final class AdminFooterTest extends TestCase {
 	 * @return void
 	 */
 	public function test_the_review_request_does_not_ask_for_a_rating() {
-		set_current_screen( $this->dashboard->hook_suffix() );
+		$GLOBALS['plugin_page'] = Dashboard::MENU_SLUG; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Simulates the requested page.
 
 		$text = $this->footer->filter_footer_text( 'core text' );
 
@@ -163,45 +130,18 @@ final class AdminFooterTest extends TestCase {
 	}
 
 	/**
-	 * Any other screen, or no screen at all, keeps whatever it was given.
+	 * Core screens, and pages others add under our menu (Freemius's Account
+	 * page), keep whatever they were given.
 	 *
 	 * @return void
 	 */
 	public function test_other_screens_keep_the_core_footer() {
-		$this->assertSame( 'core text', $this->footer->filter_footer_text( 'core text' ) );
-		$this->assertSame( 'Version 6.8', $this->footer->filter_version( 'Version 6.8' ) );
+		foreach ( array( null, 'some-other-page', 'sit-cwm-dashboard-account' ) as $page ) {
+			$GLOBALS['plugin_page'] = $page; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Simulates the requested page.
 
-		set_current_screen( 'edit-post' );
-
-		$this->assertSame( 'core text', $this->footer->filter_footer_text( 'core text' ) );
-		$this->assertSame( 'Version 6.8', $this->footer->filter_version( 'Version 6.8' ) );
-	}
-
-	/**
-	 * For a user who got neither menu, no screen matches an empty hook suffix.
-	 *
-	 * @return void
-	 */
-	public function test_unregistered_menus_match_no_screen() {
-		$this->reset_admin_state();
-
-		$settings    = new Settings();
-		$permissions = new PermissionManager( $this->posts, $settings );
-		$dashboard   = new Dashboard( new Assets( new StatusManager(), $permissions, '', '', '' ), $permissions, $this->export_form( $permissions ) );
-		$page        = new SettingsPage( $settings, $permissions );
-		$footer      = new AdminFooter( $dashboard, $page );
-
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
-		$dashboard->add_menu();
-		$page->add_menu();
-
-		$this->assertSame( '', $dashboard->hook_suffix() );
-		$this->assertSame( '', $page->hook_suffix() );
-
-		set_current_screen( 'edit-post' );
-
-		$this->assertSame( 'core text', $footer->filter_footer_text( 'core text' ) );
-		$this->assertSame( 'Version 6.8', $footer->filter_version( 'Version 6.8' ) );
+			$this->assertSame( 'core text', $this->footer->filter_footer_text( 'core text' ), (string) $page );
+			$this->assertSame( 'Version 6.8', $this->footer->filter_version( 'Version 6.8' ), (string) $page );
+		}
 	}
 
 	/**
@@ -215,30 +155,5 @@ final class AdminFooterTest extends TestCase {
 
 		$this->assertInstanceOf( AdminFooter::class, $plugin->container()->get( 'admin.footer' ) );
 		$this->assertContains( 'admin.footer', Plugin::BOOT_PHASES['admin'] );
-	}
-
-	/**
-	 * The activity export form the dashboard prints.
-	 *
-	 * @param PermissionManager $permissions Workflow authorization.
-	 * @return ActivityExport
-	 */
-	private function export_form( PermissionManager $permissions ): ActivityExport {
-		return new ActivityExport( $permissions, new ActivityExporter( $this->activity, new ActivityFormatter( new StatusManager() ), new UserSummaries() ) );
-	}
-
-	/**
-	 * Resets menu globals and the current screen.
-	 *
-	 * @return void
-	 */
-	private function reset_admin_state() {
-		global $menu, $submenu, $admin_page_hooks, $_registered_pages, $current_screen;
-
-		$menu              = array(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolates menu registration between tests.
-		$submenu           = array(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolates menu registration between tests.
-		$admin_page_hooks  = array(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolates menu registration between tests.
-		$_registered_pages = array(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolates menu registration between tests.
-		$current_screen    = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolates the current screen between tests.
 	}
 }

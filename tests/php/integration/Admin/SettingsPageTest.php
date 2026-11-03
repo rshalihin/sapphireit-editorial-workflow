@@ -8,10 +8,12 @@
 
 namespace Sit_Cwm\Tests\Integration\Admin;
 
+use Sit_Cwm\Admin\AdminShell;
 use Sit_Cwm\Admin\Dashboard;
 use Sit_Cwm\Admin\Settings as SettingsPage;
 use Sit_Cwm\Content\PostMeta;
 use Sit_Cwm\Content\PostRepository;
+use Sit_Cwm\Core\Assets;
 use Sit_Cwm\Core\Container;
 use Sit_Cwm\Core\Plugin;
 use Sit_Cwm\Core\Settings;
@@ -80,7 +82,7 @@ final class SettingsPageTest extends TestCase {
 
 		$this->store       = new Settings();
 		$this->permissions = new PermissionManager( $this->posts, $this->store );
-		$this->page        = new SettingsPage( $this->store, $this->permissions );
+		$this->page        = new SettingsPage( $this->store, $this->permissions, new AdminShell( new Assets( new StatusManager(), $this->permissions, '', '', '' ) ) );
 	}
 
 	/**
@@ -1023,6 +1025,28 @@ final class SettingsPageTest extends TestCase {
 		$this->assertStringContainsString( 'name="sit_cwm_settings[publish_gate][page]"', $html );
 		$this->assertStringNotContainsString( 'name="sit_cwm_settings[publish_gate][post]"', $html );
 		$this->assertStringContainsString( 'name="sit_cwm_settings[notifications][approved]"', $html );
+		$this->assertStringContainsString( '<div id="sit-cwm-publish-gate"><h2>Publish gate</h2>', $html );
+	}
+
+	/**
+	 * On its own screen the page prints the shared header first in `.wrap`,
+	 * before the unchanged title.
+	 *
+	 * @return void
+	 */
+	public function test_render_prints_the_shell_header_first() {
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+		$this->page->add_menu();
+		$GLOBALS['plugin_page'] = SettingsPage::MENU_SLUG; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Simulates the requested page.
+
+		ob_start();
+		$this->page->render();
+		$html = ob_get_clean();
+
+		$GLOBALS['plugin_page'] = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restores the global.
+
+		$this->assertStringStartsWith( '<div class="wrap"><div class="sit-cwm-shell">', $html );
+		$this->assertStringContainsString( '</div><h1>Editorial Workflow Settings</h1>', $html );
 	}
 
 	/**

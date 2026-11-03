@@ -1,0 +1,14 @@
+// Design tokens (F15). The only place colours and spacing are defined; every
+// other stylesheet reads them through var( --sit-cwm-* ). Declared on the body
+// class AdminShell adds to the plugin's screens.
+.sit-cwm-admin {
+	--sit-cwm-surface: #fff;
+	--sit-cwm-border: #dcdcde;
+	--sit-cwm-accent: #2145b8;
+	--sit-cwm-accent-strong: #183590;
+	--sit-cwm-accent-soft: #eef2fc;
+	--sit-cwm-muted: #50575e;
+	--sit-cwm-danger: #b32d2e;
+	--sit-cwm-radius: 8px;
+	--sit-cwm-gap: 16px;
+}

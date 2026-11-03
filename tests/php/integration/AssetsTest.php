@@ -174,7 +174,7 @@ final class AssetsTest extends WP_UnitTestCase {
 		$data = json_decode( substr( $before[0], strlen( 'window.sitCwm = ' ), -1 ), true );
 
 		$this->assertSame( $assets->bootstrap_data(), $data );
-		$this->assertSame( array( 'restNamespace', 'statuses', 'capabilities', 'postTypes', 'adminUrl', 'requireAttestation', 'attestationStatement' ), array_keys( $data ) );
+		$this->assertSame( array( 'restNamespace', 'statuses', 'capabilities', 'postTypes', 'adminUrl', 'requireAttestation', 'attestationStatement', 'gettingStartedUrl' ), array_keys( $data ) );
 	}
 
 	/**

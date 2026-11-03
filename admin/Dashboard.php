@@ -88,6 +88,14 @@ final class Dashboard implements Bootable {
 	private $export;
 
 	/**
+	 * Shared admin header.
+	 *
+	 * @since 1.2.0
+	 * @var AdminShell
+	 */
+	private $shell;
+
+	/**
 	 * Hook suffix of the registered page; empty until the menu is added.
 	 *
 	 * @since 1.0.0
@@ -99,16 +107,18 @@ final class Dashboard implements Bootable {
 	 * Constructor.
 	 *
 	 * @since 1.0.0
-	 * @since 1.2.0 Added $export.
+	 * @since 1.2.0 Added $export and $shell.
 	 *
 	 * @param Assets            $assets      Asset loader.
 	 * @param PermissionManager $permissions Workflow authorization.
 	 * @param ActivityExport    $export      Activity log export form.
+	 * @param AdminShell        $shell       Shared admin header.
 	 */
-	public function __construct( Assets $assets, PermissionManager $permissions, ActivityExport $export ) {
+	public function __construct( Assets $assets, PermissionManager $permissions, ActivityExport $export, AdminShell $shell ) {
 		$this->assets      = $assets;
 		$this->permissions = $permissions;
 		$this->export      = $export;
+		$this->shell       = $shell;
 	}
 
 	/**
@@ -208,12 +218,12 @@ final class Dashboard implements Bootable {
 	/**
 	 * Prints the page shell the React app mounts into.
 	 *
-	 * The heading sits outside the React root so it survives mounting, and
-	 * core moves admin notices below the first `.wrap h1`. Auditors also get
-	 * the activity export form above the root (F8).
+	 * The shared header and the heading sit outside the React root so they
+	 * survive mounting, and core moves admin notices below `.wp-header-end`.
+	 * Auditors also get the activity export form above the root (F8).
 	 *
 	 * @since 1.0.0
-	 * @since 1.2.0 Prints the export form for auditors.
+	 * @since 1.2.0 Prints the export form for auditors, the shared header and a visible heading.
 	 *
 	 * @return void
 	 */
@@ -222,9 +232,13 @@ final class Dashboard implements Bootable {
 			wp_die( esc_html__( 'Sorry, you are not allowed to access this page.', 'sapphireit-editorial-workflow' ), 403 );
 		}
 
+		echo '<div class="wrap sit-cwm-dashboard-wrap">';
+		$this->shell->render_header();
+
 		printf(
-			'<div class="wrap sit-cwm-dashboard-wrap"><h1 class="screen-reader-text">%1$s</h1>%2$s<div id="%3$s"></div></div>',
-			esc_html__( 'Editorial Workflow', 'sapphireit-editorial-workflow' ),
+			'<h1 class="wp-heading-inline">%1$s</h1><p class="sit-cwm-page-subtitle">%2$s</p><hr class="wp-header-end">%3$s<div id="%4$s"></div></div>',
+			esc_html__( 'Dashboard', 'sapphireit-editorial-workflow' ),
+			esc_html__( 'Everything moving through the editorial workflow.', 'sapphireit-editorial-workflow' ),
 			$this->export->render_form(), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- render_form() returns escaped markup.
 			esc_attr( self::ROOT_ID )
 		);

@@ -8,6 +8,7 @@
 
 namespace Sit_Cwm\Core;
 
+use Sit_Cwm\Admin\GettingStartedPage;
 use Sit_Cwm\Governance\Attestation;
 use Sit_Cwm\Workflow\PermissionManager;
 use Sit_Cwm\Workflow\StatusManager;
@@ -38,7 +39,7 @@ final class Assets {
 	 * @since 1.0.0
 	 * @var string[]
 	 */
-	const ENTRIES = array( 'sidebar', 'dashboard', 'classic', 'review-disclosure' );
+	const ENTRIES = array( 'sidebar', 'dashboard', 'classic', 'admin-shell', 'report', 'review-disclosure' );
 
 	/**
 	 * REST namespace exposed to scripts (D9).
@@ -229,9 +230,9 @@ final class Assets {
 	 * payload (F10).
 	 *
 	 * @since 1.0.0
-	 * @since 1.2.0 Added `requireAttestation` and `attestationStatement`.
+	 * @since 1.2.0 Added `requireAttestation`, `attestationStatement` and `gettingStartedUrl`.
 	 *
-	 * @return array{restNamespace: string, statuses: array[], capabilities: array<string, bool>, postTypes: array[], adminUrl: string, requireAttestation: bool, attestationStatement: string}
+	 * @return array{restNamespace: string, statuses: array[], capabilities: array<string, bool>, postTypes: array[], adminUrl: string, requireAttestation: bool, attestationStatement: string, gettingStartedUrl: string}
 	 */
 	public function bootstrap_data(): array {
 		$post_types = array();
@@ -259,6 +260,7 @@ final class Assets {
 			'adminUrl'             => admin_url(),
 			'requireAttestation'   => $this->settings->requires_attestation(),
 			'attestationStatement' => $this->attestation->statement(),
+			'gettingStartedUrl'    => GettingStartedPage::url(),
 		);
 	}
 

@@ -1,0 +1,293 @@
+// Getting Started page. Colours and spacing come from tokens.scss only; the
+// status dots take their colour inline from StatusManager.
+.sit-cwm-gs {
+	display: grid;
+	gap: calc(var(--sit-cwm-gap) * 1.5);
+	max-width: 1200px;
+	margin-top: var(--sit-cwm-gap);
+}
+
+.sit-cwm-gs__top {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+	gap: var(--sit-cwm-gap);
+	align-items: start;
+}
+
+.sit-cwm-gs__card {
+	min-width: 0;
+	padding: calc(var(--sit-cwm-gap) * 1.25);
+	border: 1px solid var(--sit-cwm-border);
+	border-radius: var(--sit-cwm-radius);
+	background: var(--sit-cwm-surface);
+}
+
+.sit-cwm-gs__title {
+	margin: 0 0 calc(var(--sit-cwm-gap) / 2);
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.sit-cwm-gs a {
+	color: var(--sit-cwm-accent);
+
+	&:hover {
+		color: var(--sit-cwm-accent-strong);
+	}
+}
+
+// Setup steps.
+.sit-cwm-gs__card-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: calc(var(--sit-cwm-gap) / 2);
+}
+
+.sit-cwm-gs__progress-text {
+	color: var(--sit-cwm-muted);
+}
+
+.sit-cwm-gs__progress {
+	height: 6px;
+	margin: calc(var(--sit-cwm-gap) / 2) 0 var(--sit-cwm-gap);
+	overflow: hidden;
+	border-radius: 999px;
+	background: var(--sit-cwm-accent-soft);
+}
+
+.sit-cwm-gs__progress-bar {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: var(--sit-cwm-accent);
+}
+
+.sit-cwm-gs__steps {
+	display: grid;
+	gap: var(--sit-cwm-gap);
+	margin: 0;
+	list-style: none;
+}
+
+.sit-cwm-gs__step {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	gap: calc(var(--sit-cwm-gap) * 0.75);
+	align-items: start;
+	margin: 0;
+
+	@media (max-width: 600px) {
+		grid-template-columns: auto 1fr;
+
+		.sit-cwm-gs__step-action {
+			grid-column: 2;
+			justify-self: start;
+		}
+	}
+}
+
+.sit-cwm-gs__step-marker {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: var(--sit-cwm-accent-soft);
+	color: var(--sit-cwm-accent);
+	font-weight: 600;
+
+	.is-done & {
+		background: var(--sit-cwm-accent);
+		color: var(--sit-cwm-surface);
+	}
+}
+
+.sit-cwm-gs__step-title {
+	margin: 0;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.sit-cwm-gs__step-text {
+	margin: 2px 0 0;
+	color: var(--sit-cwm-muted);
+}
+
+// Video tour: one link (the title's) stretched over the card.
+.sit-cwm-gs__tour {
+	position: relative;
+
+	.sit-cwm-gs__tour-link {
+		text-decoration: none;
+
+		&::after {
+			position: absolute;
+			inset: 0;
+			border-radius: var(--sit-cwm-radius);
+			content: "";
+		}
+
+		&:focus {
+			box-shadow: none;
+			outline: none;
+
+			&::after {
+				outline: 2px solid var(--sit-cwm-accent);
+				outline-offset: 2px;
+			}
+		}
+	}
+
+	p {
+		margin: 0;
+		color: var(--sit-cwm-muted);
+	}
+}
+
+.sit-cwm-gs__thumb {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	aspect-ratio: 16 / 9;
+	margin-bottom: var(--sit-cwm-gap);
+	padding: var(--sit-cwm-gap);
+	overflow: hidden;
+	border-radius: calc(var(--sit-cwm-radius) - 2px);
+	background: linear-gradient(135deg, var(--sit-cwm-accent) 0%, var(--sit-cwm-accent-strong) 100%);
+	color: var(--sit-cwm-surface);
+}
+
+.sit-cwm-gs__thumb-brand {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--sit-cwm-gap) / 2);
+	font-weight: 600;
+
+	img {
+		border-radius: 4px;
+	}
+}
+
+.sit-cwm-gs__thumb-pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--sit-cwm-gap) / 2);
+}
+
+.sit-cwm-gs__play {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 56px;
+	height: 56px;
+	border-radius: 50%;
+	background: var(--sit-cwm-surface);
+	color: var(--sit-cwm-accent);
+	transform: translate(-50%, -50%);
+
+	.sit-cwm-gs__tour:hover & {
+		color: var(--sit-cwm-accent-strong);
+	}
+}
+
+// Status pills: dark text, the colour on the dot only.
+.sit-cwm-gs__pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 8px;
+	border: 1px solid var(--sit-cwm-border);
+	border-radius: 999px;
+	background: var(--sit-cwm-surface);
+	font-size: 12px;
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+.sit-cwm-gs__dot {
+	display: inline-block;
+	flex-shrink: 0;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+}
+
+// Learn and get help.
+.sit-cwm-gs__section-title {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 600;
+}
+
+.sit-cwm-gs__section-text {
+	margin: 4px 0 var(--sit-cwm-gap);
+	color: var(--sit-cwm-muted);
+}
+
+.sit-cwm-gs__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+	gap: var(--sit-cwm-gap);
+}
+
+.sit-cwm-gs__links {
+	display: grid;
+	gap: calc(var(--sit-cwm-gap) / 2);
+	margin: 0;
+	list-style: none;
+
+	li {
+		margin: 0;
+	}
+}
+
+.sit-cwm-gs__links--described li {
+	display: grid;
+	gap: 2px;
+}
+
+.sit-cwm-gs__link-text,
+.sit-cwm-gs__duration {
+	color: var(--sit-cwm-muted);
+}
+
+.sit-cwm-gs__all {
+	margin: var(--sit-cwm-gap) 0 0;
+	font-weight: 500;
+}
+
+// How content moves.
+.sit-cwm-gs__flow-steps {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+	gap: var(--sit-cwm-gap);
+	margin: 0;
+	list-style: none;
+}
+
+.sit-cwm-gs__flow-step {
+	display: grid;
+	gap: calc(var(--sit-cwm-gap) / 2);
+	justify-items: start;
+	margin: 0;
+}
+
+.sit-cwm-gs__flow-text {
+	color: var(--sit-cwm-muted);
+}
+
+.sit-cwm-gs__flow-note {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--sit-cwm-gap) / 2);
+	margin: var(--sit-cwm-gap) 0 0;
+	color: var(--sit-cwm-muted);
+}

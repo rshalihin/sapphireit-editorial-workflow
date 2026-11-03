@@ -11,7 +11,10 @@ namespace Sit_Cwm\Core;
 use Sit_Cwm\Activity\ActivityLogger;
 use Sit_Cwm\Admin\ActivityExport;
 use Sit_Cwm\Admin\AdminFooter;
+use Sit_Cwm\Admin\AdminShell;
 use Sit_Cwm\Admin\Dashboard;
+use Sit_Cwm\Admin\GettingStartedPage;
+use Sit_Cwm\Admin\GovernanceReportPage;
 use Sit_Cwm\Admin\PluginActionLinks;
 use Sit_Cwm\Admin\Settings as SettingsPage;
 use Sit_Cwm\Audit\ActivityExporter;
@@ -104,6 +107,7 @@ final class Plugin {
 			'disclosure.block',
 		),
 		'admin' => array(
+			'admin.shell',
 			'admin.dashboard',
 			'admin.settings',
 			'admin.footer',
@@ -111,6 +115,8 @@ final class Plugin {
 			'editor.sidebar',
 			'editor.classic',
 			'admin.export',
+			'admin.getting_started',
+			'admin.report',
 		),
 		'rest'  => array(
 			'rest.workflow',
@@ -596,7 +602,7 @@ final class Plugin {
 		$this->container->set(
 			'admin.dashboard',
 			static function ( Container $c ) {
-				return new Dashboard( $c->get( 'assets' ), $c->get( 'permission_manager' ), $c->get( 'admin.export' ) );
+				return new Dashboard( $c->get( 'assets' ), $c->get( 'permission_manager' ), $c->get( 'admin.export' ), $c->get( 'admin.shell' ) );
 			}
 		);
 
@@ -617,14 +623,35 @@ final class Plugin {
 		$this->container->set(
 			'admin.settings',
 			static function ( Container $c ) {
-				return new SettingsPage( $c->get( 'settings' ), $c->get( 'permission_manager' ) );
+				return new SettingsPage( $c->get( 'settings' ), $c->get( 'permission_manager' ), $c->get( 'admin.shell' ) );
 			}
 		);
 
 		$this->container->set(
 			'admin.footer',
 			static function ( Container $c ) {
-				return new AdminFooter( $c->get( 'admin.dashboard' ), $c->get( 'admin.settings' ) );
+				return new AdminFooter( $c->get( 'admin.shell' ) );
+			}
+		);
+
+		$this->container->set(
+			'admin.shell',
+			static function ( Container $c ) {
+				return new AdminShell( $c->get( 'assets' ) );
+			}
+		);
+
+		$this->container->set(
+			'admin.getting_started',
+			static function ( Container $c ) {
+				return new GettingStartedPage( $c->get( 'admin.shell' ), $c->get( 'permission_manager' ), $c->get( 'settings' ), $c->get( 'status_manager' ) );
+			}
+		);
+
+		$this->container->set(
+			'admin.report',
+			static function ( Container $c ) {
+				return new GovernanceReportPage( $c->get( 'assets' ), $c->get( 'permission_manager' ), $c->get( 'admin.export' ), $c->get( 'admin.shell' ) );
 			}
 		);
 

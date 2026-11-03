@@ -1,0 +1,109 @@
+// The shared header: brand left, tabs after it, an (empty) aside right. The
+// tabs wrap under the brand on narrow screens, down to 320px.
+.sit-cwm-shell {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: stretch;
+	column-gap: calc(var(--sit-cwm-gap) * 2);
+	margin: 0 0 var(--sit-cwm-gap);
+	padding: 0 var(--sit-cwm-gap);
+	border: 1px solid var(--sit-cwm-border);
+	border-radius: var(--sit-cwm-radius);
+	background: var(--sit-cwm-surface);
+}
+
+.sit-cwm-shell__brand {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--sit-cwm-gap) * 0.75);
+	min-width: 0;
+	padding: calc(var(--sit-cwm-gap) * 0.75) 0;
+}
+
+.sit-cwm-shell__logo {
+	flex-shrink: 0;
+	border-radius: 7px;
+}
+
+.sit-cwm-shell__name {
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.sit-cwm-shell__version {
+	padding: 1px 8px;
+	border-radius: 999px;
+	background: var(--sit-cwm-accent-soft);
+	color: var(--sit-cwm-accent);
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1.6;
+}
+
+.sit-cwm-shell__tabs {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: stretch;
+	column-gap: calc(var(--sit-cwm-gap) * 1.25);
+	min-width: 0;
+}
+
+.sit-cwm-shell__tab {
+	display: flex;
+	align-items: center;
+	padding: calc(var(--sit-cwm-gap) * 0.75) 0;
+	border-bottom: 3px solid transparent;
+	color: var(--sit-cwm-muted);
+	font-size: 14px;
+	font-weight: 500;
+	text-decoration: none;
+
+	&:hover {
+		color: var(--sit-cwm-accent-strong);
+	}
+
+	&:focus {
+		color: var(--sit-cwm-accent-strong);
+		box-shadow: none;
+		outline: 2px solid var(--sit-cwm-accent);
+		outline-offset: -2px;
+	}
+
+	&.is-current {
+		border-bottom-color: var(--sit-cwm-accent);
+		color: var(--sit-cwm-accent);
+	}
+}
+
+.sit-cwm-shell__aside {
+	display: flex;
+	align-items: center;
+	margin-left: auto;
+
+	&:empty {
+		display: none;
+	}
+}
+
+// Shared by the page titles under the header.
+.sit-cwm-page-subtitle {
+	margin: 4px 0 0;
+	color: var(--sit-cwm-muted);
+	font-size: 14px;
+}
+
+@media (max-width: 600px) {
+
+	.sit-cwm-shell {
+		column-gap: var(--sit-cwm-gap);
+	}
+
+	.sit-cwm-shell__brand {
+		flex-basis: 100%;
+	}
+
+	.sit-cwm-shell__tab {
+		padding-top: calc(var(--sit-cwm-gap) / 2);
+	}
+}
