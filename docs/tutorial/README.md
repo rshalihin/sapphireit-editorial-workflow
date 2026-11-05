@@ -53,10 +53,15 @@ The spec is `tests/e2e/tutorial.spec.js`, with its helpers in
    npm run tutorial                               # all five chapters
    npm run tutorial -- --grep 04-dashboard        # one chapter
    npm run tutorial -- --headed                   # watch it live
-   npm run tutorial -- --base-url=http://127.0.0.1/cwm-e2e --user=admin --pass=password
+   npm run tutorial -- --user=admin --pass=password
    ```
 
    A full run takes about ten minutes.
+
+   The run refuses any site other than the scratch site, including one set by
+   an inherited `WP_BASE_URL`. To record on another disposable site, name it
+   twice:
+   `npm run tutorial -- --base-url=http://other.test --destroy-site=http://other.test`.
 
 Any chapter can run on its own, because each run seeds the site again
 (personas, four background posts, a quarter of publication history, default

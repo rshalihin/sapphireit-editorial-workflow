@@ -22,6 +22,7 @@ import { expect, test } from '@wordpress/e2e-test-utils-playwright';
  */
 import {
 	caption,
+	captionHold,
 	clickVisibly,
 	glide,
 	installOverlay,
@@ -41,7 +42,13 @@ import {
 	resetSettings,
 	seedTutorialSite,
 } from './tutorial/seed';
-import { loginAs, openWorkflowSidebar, statusBadge } from './utils';
+import { assertScratchSite } from './tutorial/scratch-site';
+import {
+	loginAs,
+	openWorkflowSidebar,
+	releasePostLock,
+	statusBadge,
+} from './utils';
 
 /**
  * Waits until everything the workflow panel fetches has landed, so a still
@@ -140,6 +147,98 @@ async function closeWelcomeGuide( page ) {
 	}
 	await expect( guide ).toHaveCount( 0 );
 }
+
+// After a lock is released, core keeps it for about 5 s. A switch that holds
+// its caption longer than that never meets the lock dialog.
+const LOCK_GRACE = 6000;
+
+/**
+ * Hands the open post's lock back for good.
+ *
+ * Each editor heartbeat renews the lock, and core drops a lock only when the
+ * release names the current one, answering `1` either way. A heartbeat that
+ * lands around the release therefore keeps the lock silently, and one that
+ * lands after it takes the lock again. So stop the heartbeat from renewing
+ * the lock, let one more tick land so the store holds the latest lock, and
+ * only then release it.
+ *
+ * The editor adds its renewal through `wp.hooks`, which heartbeat.js runs
+ * after the jQuery `heartbeat-send` event, so the renewal is removed there
+ * too, at a later priority.
+ *
+ * @param {Object} page Playwright page.
+ * @return {Promise<void>}
+ */
+async function releaseLockForGood( page ) {
+	await page.evaluate(
+		() =>
+			new Promise( ( resolve ) => {
+				const { heartbeat, hooks, data } = window.wp ?? {};
+				const editor = data?.select( 'core/editor' );
+
+				if (
+					! heartbeat ||
+					! hooks ||
+					! editor?.getActivePostLock?.()
+				) {
+					resolve();
+					return;
+				}
+
+				hooks.addAction(
+					'heartbeat.send',
+					'sit-cwm/tutorial-no-lock-renewal',
+					( payload ) => {
+						delete payload[ 'wp-refresh-post-lock' ];
+					},
+					99
+				);
+				hooks.addAction(
+					'heartbeat.tick',
+					'sit-cwm/tutorial-lock-settled',
+					() => resolve(),
+					99
+				);
+				hooks.addAction(
+					'heartbeat.error',
+					'sit-cwm/tutorial-lock-settled',
+					() => resolve(),
+					99
+				);
+				// Never wait longer than a slow tick.
+				window.setTimeout( resolve, 15000 );
+				heartbeat.connectNow();
+			} )
+	);
+	await releasePostLock( page );
+}
+
+/**
+ * Hands the browser to another persona on camera: releases the current
+ * user's post lock, signs out to the login screen, shows the caption that
+ * announces the switch for longer than core's lock grace period, then signs
+ * the persona in.
+ *
+ * The caption is held on the login screen, not in the editor, so no heartbeat
+ * can take the lock again during the hold.
+ *
+ * @param {Object} page     Playwright page.
+ * @param {string} username Persona username.
+ * @param {string} text     Caption announcing who takes over.
+ * @return {Promise<void>}
+ */
+async function switchTo( page, username, text ) {
+	await releaseLockForGood( page );
+	await page.context().clearCookies();
+	await page.goto( '/wp-login.php' );
+	await caption( page, text, {
+		hold: Math.max( LOCK_GRACE, captionHold( text ) ),
+	} );
+	await loginAs( page, username );
+}
+
+// The tutorial never takes a post over: a lock dialog on camera is a bug.
+const UNLOCKED = { failIfLocked: true };
 
 /**
  * The comment Dana leaves when she asks for changes.
@@ -268,7 +367,10 @@ test.describe( 'Tutorial', () => {
 	 */
 	let tutorialPostId;
 
-	test.beforeAll( async ( { requestUtils } ) => {
+	test.beforeAll( async ( { requestUtils, baseURL } ) => {
+		// Before anything is deleted, also when the spec runs without the
+		// runner.
+		assertScratchSite( baseURL );
 		( { users, ids } = await seedTutorialSite( requestUtils ) );
 	} );
 
@@ -277,6 +379,9 @@ test.describe( 'Tutorial', () => {
 	} );
 
 	test.afterEach( async ( { page }, testInfo ) => {
+		// Hand the lock back now, so the next chapter does not open the post
+		// into the lock dialog.
+		await releaseLockForGood( page );
 		await saveChapterVideo( page, slugFromTitle( testInfo.title ) );
 	} );
 
@@ -399,7 +504,7 @@ test.describe( 'Tutorial', () => {
 			window.wp.data.select( 'core/editor' ).getCurrentPostId()
 		);
 
-		let panel = await openWorkflowSidebar( page, id );
+		let panel = await openWorkflowSidebar( page, id, UNLOCKED );
 
 		await expect( statusBadge( panel ) ).toHaveText( 'Draft' );
 		await settled( panel );
@@ -413,12 +518,12 @@ test.describe( 'Tutorial', () => {
 
 		// Alex, the managing editor, assigns a reviewer and a due date. The
 		// caption goes up before the switch, so it announces who signs in.
-		await caption(
+		await switchTo(
 			page,
+			PERSONAS.alex.username,
 			'Alex Chen, the managing editor, assigns a reviewer and a due date.'
 		);
-		await loginAs( page, PERSONAS.alex.username );
-		panel = await openWorkflowSidebar( page, id );
+		panel = await openWorkflowSidebar( page, id, UNLOCKED );
 		await settled( panel );
 
 		const reviewer = panel.getByRole( 'combobox', { name: 'Reviewer' } );
@@ -441,12 +546,12 @@ test.describe( 'Tutorial', () => {
 		await still( page, '06-reviewer-and-due-date', panel );
 
 		// Sam sends it for review.
-		await caption(
+		await switchTo(
 			page,
+			PERSONAS.sam.username,
 			'When the draft is ready, Sam sends it for review.'
 		);
-		await loginAs( page, PERSONAS.sam.username );
-		panel = await openWorkflowSidebar( page, id );
+		panel = await openWorkflowSidebar( page, id, UNLOCKED );
 		await settled( panel );
 		await moveToVisibly( page, panel, 'Review' );
 		await settled( panel );
@@ -474,7 +579,7 @@ test.describe( 'Tutorial', () => {
 		// Dana reviews and sends it back.
 		await loginAs( page, PERSONAS.dana.username );
 
-		let panel = await openWorkflowSidebar( page, id );
+		let panel = await openWorkflowSidebar( page, id, UNLOCKED );
 
 		await expect( statusBadge( panel ) ).toHaveText( 'Review' );
 		await expect( panel.locator( '.sit-cwm-gate-notice' ) ).toContainText(
@@ -505,13 +610,13 @@ test.describe( 'Tutorial', () => {
 			panel.getByRole( 'button', { name: 'Add comment' } )
 		);
 		// Posted once the box empties and the comment is in the history.
-		await expect( comment ).toHaveValue( '' );
+		await expect( comment ).toHaveValue( '', { timeout: 15000 } );
 
 		const posted = panel
 			.locator( '.sit-cwm-activity' )
 			.getByText( REVIEW_COMMENT );
 
-		await expect( posted ).toBeVisible();
+		await expect( posted ).toBeVisible( { timeout: 15000 } );
 		await settled( panel );
 		await posted.evaluate( ( el ) =>
 			el.scrollIntoView( { block: 'center' } )
@@ -519,20 +624,23 @@ test.describe( 'Tutorial', () => {
 		await still( page, '09-needs-changes-comment', panel );
 
 		// Sam reworks it and resubmits.
-		await caption(
+		await switchTo(
 			page,
+			PERSONAS.sam.username,
 			'Sam adds the source, then sends the post back for review.'
 		);
-		await loginAs( page, PERSONAS.sam.username );
-		panel = await openWorkflowSidebar( page, id );
+		panel = await openWorkflowSidebar( page, id, UNLOCKED );
 		await settled( panel );
 		await moveToVisibly( page, panel, 'Writing' );
 		await moveToVisibly( page, panel, 'Review' );
 
 		// Dana approves.
-		await caption( page, 'Dana is happy with it now, and approves it.' );
-		await loginAs( page, PERSONAS.dana.username );
-		panel = await openWorkflowSidebar( page, id );
+		await switchTo(
+			page,
+			PERSONAS.dana.username,
+			'Dana is happy with it now, and approves it.'
+		);
+		panel = await openWorkflowSidebar( page, id, UNLOCKED );
 		await settled( panel );
 		await moveToVisibly( page, panel, 'Approved', { confirm: true } );
 		await expect( panel.locator( '.sit-cwm-gate-notice' ) ).toHaveCount(
@@ -543,12 +651,12 @@ test.describe( 'Tutorial', () => {
 		await still( page, '10-approved', panel );
 
 		// Alex publishes, then closes the workflow.
-		await caption(
+		await switchTo(
 			page,
+			PERSONAS.alex.username,
 			'Alex Chen publishes it. The gate lets it through because it is approved.'
 		);
-		await loginAs( page, PERSONAS.alex.username );
-		panel = await openWorkflowSidebar( page, id );
+		panel = await openWorkflowSidebar( page, id, UNLOCKED );
 		await settled( panel );
 		await publishVisibly( page );
 
@@ -561,7 +669,7 @@ test.describe( 'Tutorial', () => {
 
 		// The timeline loads its entries once, so reopen the editor to show
 		// the whole story, publication included.
-		panel = await openWorkflowSidebar( page, id );
+		panel = await openWorkflowSidebar( page, id, UNLOCKED );
 
 		const timeline = panel.locator( '.sit-cwm-activity' );
 
@@ -706,15 +814,16 @@ test.describe( 'Tutorial', () => {
 		await saveSettings( page );
 
 		// Dana declares AI use, confirms the review and approves.
-		await caption(
+		await switchTo(
 			page,
+			PERSONAS.dana.username,
 			'Dana Okafor records how the post was made, then confirms the review and approves it.'
 		);
-		await loginAs( page, PERSONAS.dana.username );
 
 		const panel = await openWorkflowSidebar(
 			page,
-			ids[ 'Migrating to block themes' ]
+			ids[ 'Migrating to block themes' ],
+			UNLOCKED
 		);
 
 		await settled( panel );

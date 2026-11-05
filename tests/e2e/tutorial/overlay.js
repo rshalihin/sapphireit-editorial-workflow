@@ -234,6 +234,18 @@ export async function installOverlay( page ) {
 }
 
 /**
+ * How long a caption stays up by default: long enough to read it.
+ *
+ * @param {string} text Caption text.
+ * @return {number} Hold in milliseconds.
+ */
+export function captionHold( text ) {
+	const words = text.split( /\s+/ ).filter( Boolean ).length;
+
+	return Math.max( MIN_HOLD, MS_PER_WORD * words );
+}
+
+/**
  * Shows a caption and holds it long enough to read.
  *
  * The caption stays on screen until the next `caption()` or `clearCaption()`,
@@ -258,12 +270,8 @@ export async function caption( page, text, { hold } = {} ) {
 		[ CAPTION_KEY, text ]
 	);
 
-	const words = text.split( /\s+/ ).filter( Boolean ).length;
-
 	// eslint-disable-next-line playwright/no-wait-for-timeout -- The hold is the point: the viewer reads the caption.
-	await page.waitForTimeout(
-		hold ?? Math.max( MIN_HOLD, MS_PER_WORD * words )
-	);
+	await page.waitForTimeout( hold ?? captionHold( text ) );
 }
 
 /**

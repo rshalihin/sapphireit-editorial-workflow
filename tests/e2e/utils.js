@@ -124,12 +124,16 @@ export async function loginAs( page, username, password = PASSWORD ) {
  * @param {boolean} [options.waitForPanel] Wait for the loaded panel; pass
  *                                         false when the load is expected to
  *                                         fail or stall.
+ * @param {boolean} [options.failIfLocked] Fail instead of taking the post
+ *                                         over when another user still holds
+ *                                         its lock (the tutorial must never
+ *                                         show the lock dialog on camera).
  * @return {Promise<Object>} Locator of the sidebar panel.
  */
 export async function openWorkflowSidebar(
 	page,
 	postId,
-	{ waitForPanel = true } = {}
+	{ waitForPanel = true, failIfLocked = false } = {}
 ) {
 	const editorReady = () =>
 		page.waitForFunction(
@@ -144,11 +148,17 @@ export async function openWorkflowSidebar(
 	// backdates it so it still holds for about five seconds. A user who
 	// arrives inside that window gets the "already being edited" dialog, so
 	// take the post over the way a person would.
-	if (
-		await page.evaluate( () =>
-			window.wp.data.select( 'core/editor' ).isPostLocked()
-		)
-	) {
+	const locked = await page.evaluate( () =>
+		window.wp.data.select( 'core/editor' ).isPostLocked()
+	);
+
+	if ( failIfLocked ) {
+		expect( locked, 'post still locked by the previous user' ).toBe(
+			false
+		);
+	}
+
+	if ( locked ) {
 		// Core takes the lock and redirects back to the plain edit URL, so
 		// follow the link (relative to wp-admin) with goto() rather than waiting
 		// for its URL.

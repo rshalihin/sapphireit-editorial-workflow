@@ -131,7 +131,8 @@ has the full rules.
 
 ## 4. Track work on the dashboard
 
-*Done by an administrator or editor.*
+*Anyone who can see workflow activity can use the dashboard. The governance
+report is for administrators.*
 
 1. Go to **Editorial Workflow → Dashboard**. The tiles at the top count what is
    in review, waiting on the author, overdue, and approved but not yet
@@ -148,7 +149,8 @@ has the full rules.
 
 4. Type in **Search content** to find a post by its title, then click the title
    to open it in the editor.
-5. Go to **Editorial Workflow → Governance report**. It shows what share of
+5. As an administrator, go to **Editorial Workflow → Governance report**.
+   Like Settings, it needs `sit_cwm_manage_workflows`. It shows what share of
    publications were approved first, how many went out while the gate was off or
    on Log only, how many were blocked, and how AI use was declared. Choose the
    period at the top.

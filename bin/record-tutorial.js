@@ -13,21 +13,27 @@
  *     npm run tutorial
  *     npm run tutorial -- --grep 03-review
  *     npm run tutorial -- --headed
- *     npm run tutorial -- --base-url=http://127.0.0.1/cwm-e2e --user=admin --pass=password
+ *     npm run tutorial -- --user=admin --pass=password
+ *     npm run tutorial -- --base-url=http://other.test --destroy-site=http://other.test
  *
- * The spec deletes every post on the target site, so it defaults to the
- * scratch site http://127.0.0.1/cwm-e2e/ rather than the development site.
- * Prepare that site once with `php bin/setup-e2e-site.php --install` (see
- * docs/tutorial/README.md).
+ * The spec deletes every post and the activity log on the target site, so it
+ * runs only on the scratch site http://127.0.0.1/cwm-e2e/, or on a site named
+ * twice, with --base-url and with --destroy-site. Prepare the scratch site
+ * once as docs/tutorial/README.md describes.
  */
 const path = require( 'path' );
 const fs = require( 'fs' );
 const { spawn } = require( 'child_process' );
+const {
+	SCRATCH_URL,
+	assertScratchSite,
+} = require( '../tests/e2e/tutorial/scratch-site' );
 
 const OPTIONS = {
 	'base-url': 'WP_BASE_URL',
 	user: 'WP_USERNAME',
 	pass: 'WP_PASSWORD',
+	'destroy-site': 'CWM_TUTORIAL_SITE',
 };
 
 const SPEC = 'tests/e2e/tutorial.spec.js';
@@ -47,11 +53,17 @@ for ( const arg of process.argv.slice( 2 ) ) {
 }
 
 // The scratch site, never the development site: the spec is destructive.
-env.WP_BASE_URL = env.WP_BASE_URL || 'http://127.0.0.1/cwm-e2e/';
-
-// e2e-test-utils-playwright resolves paths against this, so it needs the slash.
-if ( ! env.WP_BASE_URL.endsWith( '/' ) ) {
-	env.WP_BASE_URL += '/';
+// e2e-test-utils-playwright resolves paths against this, so it needs the
+// trailing slash the check adds.
+try {
+	env.WP_BASE_URL = assertScratchSite(
+		env.WP_BASE_URL || SCRATCH_URL,
+		env.CWM_TUTORIAL_SITE
+	);
+} catch ( error ) {
+	// eslint-disable-next-line no-console
+	console.error( error.message );
+	process.exit( 1 );
 }
 
 env.WP_USERNAME = env.WP_USERNAME || 'admin';
