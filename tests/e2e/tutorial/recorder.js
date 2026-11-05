@@ -32,9 +32,9 @@ export const OUT = {
 /**
  * Saves a still for the guide, without the cursor dot or the caption.
  *
- * With a locator, the still is that element clipped to what is painted in
- * the viewport: an element screenshot of a panel that runs past the viewport
- * pads the overflow with blank space.
+ * With a locator, the still is that element clipped to what its scroll
+ * container and the viewport show: an element screenshot of a panel that
+ * runs past the viewport pads the overflow with blank space.
  *
  * @param {Object} page      Playwright page.
  * @param {string} name      File name without extension, e.g. `05-sidebar-draft`.
@@ -59,16 +59,57 @@ export async function still( page, name, locator ) {
 		if ( locator ) {
 			const box = await locator.boundingBox();
 			const viewport = page.viewportSize();
-			const x = Math.max( 0, box.x );
-			const y = Math.max( 0, box.y );
+
+			// The part of the element its scroll container shows: inside a
+			// scrolled sidebar that keeps out the header and the top bar.
+			const frame = await locator.evaluate( ( element ) => {
+				let node = element.parentElement;
+
+				while ( node && node !== document.body ) {
+					const { overflowY } = window.getComputedStyle( node );
+
+					if ( /(auto|scroll)/.test( overflowY ) ) {
+						const rect = node.getBoundingClientRect();
+						// A sidebar's sticky header paints over whatever
+						// scrolls under it, so the still starts below it.
+						const header = node.querySelector(
+							'.interface-complementary-area-header'
+						);
+
+						return {
+							top: header
+								? header.getBoundingClientRect().bottom
+								: rect.top,
+							bottom: rect.bottom,
+							left: rect.left,
+							right: rect.right,
+						};
+					}
+					node = node.parentElement;
+				}
+
+				return null;
+			} );
+			const top = Math.max( 0, box.y, frame ? frame.top : 0 );
+			const left = Math.max( 0, box.x, frame ? frame.left : 0 );
+			const bottom = Math.min(
+				box.y + box.height,
+				viewport.height,
+				frame ? frame.bottom : Infinity
+			);
+			const right = Math.min(
+				box.x + box.width,
+				viewport.width,
+				frame ? frame.right : Infinity
+			);
 
 			await page.screenshot( {
 				path: file,
 				clip: {
-					x,
-					y,
-					width: Math.min( box.x + box.width, viewport.width ) - x,
-					height: Math.min( box.y + box.height, viewport.height ) - y,
+					x: left,
+					y: top,
+					width: right - left,
+					height: bottom - top,
 				},
 			} );
 		} else {

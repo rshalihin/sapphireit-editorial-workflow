@@ -36,6 +36,8 @@ import {
 	PERSONAS,
 	TUTORIAL_CONTENT,
 	TUTORIAL_TITLE,
+	applySetupSettings,
+	ensureChapterThreeStart,
 	resetSettings,
 	seedTutorialSite,
 } from './tutorial/seed';
@@ -57,6 +59,27 @@ async function settled( panel ) {
 		panel.locator( '.sit-cwm-reviewer .components-spinner' )
 	).toHaveCount( 0 );
 	await expect( panel.locator( '.components-spinner' ) ).toHaveCount( 0 );
+}
+
+/**
+ * Scrolls an element's top to just below the sidebar's sticky header, so a
+ * still of it starts at its heading rather than wherever the last click left
+ * it.
+ *
+ * @param {Object} locator Element locator.
+ * @return {Promise<void>}
+ */
+async function toTop( locator ) {
+	await locator.evaluate( ( el ) => {
+		// Margins and the header height are in CSS pixels, like scroll offsets.
+		const header = el
+			.closest( '.interface-complementary-area' )
+			?.querySelector( '.interface-complementary-area-header' );
+
+		el.style.scrollMarginTop = header ? `${ header.offsetHeight }px` : '';
+		el.scrollIntoView( { block: 'start' } );
+		el.style.scrollMarginTop = '';
+	} );
 }
 
 /**
@@ -112,6 +135,66 @@ async function closeWelcomeGuide( page ) {
 }
 
 /**
+ * The comment Dana leaves when she asks for changes.
+ *
+ * @type {string}
+ */
+const REVIEW_COMMENT = 'Please add a source for the Q2 numbers.';
+
+/**
+ * Publishes the post open in the editor with visible clicks: the top bar's
+ * Publish, then the pre-publish panel's Publish, then closes the panel.
+ *
+ * @param {Object} page Playwright page.
+ * @return {Promise<void>}
+ */
+async function publishVisibly( page ) {
+	await clickVisibly(
+		page,
+		page
+			.getByRole( 'region', { name: 'Editor top bar' } )
+			.getByRole( 'button', { name: 'Publish', exact: true } )
+	);
+
+	const publishPanel = page.getByRole( 'region', { name: 'Editor publish' } );
+
+	await clickVisibly(
+		page,
+		publishPanel.getByRole( 'button', { name: 'Publish', exact: true } )
+	);
+	await expect( publishPanel.getByText( 'is now live' ) ).toBeVisible( {
+		timeout: 20000,
+	} );
+	await clickVisibly(
+		page,
+		publishPanel.getByRole( 'button', { name: 'Close panel' } )
+	);
+}
+
+/**
+ * Shows the Editorial Workflow sidebar in the editor already open, with a
+ * visible click on its toolbar button when another panel has replaced it.
+ *
+ * @param {Object} page Playwright page.
+ * @return {Promise<Object>} Locator of the sidebar panel.
+ */
+async function showWorkflowSidebar( page ) {
+	const toggle = page
+		.getByRole( 'region', { name: 'Editor top bar' } )
+		.getByRole( 'button', { name: 'Editorial Workflow', exact: true } );
+
+	if ( 'true' !== ( await toggle.getAttribute( 'aria-pressed' ) ) ) {
+		await clickVisibly( page, toggle );
+	}
+
+	const panel = page.locator( '.sit-cwm-sidebar' );
+
+	await expect( panel ).toBeVisible();
+
+	return panel;
+}
+
+/**
  * Clicks the settings page's Save button and waits for the saved notice.
  *
  * @param {Object} page Playwright page.
@@ -161,7 +244,6 @@ test.describe( 'Tutorial', () => {
 	 *
 	 * @type {Object<string, {id: number, username: string, name: string}>}
 	 */
-	// eslint-disable-next-line no-unused-vars -- TEMP: read by chapter 3.
 	let users;
 
 	/**
@@ -178,7 +260,6 @@ test.describe( 'Tutorial', () => {
 	 *
 	 * @type {number|undefined}
 	 */
-	// eslint-disable-next-line no-unused-vars -- TEMP: read by chapter 3.
 	let tutorialPostId;
 
 	test.beforeAll( async ( { requestUtils } ) => {
@@ -320,6 +401,7 @@ test.describe( 'Tutorial', () => {
 			page,
 			'The Editorial Workflow panel shows where the post stands. Sam starts writing.'
 		);
+		await toTop( panel );
 		await still( page, '05-sidebar-draft', panel );
 		await moveToVisibly( page, panel, 'Writing' );
 
@@ -349,6 +431,7 @@ test.describe( 'Tutorial', () => {
 			panel.getByRole( 'button', { name: /^Change due date:/ } )
 		).toHaveAccessibleName( `Change due date: ${ due }` );
 		await settled( panel );
+		await toTop( panel );
 		await still( page, '06-reviewer-and-due-date', panel );
 
 		// Sam sends it for review.
@@ -365,8 +448,124 @@ test.describe( 'Tutorial', () => {
 			page,
 			'Dana Okafor, the reviewer, now has it to review, and the due date is tracked.'
 		);
+		await toTop( panel );
 		await still( page, '07-submitted-for-review', panel );
 
 		tutorialPostId = id;
+	} );
+
+	test( '03-review-and-publish: review, approve and publish', async ( {
+		page,
+		requestUtils,
+	} ) => {
+		// Chapter 1's end state, off camera: a run that skipped chapter 1
+		// would otherwise film an ungated post.
+		await applySetupSettings( requestUtils );
+		tutorialPostId ??= await ensureChapterThreeStart( requestUtils, users );
+
+		const id = tutorialPostId;
+
+		// Dana reviews and sends it back.
+		await loginAs( page, PERSONAS.dana.username );
+
+		let panel = await openWorkflowSidebar( page, id );
+
+		await expect( statusBadge( panel ) ).toHaveText( 'Review' );
+		await expect( panel.locator( '.sit-cwm-gate-notice' ) ).toContainText(
+			'Publishing is locked until this content is approved.'
+		);
+		await settled( panel );
+		await caption(
+			page,
+			'Dana Okafor reviews the post. Publishing stays locked until it is approved.'
+		);
+		await toTop( panel );
+		await still( page, '08-locked-notice', panel );
+
+		await caption(
+			page,
+			'Dana asks for changes, and says what to change in a workflow comment.'
+		);
+		await moveToVisibly( page, panel, 'Needs Changes', { confirm: true } );
+
+		const comment = panel.getByRole( 'textbox', {
+			name: 'Add a workflow comment',
+		} );
+
+		await clickVisibly( page, comment );
+		await page.keyboard.type( REVIEW_COMMENT, { delay: 35 } );
+		await clickVisibly(
+			page,
+			panel.getByRole( 'button', { name: 'Add comment' } )
+		);
+		// Posted once the box empties and the comment is in the history.
+		await expect( comment ).toHaveValue( '' );
+
+		const posted = panel
+			.locator( '.sit-cwm-activity' )
+			.getByText( REVIEW_COMMENT );
+
+		await expect( posted ).toBeVisible();
+		await settled( panel );
+		await posted.evaluate( ( el ) =>
+			el.scrollIntoView( { block: 'center' } )
+		);
+		await still( page, '09-needs-changes-comment', panel );
+
+		// Sam reworks it and resubmits.
+		await caption(
+			page,
+			'Sam adds the source, then sends the post back for review.'
+		);
+		await loginAs( page, PERSONAS.sam.username );
+		panel = await openWorkflowSidebar( page, id );
+		await settled( panel );
+		await moveToVisibly( page, panel, 'Writing' );
+		await moveToVisibly( page, panel, 'Review' );
+
+		// Dana approves.
+		await caption( page, 'Dana is happy with it now, and approves it.' );
+		await loginAs( page, PERSONAS.dana.username );
+		panel = await openWorkflowSidebar( page, id );
+		await settled( panel );
+		await moveToVisibly( page, panel, 'Approved', { confirm: true } );
+		await expect( panel.locator( '.sit-cwm-gate-notice' ) ).toHaveCount(
+			0
+		);
+		await settled( panel );
+		await toTop( panel );
+		await still( page, '10-approved', panel );
+
+		// Alex publishes, then closes the workflow.
+		await caption(
+			page,
+			'Alex Chen publishes it. The gate lets it through because it is approved.'
+		);
+		await loginAs( page, PERSONAS.alex.username );
+		panel = await openWorkflowSidebar( page, id );
+		await settled( panel );
+		await publishVisibly( page );
+
+		await caption(
+			page,
+			'Publishing the post and closing the workflow are separate steps: WordPress status and workflow status are tracked independently.'
+		);
+		panel = await showWorkflowSidebar( page );
+		await moveToVisibly( page, panel, 'Published', { confirm: true } );
+
+		// The timeline loads its entries once, so reopen the editor to show
+		// the whole story, publication included.
+		panel = await openWorkflowSidebar( page, id );
+
+		const timeline = panel.locator( '.sit-cwm-activity' );
+
+		await settled( panel );
+		await expect( timeline ).toContainText( REVIEW_COMMENT );
+		await toTop( timeline );
+		await caption(
+			page,
+			'Every step is in the activity history: who did what, and when.'
+		);
+		await still( page, '11-published-timeline', timeline );
 	} );
 } );
