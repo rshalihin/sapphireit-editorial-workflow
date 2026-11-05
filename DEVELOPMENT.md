@@ -53,6 +53,7 @@ test suites.
 | `npm run env:start` | wp-env |
 | `npm run makepot` | Regenerate `languages/sapphireit-editorial-workflow.pot` (needs wp-cli) |
 | `npm run screenshots` | Regenerate `docs/screenshots/` (**destructive**) |
+| `npm run tutorial` | Regenerate the tutorial videos and guide stills in `docs/tutorial/` (**destructive**; see [docs/tutorial/README.md](docs/tutorial/README.md)) |
 | `npm run check:version` | Assert the version matches in all four files |
 | `npm run build:zip` | Build the release zip into `dist/` |
 
