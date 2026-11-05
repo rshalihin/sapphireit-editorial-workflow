@@ -211,6 +211,12 @@ body.sit-cwm-admin {
 			width: 16px;
 			height: 16px;
 			font-size: 16px;
+			// Overrides core's `.wp-core-ui .button .dashicons { line-height: 1.9 }`.
+			line-height: 1.4;
+
+			&::before {
+				line-height: 1.4;
+			}
 		}
 
 		&:hover,
