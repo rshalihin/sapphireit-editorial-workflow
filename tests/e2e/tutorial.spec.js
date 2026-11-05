@@ -51,14 +51,21 @@ import { loginAs, openWorkflowSidebar, statusBadge } from './utils';
  * @return {Promise<void>}
  */
 async function settled( panel ) {
+	// A loaded machine can take several seconds to answer the panel's
+	// requests, so wait longer than the 5 s default.
+	const timeout = 15000;
+
 	await expect( panel.locator( '.sit-cwm-activity' ) ).toHaveAttribute(
 		'aria-busy',
-		'false'
+		'false',
+		{ timeout }
 	);
 	await expect(
 		panel.locator( '.sit-cwm-reviewer .components-spinner' )
-	).toHaveCount( 0 );
-	await expect( panel.locator( '.components-spinner' ) ).toHaveCount( 0 );
+	).toHaveCount( 0, { timeout } );
+	await expect( panel.locator( '.components-spinner' ) ).toHaveCount( 0, {
+		timeout,
+	} );
 }
 
 /**
@@ -251,7 +258,6 @@ test.describe( 'Tutorial', () => {
 	 *
 	 * @type {Object<string, number>}
 	 */
-	// eslint-disable-next-line no-unused-vars -- TEMP: read by chapters 4 and 5.
 	let ids;
 
 	/**
@@ -567,5 +573,170 @@ test.describe( 'Tutorial', () => {
 			'Every step is in the activity history: who did what, and when.'
 		);
 		await still( page, '11-published-timeline', timeline );
+	} );
+
+	test( '04-dashboard-and-report: track work on the dashboard', async ( {
+		admin,
+		page,
+	} ) => {
+		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-dashboard' );
+
+		const rows = page.locator( '.dataviews-view-table tbody tr' );
+
+		for ( const title of Object.keys( ids ) ) {
+			await expect(
+				page.getByText( title, { exact: true } )
+			).toBeVisible( { timeout: 20000 } );
+		}
+
+		await caption(
+			page,
+			'The dashboard lists everything in the workflow: its status, its reviewer and when it is due.'
+		);
+
+		// 1. Sort by due date: the soonest comes first.
+		await caption(
+			page,
+			'Sort by due date to see what needs attention first.'
+		);
+		await clickVisibly(
+			page,
+			page.getByRole( 'button', { name: 'Due', exact: true } )
+		);
+		await clickVisibly(
+			page,
+			page.getByRole( 'menuitemradio', { name: 'Sort ascending' } )
+		);
+		// A radio item keeps the menu open; close it like a person would.
+		await page.keyboard.press( 'Escape' );
+		await expect( rows.first() ).toContainText(
+			'Accessibility audit findings'
+		);
+		await still( page, '12-dashboard' );
+
+		// 2. Filter to Review: two rows.
+		await caption(
+			page,
+			'Filter by status to see only what is waiting for review.'
+		);
+		await clickVisibly(
+			page,
+			page.getByRole( 'button', { name: 'Add filter' } )
+		);
+		await clickVisibly(
+			page,
+			page.getByRole( 'menuitem', { name: 'Status', exact: true } )
+		);
+		await clickVisibly(
+			page,
+			page.getByRole( 'option', { name: 'Review', exact: true } )
+		);
+		// Close the filter popover with a click on empty page space. Escape
+		// would hand focus back to the filter button, whose tooltip would
+		// then sit in the still.
+		await clickVisibly(
+			page,
+			page.getByText(
+				'Everything moving through the editorial workflow.'
+			)
+		);
+		await expect( page.getByRole( 'tooltip' ) ).toHaveCount( 0 );
+		await expect( rows ).toHaveCount( 2 );
+		await expect(
+			rows.getByText( 'Q3 launch announcement' )
+		).toBeVisible();
+		await expect(
+			rows.getByText( 'Migrating to block themes' )
+		).toBeVisible();
+		await still( page, '13-dashboard-filtered' );
+
+		// 3. Search: one row, then open it.
+		await caption(
+			page,
+			'Search finds a post by its title. Open it to work on it.'
+		);
+
+		const search = page.getByRole( 'searchbox' );
+
+		await clickVisibly( page, search );
+		await page.keyboard.type( 'launch', { delay: 60 } );
+		await expect( rows ).toHaveCount( 1 );
+		await clickVisibly(
+			page,
+			rows.getByRole( 'link', { name: 'Q3 launch announcement' } )
+		);
+		await page.waitForURL( '**/post.php?post=*' );
+		await page.waitForFunction(
+			() =>
+				!! window.wp?.data?.select( 'core/editor' )?.getCurrentPostId()
+		);
+		await closeWelcomeGuide( page );
+
+		// The governance report.
+		await caption(
+			page,
+			'The governance report shows how content was published: approved first, or not.'
+		);
+		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-report' );
+		await expect(
+			page.locator( '.sit-cwm-report__headline-value' )
+		).not.toHaveText( '—' );
+		await still( page, '14-governance-report' );
+	} );
+
+	test( '05-ai-use-and-attestation: declare AI use and confirm review', async ( {
+		admin,
+		page,
+	} ) => {
+		// The administrator turns on review attestation.
+		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-settings' );
+
+		const tab = await openSettingsTab( page, 'Review attestation' );
+
+		await caption(
+			page,
+			'Optionally, approvers must confirm they reviewed the content before approving it.'
+		);
+		await tickVisibly(
+			page,
+			tab.getByRole( 'checkbox', {
+				name: 'Require approvers to confirm they reviewed the content',
+			} )
+		);
+		await saveSettings( page );
+
+		// Dana declares AI use, confirms the review and approves.
+		await caption(
+			page,
+			'Dana Okafor records how the post was made, then confirms the review and approves it.'
+		);
+		await loginAs( page, PERSONAS.dana.username );
+
+		const panel = await openWorkflowSidebar(
+			page,
+			ids[ 'Migrating to block themes' ]
+		);
+
+		await settled( panel );
+
+		const aiUse = panel.getByRole( 'combobox', { name: 'AI use' } );
+
+		await clickVisibly( page, aiUse );
+		await aiUse.selectOption( { label: 'AI-assisted' } );
+		await expect( aiUse ).toHaveValue( 'ai_assisted' );
+		await settled( panel );
+		await toTop( panel );
+		await still( page, '15-ai-use', panel );
+
+		const confirmation = panel.getByRole( 'checkbox', {
+			name: 'I confirm I have reviewed this content and approve it for publication.',
+		} );
+
+		await tickVisibly( page, confirmation );
+		await confirmation.evaluate( ( el ) =>
+			el.scrollIntoView( { block: 'center' } )
+		);
+		await still( page, '16-attestation', panel );
+		await moveToVisibly( page, panel, 'Approved', { confirm: true } );
 	} );
 } );

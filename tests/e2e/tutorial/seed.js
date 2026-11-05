@@ -9,7 +9,10 @@
 import {
 	PASSWORD,
 	allNotifications,
+	clearActivity,
 	clearMails,
+	daysAgo,
+	seedActivity,
 	setSettings,
 	walkWorkflow,
 } from '../utils';
@@ -55,6 +58,30 @@ const POSTS = [
 	},
 	{ title: 'Accessibility audit findings', status: 'needs_changes', due: 2 },
 	{ title: 'Release notes 4.2', status: 'writing', due: 12 },
+];
+
+/**
+ * A quarter of earlier publications for the governance report, logged
+ * against the background posts: `[ title, days ago, workflow status at
+ * publish, gate mode, AI use ]`. Without it the report would be empty
+ * whenever chapter 4 is recorded on its own.
+ *
+ * @type {Array<[string, number, string, string, string]>}
+ */
+const HISTORY = [
+	[ 'Release notes 4.2', 5, 'approved', 'enforce', 'ai_assisted' ],
+	[ 'Accessibility audit findings', 12, 'approved', 'enforce', 'human' ],
+	[ 'Q3 launch announcement', 19, 'approved', 'enforce', 'human' ],
+	[ 'Migrating to block themes', 27, 'approved', 'log_only', 'ai_assisted' ],
+	[ 'Release notes 4.2', 38, 'review', 'log_only', 'human' ],
+	[
+		'Accessibility audit findings',
+		52,
+		'approved',
+		'enforce',
+		'ai_assisted',
+	],
+	[ 'Q3 launch announcement', 70, 'approved', 'enforce', 'human' ],
 ];
 
 /**
@@ -184,6 +211,10 @@ export async function seedTutorialSite( requestUtils ) {
 
 	await requestUtils.deleteAllPosts();
 
+	// The governance report counts the whole activity table, so an earlier
+	// run's rows would pile up in it.
+	await clearActivity( requestUtils );
+
 	const users = {};
 
 	for ( const [ key, persona ] of Object.entries( PERSONAS ) ) {
@@ -214,6 +245,22 @@ export async function seedTutorialSite( requestUtils ) {
 		} );
 		await walkWorkflow( requestUtils, created.id, ROUTES[ post.status ] );
 	}
+
+	await seedActivity(
+		requestUtils,
+		HISTORY.map( ( [ title, days, workflowStatus, gateMode, ai ] ) => ( {
+			post_id: ids[ title ],
+			action: 'post_published',
+			old_value: 'draft',
+			new_value: 'publish',
+			created_at: daysAgo( days ),
+			context: {
+				workflow_status: workflowStatus,
+				gate_mode: gateMode,
+				ai_origin: ai,
+			},
+		} ) )
+	);
 
 	return { users, ids };
 }
