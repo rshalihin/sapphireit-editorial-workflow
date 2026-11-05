@@ -17,6 +17,7 @@
     "env:start": "wp-env start",
     "makepot": "wp i18n make-pot . languages/sapphireit-editorial-workflow.pot --domain=sapphireit-editorial-workflow --slug=sapphireit-editorial-workflow --exclude=tests,bin,artifacts,.github,.claude,freemius",
     "screenshots": "node bin/capture-screenshots.js",
+    "tutorial": "node bin/record-tutorial.js",
     "build:zip": "php bin/build-zip.php --out=dist",
     "check:version": "php bin/check-version.php"
   },
