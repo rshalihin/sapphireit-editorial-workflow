@@ -643,6 +643,23 @@ export function freemiusOptin( requestUtils, optin ) {
 }
 
 /**
+ * Whether Pro is active on the site under test. Free's suite also runs with Pro on, and
+ * a few specs describe what only a site without Pro shows.
+ *
+ * @param {Object} requestUtils Request utils fixture.
+ * @return {Promise<boolean>} Whether Pro is active.
+ */
+export async function isProActive( requestUtils ) {
+	const plugins = await requestUtils.rest( { path: '/wp/v2/plugins' } );
+
+	return plugins.some(
+		( { plugin, status } ) =>
+			plugin.startsWith( 'sapphireit-editorial-workflow-pro/' ) &&
+			status === 'active'
+	);
+}
+
+/**
  * Creates an Application Password for a user, as the administrator.
  *
  * @param {Object} requestUtils Request utils fixture.

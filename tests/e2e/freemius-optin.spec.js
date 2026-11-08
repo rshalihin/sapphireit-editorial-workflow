@@ -17,6 +17,7 @@ import { expect, test } from '@wordpress/e2e-test-utils-playwright';
 import {
 	createWorkflowUser,
 	freemiusOptin,
+	isProActive,
 	loginAs,
 	setUserCap,
 } from './utils';
@@ -302,6 +303,12 @@ test.describe( 'Freemius opt-in', () => {
 		page,
 		requestUtils,
 	} ) => {
+		// eslint-disable-next-line playwright/no-skipped-test -- Deliberate: Pro has `Requires Plugins`, so core removes this link.
+		test.skip(
+			await isProActive( requestUtils ),
+			'Core offers no Deactivate link while Pro requires this plugin.'
+		);
+
 		await freemiusOptin( requestUtils, 'skip' );
 
 		try {

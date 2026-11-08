@@ -141,6 +141,8 @@ test.describe( 'Editorial workflow', () => {
 
 		expect(
 			activity
+				// Free's own trail: Pro, when active, logs its actions beside these.
+				.filter( ( entry ) => ! entry.action.startsWith( 'pro_' ) )
 				.map( ( entry ) => [
 					entry.action === 'status_changed'
 						? `status_changed:${ entry.new_value }`

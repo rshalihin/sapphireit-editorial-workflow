@@ -11,7 +11,7 @@ import { expect, test } from '@wordpress/e2e-test-utils-playwright';
 /**
  * Internal dependencies
  */
-import { createWorkflowUser, loginAs } from './utils';
+import { createWorkflowUser, isProActive, loginAs } from './utils';
 
 const EDITOR = 'e2e_shell_editor';
 
@@ -53,7 +53,14 @@ test.describe( 'Admin shell and Getting Started', () => {
 	test( 'admin sees Dashboard, Governance report, Settings and Getting Started tabs in that order', async ( {
 		admin,
 		page,
+		requestUtils,
 	} ) => {
+		// eslint-disable-next-line playwright/no-skipped-test -- Deliberate: Pro adds tabs and drops Add-Ons, see the next test.
+		test.skip(
+			await isProActive( requestUtils ),
+			'Describes a site without Pro.'
+		);
+
 		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-dashboard' );
 
 		// Pro is on sale and not active here, so the SDK's Add-Ons page is
@@ -62,6 +69,28 @@ test.describe( 'Admin shell and Getting Started', () => {
 			...ADMIN_TABS.map( ( [ label ] ) => label ),
 			'Add-Ons',
 		] );
+	} );
+
+	test( 'with Pro active, Free keeps its tabs in order and Add-Ons goes', async ( {
+		admin,
+		page,
+		requestUtils,
+	} ) => {
+		// eslint-disable-next-line playwright/no-skipped-test -- Deliberate: only a site with Pro has this state.
+		test.skip(
+			! ( await isProActive( requestUtils ) ),
+			'Needs Pro active.'
+		);
+
+		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-dashboard' );
+
+		const free = ADMIN_TABS.map( ( [ label ] ) => label );
+		const labels = await tabs( page ).getByRole( 'link' ).allTextContents();
+
+		expect( labels.filter( ( label ) => free.includes( label ) ) ).toEqual(
+			free
+		);
+		expect( labels ).not.toContain( 'Add-Ons' );
 	} );
 
 	test( 'editor sees only Dashboard and Getting Started, and no setup steps', async ( {

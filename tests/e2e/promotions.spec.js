@@ -23,10 +23,13 @@ import {
 	ADMIN,
 	createWorkflowUser,
 	freemiusOptin,
+	isProActive,
 	loginAs,
 	openWorkflowSidebar,
 	setUserCap,
 } from './utils';
+
+const PRO_OWNED = 'With Pro active, Free promotes nothing: see its own test.';
 
 const MANAGER = 'e2e_promo_manager';
 const EDITOR = 'e2e_promo_editor';
@@ -95,8 +98,11 @@ async function openSection( page, section ) {
 test.describe( 'Promotion of Pro (phase 49)', () => {
 	let editorId;
 	let postId;
+	let proActive;
 
 	test.beforeAll( async ( { requestUtils } ) => {
+		proActive = await isProActive( requestUtils );
+
 		await requestUtils.deleteAllPosts();
 		await requestUtils.deleteAllUsers();
 		await freemiusOptin( requestUtils, 'skip' );
@@ -135,6 +141,9 @@ test.describe( 'Promotion of Pro (phase 49)', () => {
 	test( 'a manager sees each one-line hint on its own screen', async ( {
 		page,
 	} ) => {
+		// eslint-disable-next-line playwright/no-skipped-test -- Deliberate: Pro active is its own test below.
+		test.skip( proActive, PRO_OWNED );
+
 		await loginAs( page, MANAGER );
 
 		for ( const [ key, path, query, section ] of HINTS ) {
@@ -161,6 +170,9 @@ test.describe( 'Promotion of Pro (phase 49)', () => {
 	test( 'a dismissed hint never comes back, and the others stay', async ( {
 		page,
 	} ) => {
+		// eslint-disable-next-line playwright/no-skipped-test -- Deliberate: Pro active is its own test below.
+		test.skip( proActive, PRO_OWNED );
+
 		await loginAs( page, MANAGER );
 		await visit( page, 'admin.php', 'page=sit-cwm-settings' );
 
@@ -182,6 +194,9 @@ test.describe( 'Promotion of Pro (phase 49)', () => {
 	} );
 
 	test( 'a dismiss link with a bad nonce is refused', async ( { page } ) => {
+		// eslint-disable-next-line playwright/no-skipped-test -- Deliberate: Pro active is its own test below.
+		test.skip( proActive, PRO_OWNED );
+
 		await loginAs( page, MANAGER );
 
 		const response = await page.goto(
@@ -196,6 +211,9 @@ test.describe( 'Promotion of Pro (phase 49)', () => {
 	test( 'the header has a plain Pro link and Add-Ons as the last tab', async ( {
 		page,
 	} ) => {
+		// eslint-disable-next-line playwright/no-skipped-test -- Deliberate: Pro active is its own test below.
+		test.skip( proActive, PRO_OWNED );
+
 		await loginAs( page, ADMIN.username, ADMIN.password );
 		await visit( page, 'admin.php', 'page=sit-cwm-dashboard' );
 
@@ -256,9 +274,38 @@ test.describe( 'Promotion of Pro (phase 49)', () => {
 		}
 	} );
 
+	test( 'with Pro active, Free promotes nothing', async ( { page } ) => {
+		// eslint-disable-next-line playwright/no-skipped-test -- Deliberate: only a site with Pro has this state.
+		test.skip( ! proActive, 'Needs Pro active.' );
+
+		await loginAs( page, ADMIN.username, ADMIN.password );
+
+		for ( const screen of [
+			'page=sit-cwm-dashboard',
+			'page=sit-cwm-report',
+			'page=sit-cwm-settings',
+		] ) {
+			await visit( page, 'admin.php', screen );
+
+			await expect( page.locator( '.sit-cwm-hint' ), screen ).toHaveCount(
+				0
+			);
+			await expect(
+				page.locator( '.sit-cwm-shell__pro' ),
+				screen
+			).toHaveCount( 0 );
+		}
+
+		await page.goto( '/wp-admin/plugins.php' );
+		await expect( page.locator( '.sit_cwm_go_pro' ) ).toHaveCount( 0 );
+	} );
+
 	test( 'the Plugins screen row has a plain Go Pro link', async ( {
 		page,
 	} ) => {
+		// eslint-disable-next-line playwright/no-skipped-test -- Deliberate: Pro active is its own test above.
+		test.skip( proActive, PRO_OWNED );
+
 		await loginAs( page, ADMIN.username, ADMIN.password );
 		await page.goto( '/wp-admin/plugins.php' );
 
