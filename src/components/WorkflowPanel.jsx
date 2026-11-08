@@ -12,7 +12,8 @@ import {
 	Spinner,
 	VisuallyHidden,
 } from '@wordpress/components';
-import { useState } from '@wordpress/element';
+import { useEffect, useState } from '@wordpress/element';
+import { addAction, removeAction } from '@wordpress/hooks';
 import { __, sprintf } from '@wordpress/i18n';
 
 /**
@@ -29,6 +30,7 @@ import TransitionActions from '../sidebar/components/TransitionActions';
 import { getStatusDefinition } from '../utils/format';
 import ActivityTimeline from './ActivityTimeline';
 import BlockedTransitions from './BlockedTransitions';
+import ExtensionSections from './ExtensionSections';
 import PublishGateNotice from './PublishGateNotice';
 
 /**
@@ -126,6 +128,19 @@ function WorkflowPanel( {
 		clearError,
 	} = useWorkflow( postId );
 	const [ isGoneDismissed, setIsGoneDismissed ] = useState( false );
+
+	// An add-on that changed something on the server asks for a refetch.
+	useEffect( () => {
+		const namespace = `sit-cwm/workflow-panel-${ postId }`;
+
+		addAction( 'sitCwm.workflow.refresh', namespace, ( payload ) => {
+			if ( payload?.postId === postId ) {
+				refresh();
+			}
+		} );
+
+		return () => removeAction( 'sitCwm.workflow.refresh', namespace );
+	}, [ postId, refresh ] );
 
 	// `updateStatus` resolves to null on success, or the error. `options`
 	// carries an approver's attestation.
@@ -321,6 +336,12 @@ function WorkflowPanel( {
 					/>
 				</PanelBody>
 			) }
+
+			<ExtensionSections
+				postId={ postId }
+				isClassic={ isClassic }
+				workflow={ workflow }
+			/>
 
 			{ /* Not mounted at all without the capability, so no request is made. */ }
 			{ capabilities.can_view_activity && (

@@ -8,6 +8,7 @@
 
 namespace Sit_Cwm\Core;
 
+use Sit_Cwm\Admin\Promotions;
 use Sit_Cwm\Workflow\Capabilities;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -95,6 +96,9 @@ final class Uninstaller {
 
 		delete_option( 'sit_cwm_settings' );
 		delete_option( Capabilities::REVISION_OPTION );
+
+		// Dismissed promotion hints, for every user.
+		delete_metadata( 'user', 0, Promotions::DISMISSED_META, '', true );
 
 		wp_cache_flush();
 	}

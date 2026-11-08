@@ -8,6 +8,7 @@
 import { speak } from '@wordpress/a11y';
 import { useDispatch } from '@wordpress/data';
 import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
+import { doAction } from '@wordpress/hooks';
 import { __, sprintf } from '@wordpress/i18n';
 import { store as noticesStore } from '@wordpress/notices';
 
@@ -34,6 +35,22 @@ const BUSY = { code: 'sit_cwm_busy', message: '', status: 0 };
 const GONE = { code: 'sit_cwm_gone', message: '', status: 404 };
 
 /**
+ * Tells add-ons the server sent a new workflow. A listener that throws is
+ * logged, so it cannot turn a good response into a failed one.
+ *
+ * @param {number} postId   Post id.
+ * @param {Object} workflow Workflow payload.
+ */
+function announceChange( postId, workflow ) {
+	try {
+		doAction( 'sitCwm.workflow.changed', { postId, workflow } );
+	} catch ( err ) {
+		// eslint-disable-next-line no-console
+		console.error( err );
+	}
+}
+
+/**
  * Loads and mutates a post's workflow through the REST API.
  *
  * The server is the source of truth: mutations are not applied optimistically.
@@ -54,6 +71,8 @@ const GONE = { code: 'sit_cwm_gone', message: '', status: 404 };
  *
  * Reviewer, due date and comment changes are announced to screen readers;
  * status and AI use changes raise a snackbar, which announces itself.
+ *
+ * Every new server response fires `sitCwm.workflow.changed`.
  *
  * @param {number} postId Post id.
  * @return {Object} `{ workflow, isLoading, isSaving, isGone, error,
@@ -99,6 +118,7 @@ export default function useWorkflow( postId ) {
 				loadedRef.current = true;
 				setWorkflow( data );
 				setError( null );
+				announceChange( postIdRef.current, data );
 			}
 
 			return data;
@@ -248,6 +268,7 @@ export default function useWorkflow( postId ) {
 			if ( result.data && generation === generationRef.current ) {
 				setWorkflow( result.data );
 				setError( null );
+				announceChange( postIdRef.current, result.data );
 			}
 
 			return result;

@@ -212,7 +212,7 @@ final class ActivityExportTest extends TestCase {
 		$plugin->boot();
 
 		$this->assertInstanceOf( ActivityExport::class, $plugin->container()->get( 'admin.export' ) );
-		$this->assertInstanceOf( ActivityExporter::class, $plugin->container()->get( 'audit.exporter' ) );
+		$this->assertInstanceOf( ActivityExporter::class, $plugin->container()->get( 'activity_exporter' ) );
 		$this->assertContains( 'admin.export', Plugin::BOOT_PHASES['admin'] );
 	}
 

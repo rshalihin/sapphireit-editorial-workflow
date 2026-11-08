@@ -153,6 +153,14 @@ final class Settings implements Bootable {
 	private $shell;
 
 	/**
+	 * Promotion of Pro (the workflow and notification hints), if wired.
+	 *
+	 * @since 1.2.0
+	 * @var Promotions|null
+	 */
+	private $promotions;
+
+	/**
 	 * Hook suffix of the registered page; empty until the menu is added.
 	 *
 	 * @since 1.0.0
@@ -164,16 +172,18 @@ final class Settings implements Bootable {
 	 * Constructor.
 	 *
 	 * @since 1.0.0
-	 * @since 1.2.0 Added $shell.
+	 * @since 1.2.0 Added $shell and $promotions.
 	 *
 	 * @param SettingsStore     $settings    Settings store.
 	 * @param PermissionManager $permissions Workflow authorization.
 	 * @param AdminShell        $shell       Shared admin header.
+	 * @param Promotions|null   $promotions  Promotion of Pro; null prints no hint.
 	 */
-	public function __construct( SettingsStore $settings, PermissionManager $permissions, AdminShell $shell ) {
+	public function __construct( SettingsStore $settings, PermissionManager $permissions, AdminShell $shell, ?Promotions $promotions = null ) {
 		$this->settings    = $settings;
 		$this->permissions = $permissions;
 		$this->shell       = $shell;
+		$this->promotions  = $promotions;
 	}
 
 	/**
@@ -629,6 +639,7 @@ final class Settings implements Bootable {
 	 * Prints the section introduction.
 	 *
 	 * @since 1.0.0
+	 * @since 1.2.0 Prints the workflow hint while Pro is on sale.
 	 *
 	 * @return void
 	 */
@@ -637,6 +648,22 @@ final class Settings implements Bootable {
 			'<p>%s</p>',
 			esc_html__( 'Choose which content goes through the editorial workflow.', 'sapphireit-editorial-workflow' )
 		);
+
+		$this->print_hint( 'workflows' );
+	}
+
+	/**
+	 * Prints one promotion hint, if there is one to print.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param string $key Hint key.
+	 * @return void
+	 */
+	private function print_hint( string $key ): void {
+		if ( null !== $this->promotions ) {
+			echo $this->promotions->hint( $key ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hint() returns escaped markup.
+		}
 	}
 
 	/**
@@ -922,6 +949,7 @@ final class Settings implements Bootable {
 	 * Prints the email notifications section introduction.
 	 *
 	 * @since 1.1.0
+	 * @since 1.2.0 Prints the notifications hint while Pro is on sale.
 	 *
 	 * @return void
 	 */
@@ -930,6 +958,8 @@ final class Settings implements Bootable {
 			'<p>%s</p>',
 			esc_html__( 'Send an email when these workflow events happen. Nobody is emailed about their own actions, and comment text is only included for people allowed to read the activity history.', 'sapphireit-editorial-workflow' )
 		);
+
+		$this->print_hint( 'notifications' );
 	}
 
 	/**

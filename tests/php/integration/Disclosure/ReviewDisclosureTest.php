@@ -61,6 +61,102 @@ final class ReviewDisclosureTest extends TestCase {
 	}
 
 	/**
+	 * The filter can switch the line on for one post with the setting off.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_filter_enables_disclosure_for_one_post_while_setting_off() {
+		$on  = $this->approved_and_published();
+		$off = $this->approved_and_published();
+
+		add_filter(
+			'sit_cwm_disclosure_enabled',
+			static function ( $enabled, $post_id ) use ( $on ) {
+				return $post_id === $on ? true : $enabled;
+			},
+			10,
+			2
+		);
+
+		$this->assertNotNull( $this->disclosure->data_for( $on ) );
+		$this->assertNull( $this->disclosure->data_for( $off ) );
+	}
+
+	/**
+	 * The filter never shows a line without an approval row.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_filter_cannot_bypass_approval_requirement() {
+		add_filter( 'sit_cwm_disclosure_enabled', '__return_true' );
+
+		$post = $this->create_managed_post( array( 'post_status' => 'draft' ) );
+
+		$this->posts->set_status( $post, 'approved' );
+		wp_publish_post( $post );
+
+		$this->assertNull( $this->disclosure->data_for( $post ) );
+	}
+
+	/**
+	 * The filter never shows a line on a post that is not published.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_filter_cannot_bypass_published_requirement() {
+		add_filter( 'sit_cwm_disclosure_enabled', '__return_true' );
+
+		$post = $this->approved_and_published();
+
+		wp_update_post(
+			array(
+				'ID'          => $post,
+				'post_status' => 'draft',
+			)
+		);
+
+		$this->assertNull( $this->disclosure->data_for( $post ) );
+	}
+
+	/**
+	 * Only boolean `true` enables.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_truthy_non_boolean_does_not_enable() {
+		add_filter(
+			'sit_cwm_disclosure_enabled',
+			static function () {
+				return 1;
+			}
+		);
+
+		$this->assertNull( $this->disclosure->data_for( $this->approved_and_published() ) );
+	}
+
+	/**
+	 * The filter can switch the line off for a post with the setting on.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_filter_can_disable_for_a_post_while_setting_on() {
+		( new Settings() )->update( array( 'disclosure_enabled' => true ) );
+		add_filter( 'sit_cwm_disclosure_enabled', '__return_false' );
+
+		$this->assertNull( $this->disclosure->data_for( $this->approved_and_published() ) );
+	}
+
+	/**
 	 * Both lines when on; each can be switched off, and both off is empty.
 	 *
 	 * @return void

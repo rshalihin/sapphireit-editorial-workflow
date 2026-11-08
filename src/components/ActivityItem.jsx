@@ -38,6 +38,27 @@ const BLOCK_ELEMENTS =
 	'p, div, li, blockquote, pre, h1, h2, h3, h4, h5, h6, tr';
 
 /**
+ * Actions Free logs itself. Anything else came from an add-on.
+ *
+ * @type {string[]}
+ */
+const KNOWN_ACTIONS = [
+	'status_changed',
+	'reviewer_assigned',
+	'reviewer_cleared',
+	'due_date_set',
+	'due_date_cleared',
+	'comment_added',
+	'ai_origin_changed',
+	'activity_pruned',
+	'content_changed',
+	'post_published',
+	'post_unpublished',
+	'publish_gate_refused',
+	'publish_gate_bypassed',
+];
+
+/**
  * Plain-text projection of a comment's post-safe HTML.
  *
  * The server's `wp_kses_post` is the guarantee; this keeps the client from
@@ -103,7 +124,8 @@ export function isSettingsDefault( entry ) {
  * `<wfstatus />` and `<label />` tags, which `createInterpolateElement` swaps
  * for elements, so names and labels never become part of the string being
  * parsed. An entry missing a label its sentence needs gets the generic
- * "actor: action label" sentence.
+ * "actor: action label" sentence, and an add-on's action gets "actor — action
+ * label".
  *
  * @param {Object} entry Activity entry.
  * @return {string} Template.
@@ -313,6 +335,15 @@ function sentenceTemplate( entry ) {
 				actor,
 				wfstatus
 			);
+	}
+
+	if ( ! KNOWN_ACTIONS.includes( entry.action ) ) {
+		return sprintf(
+			/* translators: 1: user name, 2: activity label from an add-on, e.g. "Signed off" */
+			__( '%1$s — %2$s', 'sapphireit-editorial-workflow' ),
+			actor,
+			'<label />'
+		);
 	}
 
 	return sprintf(

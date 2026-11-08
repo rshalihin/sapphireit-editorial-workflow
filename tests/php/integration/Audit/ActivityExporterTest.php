@@ -86,6 +86,331 @@ final class ActivityExporterTest extends TestCase {
 	}
 
 	/**
+	 * `columns()` is the public name of the fixed column list.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_columns_returns_the_column_list() {
+		$this->assertSame( ActivityExporter::COLUMNS, $this->exporter()->columns() );
+	}
+
+	/**
+	 * Filters narrow the rows, and extra columns follow Free's.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_export_with_filters_and_extra_columns() {
+		$first = $this->log_at( '2026-01-01 10:00:00' );
+
+		$this->log_at( '2026-03-01 10:00:00' );
+
+		$h      = $this->stream();
+		$result = $this->exporter()->export_with(
+			$h,
+			array(
+				'filters'       => array( 'until' => '2026-02-01 00:00:00' ),
+				'extra_columns' => array( 'chain_hash' ),
+				'row_filter'    => static function ( $row ) {
+					$row['chain_hash'] = 'h';
+
+					return $row;
+				},
+			)
+		);
+
+		$this->assertSame(
+			array(
+				'read'    => 1,
+				'written' => 1,
+				'last_id' => $first,
+			),
+			$result
+		);
+
+		$rows = $this->csv_rows( $h );
+
+		$this->assertSame( array_merge( ActivityExporter::COLUMNS, array( 'chain_hash' ) ), $rows[0] );
+		$this->assertCount( 2, $rows );
+		$this->assertSame( 'h', end( $rows[1] ) );
+	}
+
+	/**
+	 * A missing extra key writes an empty cell, so the columns stay aligned.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_missing_extra_key_writes_an_empty_cell() {
+		$this->log_at( '2026-01-01 10:00:00' );
+
+		$h = $this->stream();
+
+		$this->exporter()->export_with( $h, array( 'extra_columns' => array( 'chain_hash' ) ) );
+
+		$rows = $this->csv_rows( $h );
+
+		$this->assertCount( count( $rows[0] ), $rows[1] );
+		$this->assertSame( '', end( $rows[1] ) );
+	}
+
+	/**
+	 * A skipped row is read but not written.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_row_filter_null_counts_read_not_written() {
+		$first  = $this->log_at( '2026-01-01 10:00:00' );
+		$second = $this->log_at( '2026-01-02 10:00:00' );
+		$h      = $this->stream();
+
+		$result = $this->exporter()->export_with(
+			$h,
+			array(
+				'row_filter' => static function ( $row, $entry ) use ( $first ) {
+					return $entry->get_id() === $first ? null : $row;
+				},
+			)
+		);
+
+		$this->assertSame(
+			array(
+				'read'    => 2,
+				'written' => 1,
+				'last_id' => $second,
+			),
+			$result
+		);
+		$this->assertCount( 2, $this->csv_rows( $h ) );
+	}
+
+	/**
+	 * `max_rows` stops exactly, across a batch boundary.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_max_rows_stops_exactly_and_reports_last_id() {
+		$this->log_at( '2026-01-01 10:00:00' );
+
+		$second = $this->log_at( '2026-01-02 10:00:00' );
+
+		$this->log_at( '2026-01-03 10:00:00' );
+
+		$result = $this->exporter( 1 )->export_with( $this->stream(), array( 'max_rows' => 2 ) );
+
+		$this->assertSame(
+			array(
+				'read'    => 2,
+				'written' => 2,
+				'last_id' => $second,
+			),
+			$result
+		);
+	}
+
+	/**
+	 * Extra cells get the same formula neutralising as Free's own.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_cells_are_neutralised_in_extra_columns() {
+		$this->log_at( '2026-01-01 10:00:00' );
+
+		$h = $this->stream();
+
+		$this->exporter()->export_with(
+			$h,
+			array(
+				'extra_columns' => array( 'note' ),
+				'row_filter'    => static function ( $row ) {
+					$row['note'] = '=SUM(1)';
+
+					return $row;
+				},
+			)
+		);
+
+		$rows = $this->csv_rows( $h );
+
+		$this->assertSame( "'=SUM(1)", end( $rows[1] ) );
+	}
+
+	/**
+	 * `after_batch` runs once per batch.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_export_with_runs_after_batch() {
+		$this->log_at( '2026-01-01 10:00:00' );
+		$this->log_at( '2026-01-02 10:00:00' );
+
+		$calls = 0;
+
+		$this->exporter( 1 )->export_with(
+			$this->stream(),
+			array(
+				'after_batch' => static function () use ( &$calls ) {
+					++$calls;
+				},
+			)
+		);
+
+		$this->assertSame( 2, $calls );
+	}
+
+	/**
+	 * Free's own export stays exactly what it was.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_export_output_is_unchanged() {
+		$this->log_at( '2026-01-01 10:00:00' );
+		$this->log_at( '2026-01-02 10:00:00' );
+
+		$plain = $this->stream();
+		$with  = $this->stream();
+
+		$this->assertSame( 2, $this->exporter()->export( $plain ) );
+		$this->exporter()->export_with( $with );
+
+		rewind( $plain );
+		rewind( $with );
+
+		$this->assertSame( stream_get_contents( $plain ), stream_get_contents( $with ) );
+	}
+
+	/**
+	 * The service is available outside wp-admin, for scheduled jobs.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_service_is_registered() {
+		$this->assertInstanceOf( ActivityExporter::class, sit_cwm_container()->get( 'activity_exporter' ) );
+	}
+
+	/**
+	 * The export ends with the two approval evidence columns, filled from an
+	 * approval row.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_approval_row_fills_the_evidence_columns() {
+		$this->assertCount( 24, ActivityExporter::COLUMNS );
+		$this->assertSame( array( 'content_hash', 'revision_id' ), array_slice( ActivityExporter::COLUMNS, -2 ) );
+
+		$post = $this->create_managed_post( array( 'post_status' => 'draft' ) );
+		$hash = str_repeat( 'b2', 32 );
+
+		$this->activity->log_status_change(
+			$post,
+			'review',
+			'approved',
+			self::fixture_user( 'editor' ),
+			array(
+				'content_hash' => $hash,
+				'revision_id'  => 44,
+			)
+		);
+
+		$rows = $this->export_rows();
+		$row  = end( $rows );
+
+		$this->assertSame( $hash, $row['content_hash'] );
+		$this->assertSame( '44', $row['revision_id'] );
+	}
+
+	/**
+	 * A prune row exports with its label and no post, whatever post is global.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_prune_row_exports_with_its_label_and_no_post() {
+		$p = $this->create_managed_post(
+			array(
+				'post_title'  => 'Global post',
+				'post_status' => 'draft',
+			)
+		);
+
+		$this->activity->log(
+			$p,
+			'comment_added',
+			array(
+				'message'    => 'old',
+				'created_at' => '2024-01-01 00:00:00',
+			)
+		);
+		$this->activity->purge_before( '2025-01-01 00:00:00' );
+
+		$GLOBALS['post'] = get_post( $p ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- `get_post( 0 )` falls back to this.
+
+		$rows = $this->export_rows();
+
+		unset( $GLOBALS['post'] );
+
+		$row = end( $rows );
+
+		$this->assertSame( 'activity_pruned', $row['action'] );
+		$this->assertSame( 'Activity log pruned', $row['action_label'] );
+		$this->assertSame( '0', $row['post_id'] );
+		$this->assertSame( '', $row['post_title'] );
+	}
+
+	/**
+	 * Logs a row at a set time, on a post of its own.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param string $created_at UTC `Y-m-d H:i:s`.
+	 * @return int Activity id.
+	 */
+	private function log_at( string $created_at ): int {
+		return $this->activity->log(
+			$this->create_managed_post( array( 'post_status' => 'draft' ) ),
+			'comment_added',
+			array(
+				'message'    => 'note',
+				'created_at' => $created_at,
+			)
+		);
+	}
+
+	/**
+	 * The CSV written to a stream, header first.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param resource $h Stream.
+	 * @return array[]
+	 */
+	private function csv_rows( $h ): array {
+		rewind( $h );
+		fread( $h, 3 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fread -- In-memory stream.
+
+		return $this->read_rows( $h );
+	}
+
+	/**
 	 * The batch callback runs once per non-empty batch.
 	 *
 	 * @return void

@@ -1,4 +1,9 @@
 /**
+ * WordPress dependencies
+ */
+import { addFilter, removeAllFilters } from '@wordpress/hooks';
+
+/**
  * External dependencies
  */
 import { render, screen } from '@testing-library/react';
@@ -6,7 +11,17 @@ import { render, screen } from '@testing-library/react';
 /**
  * Internal dependencies
  */
-import buildFields, { mergeUsers } from '../../src/dashboard/fields';
+import buildFields, {
+	addonFields,
+	addonFilterFields,
+	mergeUsers,
+} from '../../src/dashboard/fields';
+import {
+	DEFAULT_LAYOUTS,
+	defaultLayouts,
+	defaultView,
+	viewFromSearchParams,
+} from '../../src/dashboard/urlState';
 import { FILTER_OPERATORS } from '../../src/hooks/usePosts';
 
 const row = ( overrides = {} ) => ( {
@@ -324,6 +339,160 @@ describe( 'field rendering', () => {
 		renderCell( 'last_activity', row() );
 
 		expect( screen.getByText( 'No activity' ) ).toBeTruthy();
+	} );
+} );
+
+describe( 'the sitCwm.dashboard.fields filter', () => {
+	const HOOK = 'sitCwm.dashboard.fields';
+	const elements = [ { value: 'my_groups', label: 'My groups' } ];
+
+	afterEach( () => removeAllFilters( HOOK ) );
+
+	it( 'changes nothing with no filter registered', () => {
+		expect( addonFields() ).toEqual( [] );
+		expect( buildFields().map( ( entry ) => entry.id ) ).toEqual( [
+			'title',
+			'status',
+			'ai_origin',
+			'reviewer',
+			'due_date',
+			'author',
+			'post_type',
+			'last_activity',
+			'is_overdue',
+		] );
+	} );
+
+	it( 'appends added fields and keeps every core field', () => {
+		addFilter( HOOK, 't', () => [
+			{ id: 'pro_workflow', label: 'Workflow' },
+		] );
+
+		const ids = buildFields().map( ( entry ) => entry.id );
+
+		expect( ids.slice( 0, 2 ) ).toEqual( [ 'title', 'status' ] );
+		expect( ids[ ids.length - 1 ] ).toBe( 'pro_workflow' );
+		expect( ids ).toContain( 'is_overdue' );
+	} );
+
+	it( 'makes an added field hideable and unsortable', () => {
+		addFilter( HOOK, 't', ( fields ) => [
+			...fields,
+			{
+				id: 'pro_workflow',
+				label: 'Workflow',
+				enableHiding: false,
+				enableSorting: true,
+			},
+		] );
+
+		const added = field( buildFields(), 'pro_workflow' );
+
+		expect( added.enableHiding ).toBe( true );
+		expect( added.enableSorting ).toBe( false );
+	} );
+
+	it( 'cannot replace a core field or add a malformed one', () => {
+		addFilter( HOOK, 't', ( fields ) => [
+			...fields,
+			{ id: 'status', label: 'Hacked' },
+			null,
+			{ label: 'No id' },
+		] );
+
+		const fields = buildFields();
+
+		expect( field( fields, 'status' ).label ).toBe( 'Status' );
+		expect( addonFields() ).toEqual( [] );
+		expect(
+			fields.filter( ( entry ) => entry.id === 'status' )
+		).toHaveLength( 1 );
+	} );
+
+	it( 'a filter callback that throws leaves the core fields', () => {
+		addFilter( HOOK, 't', () => {
+			throw new Error( 'boom' );
+		} );
+
+		expect( field( buildFields(), 'title' ) ).toBeTruthy();
+		expect( addonFields() ).toEqual( [] );
+		expect( viewFromSearchParams( '' ).filters ).toEqual( [] );
+		expect( console ).toHaveErrored();
+	} );
+
+	it( 'drops malformed elements and keeps the field working', () => {
+		addFilter( HOOK, 't', () => [
+			{
+				id: 'pro_view',
+				label: 'View',
+				elements: [ null, 'text', ...elements ],
+				filterBy: { operators: [ 'is' ] },
+			},
+			{
+				id: 'pro_empty',
+				label: 'Empty',
+				elements: [ null ],
+				filterBy: { operators: [ 'is' ] },
+			},
+		] );
+
+		expect( field( addonFields(), 'pro_view' ).elements ).toEqual(
+			elements
+		);
+		expect( field( addonFields(), 'pro_empty' ).filterBy ).toBe( false );
+		expect( viewFromSearchParams( 'pro_view=my_groups' ).filters ).toEqual(
+			[ { field: 'pro_view', operator: 'is', value: 'my_groups' } ]
+		);
+	} );
+
+	it( 'ignores a non-array result', () => {
+		addFilter( HOOK, 't', () => 'nope' );
+
+		expect( addonFields() ).toEqual( [] );
+		expect( field( buildFields(), 'title' ) ).toBeTruthy();
+	} );
+
+	it( 'lists only fields with elements and the "is" operator as filterable', () => {
+		addFilter( HOOK, 't', () => [
+			{
+				id: 'pro_view',
+				label: 'View',
+				elements,
+				filterBy: { operators: [ 'is' ] },
+			},
+			{ id: 'pro_plain', label: 'Plain' },
+			{
+				id: 'pro_any',
+				label: 'Any',
+				elements,
+				filterBy: { operators: [ 'isAny' ] },
+			},
+		] );
+
+		expect( addonFilterFields().map( ( entry ) => entry.id ) ).toEqual( [
+			'pro_view',
+		] );
+		expect( field( buildFields(), 'pro_plain' ).filterBy ).toBe( false );
+		expect( field( buildFields(), 'pro_any' ).filterBy ).toBe( false );
+	} );
+
+	it( 'shows a defaultVisible field from the start, and no other', () => {
+		addFilter( HOOK, 't', () => [
+			{ id: 'pro_stage', label: 'Stage', defaultVisible: true },
+			{ id: 'pro_view', label: 'View' },
+		] );
+
+		const { fields } = viewFromSearchParams( '' );
+
+		expect( fields ).toContain( 'pro_stage' );
+		expect( fields ).not.toContain( 'pro_view' );
+		expect( viewFromSearchParams( 'layout=grid' ).fields ).toContain(
+			'pro_stage'
+		);
+		expect( defaultLayouts().table.fields ).toContain( 'pro_stage' );
+		expect( defaultLayouts().grid.fields ).toContain( 'pro_stage' );
+		expect( defaultView().fields ).toContain( 'pro_stage' );
+		expect( DEFAULT_LAYOUTS.table.fields ).not.toContain( 'pro_stage' );
 	} );
 } );
 

@@ -38,7 +38,8 @@ back for the server to re-derive from scratch. See
   the gate does **not** cover.
 - **Publication audit trail.** Every publish and unpublish of managed content is
   logged with the actor, the time and the workflow status at that moment, in
-  every gate mode including *Off*.
+  every gate mode including *Off*. An approval also records a fingerprint of the
+  content it approved, and an edit made after review started is logged.
 - **Opt-in email notifications** for five events: reviewer assigned, submitted
   for review, changes requested, approved, workflow comment added. Off until a
   site owner turns them on; never sent to the actor or to anyone who cannot
@@ -230,6 +231,12 @@ guard and the known trade-offs — is in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 Free core fires these so Pro add-ons (and your own code) can extend it without
 touching a core file. Every one is prefixed `sit_cwm_`.
+
+In the editors, an add-on can also add a section to the workflow panel with the
+`sitCwm.workflowPanel.sections` JavaScript filter, learn about changes from
+`sitCwm.workflow.changed`, and ask the panel to refetch with
+`sitCwm.workflow.refresh`. See
+[JavaScript extension points](ARCHITECTURE.md#javascript-extension-points).
 
 ### Actions
 

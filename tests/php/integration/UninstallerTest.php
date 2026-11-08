@@ -8,6 +8,7 @@
 
 namespace Sit_Cwm\Tests\Integration;
 
+use Sit_Cwm\Admin\Promotions;
 use Sit_Cwm\Core\Database;
 use Sit_Cwm\Core\Uninstaller;
 use Sit_Cwm\Workflow\Capabilities;
@@ -131,6 +132,27 @@ final class UninstallerTest extends WP_UnitTestCase {
 		$this->assertFalse( get_role( 'administrator' )->has_cap( Capabilities::MANAGE_WORKFLOWS ) );
 		$this->assertFalse( get_option( 'sit_cwm_settings' ) );
 		$this->assertFalse( get_option( Capabilities::REVISION_OPTION ) );
+	}
+
+	/**
+	 * With the opt-in, every user's dismissed promotion hints go too; other
+	 * user meta stays. Without it, they stay.
+	 *
+	 * @return void
+	 */
+	public function test_dismissed_hints_follow_the_opt_in() {
+		$user_id = self::factory()->user->create();
+		update_user_meta( $user_id, Promotions::DISMISSED_META, array( 'export' ) );
+		update_user_meta( $user_id, 'other_plugin_key', 'kept' );
+
+		update_option( 'sit_cwm_settings', array( 'delete_data_on_uninstall' => false ) );
+		Uninstaller::run();
+		$this->assertSame( array( 'export' ), get_user_meta( $user_id, Promotions::DISMISSED_META, true ) );
+
+		update_option( 'sit_cwm_settings', array( 'delete_data_on_uninstall' => true ) );
+		Uninstaller::run();
+		$this->assertSame( '', get_user_meta( $user_id, Promotions::DISMISSED_META, true ) );
+		$this->assertSame( 'kept', get_user_meta( $user_id, 'other_plugin_key', true ) );
 	}
 
 	/**

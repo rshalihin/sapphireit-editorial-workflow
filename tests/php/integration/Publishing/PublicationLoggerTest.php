@@ -76,6 +76,29 @@ final class PublicationLoggerTest extends TestCase {
 	}
 
 	/**
+	 * Going live and coming down each record the content at that moment.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_publication_rows_record_the_content_hash() {
+		$post = $this->create_managed_post( array( 'post_status' => 'draft' ) );
+		$hash = $this->posts->content_fingerprint( $post );
+
+		wp_publish_post( $post );
+		wp_update_post(
+			array(
+				'ID'          => $post,
+				'post_status' => 'draft',
+			)
+		);
+
+		$this->assertSame( $hash, $this->activity->latest_for_post( $post, 'post_published' )->get_context()['content_hash'] );
+		$this->assertSame( $hash, $this->activity->latest_for_post( $post, 'post_unpublished' )->get_context()['content_hash'] );
+	}
+
+	/**
 	 * Roadmap §3.1B acceptance: publishing at `review` with no gate configured
 	 * names the actor, the time and the workflow status.
 	 *

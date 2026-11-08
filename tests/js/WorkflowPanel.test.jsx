@@ -1,7 +1,17 @@
 /**
+ * WordPress dependencies
+ */
+import {
+	addFilter,
+	doAction,
+	hasAction,
+	removeAllFilters,
+} from '@wordpress/hooks';
+
+/**
  * External dependencies
  */
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 /**
@@ -12,6 +22,9 @@ import WorkflowPanel from '../../src/components/WorkflowPanel';
 import useWorkflow from '../../src/hooks/useWorkflow';
 
 jest.mock( '../../src/hooks/useWorkflow' );
+
+// Loads its own data; not under test.
+jest.mock( '../../src/components/ActivityTimeline', () => () => null );
 
 // The classic mount renders snackbars from the notices store; not under test.
 jest.mock( '../../src/components/Snackbars', () => () => null );
@@ -354,5 +367,80 @@ describe( 'WorkflowPanel attestation', () => {
 		render( <WorkflowPanel postId={ 42 } /> );
 
 		expect( screen.queryByRole( 'checkbox' ) ).toBeNull();
+	} );
+} );
+
+describe( 'WorkflowPanel extension points', () => {
+	afterEach( () => {
+		removeAllFilters( 'sitCwm.workflowPanel.sections' );
+	} );
+
+	it( 'renders an extension section after the actions, before the activity', () => {
+		addFilter( 'sitCwm.workflowPanel.sections', 'test', () => [
+			{ name: 'x', order: 1, render: () => <p>Extra section</p> },
+		] );
+		mockWorkflow(
+			makeWorkflow( {
+				capabilities: {
+					can_change_status: true,
+					can_view_activity: true,
+				},
+			} )
+		);
+
+		const { container } = render( <WorkflowPanel postId={ 42 } /> );
+		const text = container.textContent;
+
+		expect( text.indexOf( 'Workflow actions' ) ).toBeLessThan(
+			text.indexOf( 'Extra section' )
+		);
+		expect( text.indexOf( 'Extra section' ) ).toBeLessThan(
+			text.indexOf( 'Activity' )
+		);
+	} );
+
+	it( 'renders no extension section before the workflow has loaded', () => {
+		const filter = jest.fn( () => [] );
+
+		addFilter( 'sitCwm.workflowPanel.sections', 'test', filter );
+		mockWorkflow( null );
+		useWorkflow.mockReturnValue( {
+			...useWorkflow(),
+			isLoading: true,
+		} );
+
+		render( <WorkflowPanel postId={ 42 } /> );
+
+		expect( filter ).not.toHaveBeenCalled();
+	} );
+
+	it( 'refetches on a refresh request for its own post only', () => {
+		mockWorkflow( makeWorkflow() );
+
+		render( <WorkflowPanel postId={ 5 } /> );
+
+		const { refresh } = useWorkflow.mock.results[ 0 ].value;
+
+		act( () => doAction( 'sitCwm.workflow.refresh', { postId: 6 } ) );
+		expect( refresh ).not.toHaveBeenCalled();
+
+		act( () => doAction( 'sitCwm.workflow.refresh', { postId: 5 } ) );
+		expect( refresh ).toHaveBeenCalledTimes( 1 );
+	} );
+
+	it( 'stops listening when it unmounts', () => {
+		mockWorkflow( makeWorkflow() );
+
+		const { unmount } = render( <WorkflowPanel postId={ 5 } /> );
+
+		expect(
+			hasAction( 'sitCwm.workflow.refresh', 'sit-cwm/workflow-panel-5' )
+		).toBeTruthy();
+
+		unmount();
+
+		expect(
+			hasAction( 'sitCwm.workflow.refresh', 'sit-cwm/workflow-panel-5' )
+		).toBeFalsy();
 	} );
 } );

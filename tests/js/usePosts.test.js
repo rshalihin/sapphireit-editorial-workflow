@@ -46,6 +46,40 @@ beforeEach( () => {
 	];
 } );
 
+describe( 'viewToQuery add-on filters', () => {
+	const view = ( field, operator, value ) => ( {
+		type: 'table',
+		filters: [ { field, operator, value } ],
+	} );
+
+	it( 'forwards an active add-on filter as a query param', () => {
+		expect(
+			viewToQuery( view( 'pro_view', 'is', 'my_groups' ), [ 'pro_view' ] )
+		).toEqual( { ...DEFAULTS, pro_view: 'my_groups' } );
+	} );
+
+	it( 'does not send a field no add-on declared', () => {
+		expect( viewToQuery( view( 'pro_view', 'is', 'my_groups' ) ) ).toEqual(
+			DEFAULTS
+		);
+	} );
+
+	it( 'does not send another operator or an empty value', () => {
+		expect(
+			viewToQuery( view( 'pro_view', 'isAny', [ 'a' ] ), [ 'pro_view' ] )
+		).toEqual( DEFAULTS );
+		expect(
+			viewToQuery( view( 'pro_view', 'is', '' ), [ 'pro_view' ] )
+		).toEqual( DEFAULTS );
+	} );
+
+	it( 'never lets an add-on field overwrite a core argument', () => {
+		expect(
+			viewToQuery( view( 'per_page', 'is', '100000' ), [ 'per_page' ] )
+		).toEqual( DEFAULTS );
+	} );
+} );
+
 describe( 'viewToQuery', () => {
 	it( 'maps an empty view to the first default page', () => {
 		expect( viewToQuery( { type: 'table' } ) ).toEqual( DEFAULTS );

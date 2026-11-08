@@ -145,6 +145,35 @@ body.sit-cwm-admin {
 	}
 }
 
+// The plain "Pro" link (Promotions, roadmap §4.5): a text link, never a button.
+.sit-cwm-shell__pro {
+	color: var(--sit-cwm-muted);
+	font-size: 14px;
+	text-decoration: none;
+
+	&:hover,
+	&:focus {
+		color: var(--sit-cwm-accent);
+		text-decoration: underline;
+	}
+}
+
+// One-line Pro hint (Promotions): muted text, no colour block, no icon.
+.sit-cwm-hint {
+	margin: 0 0 var(--sit-cwm-gap);
+	color: var(--sit-cwm-muted);
+	font-size: 13px;
+
+	a {
+		color: var(--sit-cwm-accent);
+	}
+
+	.sit-cwm-hint__dismiss {
+		margin-left: 8px;
+		color: var(--sit-cwm-muted);
+	}
+}
+
 // Title row under the header: h1 and subtitle left, page actions right.
 .sit-cwm-page-head {
 	display: flex;

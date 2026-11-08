@@ -206,16 +206,40 @@ export const FILTER_OPERATORS = Object.fromEntries(
 );
 
 /**
+ * Arguments `viewToQuery()` sets itself; an add-on field cannot use these names.
+ *
+ * @type {string[]}
+ */
+const CORE_QUERY_ARGS = [
+	'page',
+	'per_page',
+	'search',
+	'orderby',
+	'order',
+	'status',
+	'reviewer_id',
+	'author',
+	'post_type',
+	'due_after',
+	'due_before',
+	'overdue',
+];
+
+/**
  * Maps a DataViews `view` to `GET /sit-cwm/v1/posts` arguments.
  *
  * Unknown sort fields, filter fields and operators, and invalid filter values
  * are dropped rather than passed through. The server validates everything
  * again regardless.
  *
- * @param {Object} [view] DataViews view.
+ * An add-on's filter is sent as `<field id>=<value>`, for add-ons to read in
+ * `sit_cwm_posts_query_args`.
+ *
+ * @param {Object}   [view]          DataViews view.
+ * @param {string[]} [addonFieldIds] Add-on field ids that can be filtered.
  * @return {Object} REST query arguments.
  */
-export function viewToQuery( view = {} ) {
+export function viewToQuery( view = {}, addonFieldIds = [] ) {
 	const page = toInteger( view.page );
 	const query = {
 		page: page > 0 ? page : 1,
@@ -240,6 +264,22 @@ export function viewToQuery( view = {} ) {
 
 	( Array.isArray( view.filters ) ? view.filters : [] ).forEach(
 		( filter ) => {
+			if (
+				filter &&
+				addonFieldIds.includes( filter.field ) &&
+				! CORE_QUERY_ARGS.includes( filter.field )
+			) {
+				if (
+					filter.operator === 'is' &&
+					( typeof filter.value === 'number' ||
+						( typeof filter.value === 'string' && filter.value ) )
+				) {
+					query[ filter.field ] = String( filter.value );
+				}
+
+				return;
+			}
+
 			if (
 				! filter ||
 				! hasOwn( FILTERS, filter.field ) ||

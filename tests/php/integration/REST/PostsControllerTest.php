@@ -602,6 +602,107 @@ final class PostsControllerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * `sit_cwm_posts_item` adds keys to every row.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_item_filter_adds_keys() {
+		$admin = $this->make_user( 'administrator' );
+		$post  = $this->make_post( $admin, 'itemfilter' );
+
+		add_filter(
+			'sit_cwm_posts_item',
+			static function ( $item, $row_post, $user_id ) use ( $admin ) {
+				$item['pro_workflow'] = 'legal-' . $row_post->ID . '-' . ( $admin === $user_id ? 'me' : 'other' );
+
+				return $item;
+			},
+			10,
+			3
+		);
+		wp_set_current_user( $admin );
+
+		$row = $this->find_row( $this->get_posts( array( 'search' => 'itemfilter' ) ), $post );
+
+		$this->assertSame( 'legal-' . $post . '-me', $row['pro_workflow'] );
+	}
+
+	/**
+	 * Core keys always keep Free's value.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_item_filter_cannot_change_or_drop_core_keys() {
+		$admin = $this->make_user( 'administrator' );
+		$post  = $this->make_post( $admin, 'itemfilter' );
+
+		add_filter(
+			'sit_cwm_posts_item',
+			static function ( $item ) {
+				unset( $item['status'] );
+				$item['post_id'] = 0;
+				$item['title']   = 'Hacked';
+
+				return $item;
+			}
+		);
+		wp_set_current_user( $admin );
+
+		$row = $this->find_row( $this->get_posts( array( 'search' => 'itemfilter' ) ), $post );
+
+		$this->assertArrayHasKey( 'status', $row );
+		$this->assertNotSame( 'Hacked', $row['title'] );
+	}
+
+	/**
+	 * A filter that returns something other than an array changes nothing.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_non_array_item_filter_result_is_ignored() {
+		$admin = $this->make_user( 'administrator' );
+		$post  = $this->make_post( $admin, 'itemfilter' );
+
+		add_filter( 'sit_cwm_posts_item', '__return_null' );
+		wp_set_current_user( $admin );
+
+		$this->assertArrayHasKey( 'status', $this->find_row( $this->get_posts( array( 'search' => 'itemfilter' ) ), $post ) );
+	}
+
+	/**
+	 * An add-on's filter param reaches `sit_cwm_posts_query_args` unregistered.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_unknown_query_param_reaches_query_args_filter() {
+		$admin = $this->make_user( 'administrator' );
+		$seen  = null;
+
+		add_filter(
+			'sit_cwm_posts_query_args',
+			static function ( $args, $request ) use ( &$seen ) {
+				$seen = $request->get_param( 'pro_view' );
+
+				return $args;
+			},
+			10,
+			2
+		);
+		wp_set_current_user( $admin );
+
+		$this->assertSame( 200, $this->get_posts( array( 'pro_view' => 'my_groups' ) )->get_status() );
+		$this->assertSame( 'my_groups', $seen );
+	}
+
+	/**
 	 * Queries run by one cold-cache collection request.
 	 *
 	 * Options and the current user are loaded before counting, as WordPress

@@ -76,6 +76,492 @@ final class ActivityLoggerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A status row keeps a real hash and revision id, and nothing else.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_status_change_keeps_only_valid_hash_and_revision() {
+		$hash = str_repeat( 'a1', 32 );
+
+		$good = $this->activity->log_status_change(
+			$this->post,
+			'review',
+			'approved',
+			7,
+			array(
+				'content_hash' => $hash,
+				'revision_id'  => 12,
+			)
+		);
+		$bad  = $this->activity->log_status_change(
+			$this->post,
+			'review',
+			'approved',
+			7,
+			array(
+				'content_hash' => 'not-a-hash',
+				'revision_id'  => 0,
+			)
+		);
+
+		$this->assertSame(
+			array(
+				'content_hash' => $hash,
+				'revision_id'  => 12,
+			),
+			$this->activity->get( $good )->get_context()
+		);
+		$this->assertSame( array(), (array) $this->activity->get( $bad )->get_context() );
+	}
+
+	/**
+	 * `until` is exclusive.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_get_batch_until_is_exclusive() {
+		$first = $this->activity->log(
+			$this->post,
+			'comment_added',
+			array(
+				'message'    => 'a',
+				'created_at' => '2026-01-01 10:00:00',
+			)
+		);
+		$this->activity->log(
+			$this->post,
+			'comment_added',
+			array(
+				'message'    => 'b',
+				'created_at' => '2026-01-02 10:00:00',
+			)
+		);
+
+		$ids = array_map(
+			static function ( ActivityEntry $entry ) {
+				return $entry->get_id();
+			},
+			$this->activity->get_batch( array( 'until' => '2026-01-02 10:00:00' ) )
+		);
+
+		$this->assertSame( array( $first ), $ids );
+	}
+
+	/**
+	 * `user_id` and `post_id` narrow the batch together.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_get_batch_filters_by_user_and_post() {
+		$other_post = self::factory()->post->create( array( 'post_status' => 'draft' ) );
+		$user       = self::factory()->user->create();
+		$other_user = self::factory()->user->create();
+
+		$this->activity->log(
+			$this->post,
+			'comment_added',
+			array(
+				'user_id' => $user,
+				'message' => 'x',
+			)
+		);
+		$this->activity->log(
+			$other_post,
+			'comment_added',
+			array(
+				'user_id' => $user,
+				'message' => 'y',
+			)
+		);
+		$this->activity->log(
+			$this->post,
+			'comment_added',
+			array(
+				'user_id' => $other_user,
+				'message' => 'z',
+			)
+		);
+
+		$this->assertCount(
+			1,
+			$this->activity->get_batch(
+				array(
+					'user_id' => $user,
+					'post_id' => $this->post,
+				)
+			)
+		);
+		$this->assertCount( 2, $this->activity->get_batch( array( 'user_id' => $user ) ) );
+		$this->assertCount( 2, $this->activity->get_batch( array( 'post_id' => $this->post ) ) );
+	}
+
+	/**
+	 * Bad values for the new arguments are ignored, like a bad `since`.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_invalid_new_batch_args_are_ignored() {
+		$this->activity->log( $this->post, 'comment_added', array( 'message' => 'x' ) );
+
+		$this->assertCount(
+			1,
+			$this->activity->get_batch(
+				array(
+					'until'   => 'garbage',
+					'user_id' => -3,
+					'post_id' => 'abc',
+				)
+			)
+		);
+	}
+
+	/**
+	 * A prune removes old rows, oldest first, and records itself.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_purge_before_deletes_oldest_first_and_records_itself() {
+		$old   = $this->activity->log(
+			$this->post,
+			'comment_added',
+			array(
+				'message'    => 'old',
+				'created_at' => '2024-01-01 00:00:00',
+			)
+		);
+		$new   = $this->activity->log( $this->post, 'comment_added', array( 'message' => 'new' ) );
+		$fired = array();
+		$user  = self::factory()->user->create();
+
+		wp_set_current_user( $user );
+		add_action(
+			'sit_cwm_activity_pruned',
+			static function () use ( &$fired ) {
+				$fired[] = func_get_args();
+			},
+			10,
+			4
+		);
+
+		$result = $this->activity->purge_before( '2025-01-01 00:00:00', 1000 );
+
+		$this->assertSame(
+			array(
+				'count'    => 1,
+				'first_id' => $old,
+				'last_id'  => $old,
+			),
+			$result
+		);
+		$this->assertNull( $this->activity->get( $old ) );
+		$this->assertNotNull( $this->activity->get( $new ) );
+		$this->assertSame( array( array( 1, $old, $old, '2025-01-01 00:00:00' ) ), $fired );
+
+		$records = $this->activity->get_batch( array( 'actions' => array( 'activity_pruned' ) ) );
+
+		$this->assertCount( 1, $records );
+		$this->assertSame( 0, $records[0]->get_post_id() );
+		$this->assertSame( $user, $records[0]->get_user_id() );
+		$this->assertSame(
+			array(
+				'before'   => '2025-01-01 00:00:00',
+				'count'    => 1,
+				'first_id' => $old,
+				'last_id'  => $old,
+			),
+			$records[0]->get_context()
+		);
+	}
+
+	/**
+	 * Add-ons hear about the prune record like any other row.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_purge_record_fires_activity_logged() {
+		$this->activity->log(
+			$this->post,
+			'comment_added',
+			array(
+				'message'    => 'old',
+				'created_at' => '2024-01-01 00:00:00',
+			)
+		);
+
+		$seen = array();
+
+		add_action(
+			'sit_cwm_activity_logged',
+			static function ( $id, $entry ) use ( &$seen ) {
+				$seen[] = $entry->get_action();
+			},
+			10,
+			2
+		);
+
+		$this->activity->purge_before( '2025-01-01 00:00:00' );
+
+		$this->assertSame( array( 'activity_pruned' ), $seen );
+	}
+
+	/**
+	 * A cutoff under a day old, or one that is not a UTC datetime, is refused.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_purge_refuses_recent_or_invalid_cutoff() {
+		$id    = $this->activity->log( $this->post, 'comment_added', array( 'message' => 'x' ) );
+		$fired = 0;
+		$zero  = array(
+			'count'    => 0,
+			'first_id' => 0,
+			'last_id'  => 0,
+		);
+
+		add_action(
+			'sit_cwm_activity_pruned',
+			static function () use ( &$fired ) {
+				++$fired;
+			}
+		);
+
+		$this->assertSame( $zero, $this->activity->purge_before( gmdate( 'Y-m-d H:i:s', time() - HOUR_IN_SECONDS ) ) );
+		$this->assertSame( $zero, $this->activity->purge_before( gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS ) ) );
+		$this->assertSame( $zero, $this->activity->purge_before( 'yesterday' ) );
+		$this->assertSame( 0, $fired );
+		$this->assertNotNull( $this->activity->get( $id ) );
+	}
+
+	/**
+	 * With nothing to delete, nothing is recorded and nothing fires.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_purge_with_no_matching_rows_records_nothing() {
+		$fired = 0;
+
+		add_action(
+			'sit_cwm_activity_pruned',
+			static function () use ( &$fired ) {
+				++$fired;
+			}
+		);
+
+		$this->assertSame( 0, $this->activity->purge_before( '2001-01-01 00:00:00' )['count'] );
+		$this->assertSame( 0, $fired );
+		$this->assertSame( array(), $this->activity->get_batch( array( 'actions' => array( 'activity_pruned' ) ) ) );
+	}
+
+	/**
+	 * `$limit` caps one call, and the oldest ids go first.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_purge_respects_limit() {
+		$ids = array();
+
+		for ( $i = 0; $i < 3; $i++ ) {
+			$ids[] = $this->activity->log(
+				$this->post,
+				'comment_added',
+				array(
+					'message'    => "m{$i}",
+					'created_at' => '2024-01-01 00:00:0' . $i,
+				)
+			);
+		}
+
+		$result = $this->activity->purge_before( '2025-01-01 00:00:00', 2 );
+
+		$this->assertSame( 2, $result['count'] );
+		$this->assertSame( $ids[0], $result['first_id'] );
+		$this->assertSame( $ids[1], $result['last_id'] );
+		$this->assertNotNull( $this->activity->get( $ids[2] ) );
+	}
+
+	/**
+	 * The prune record belongs to no post.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_pruned_record_not_listed_for_any_post() {
+		$this->activity->log(
+			$this->post,
+			'comment_added',
+			array(
+				'message'    => 'old',
+				'created_at' => '2024-01-01 00:00:00',
+			)
+		);
+
+		$this->activity->purge_before( '2025-01-01 00:00:00' );
+
+		$this->assertSame( 0, $this->activity->count_for_post( $this->post ) );
+	}
+
+	/**
+	 * With no record, nothing is deleted: the prune must never go unrecorded.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_purge_deletes_nothing_when_the_record_cannot_be_written() {
+		$old   = $this->old_row();
+		$fired = 0;
+		$table = $this->database->table_name();
+
+		add_action(
+			'sit_cwm_activity_pruned',
+			static function () use ( &$fired ) {
+				++$fired;
+			}
+		);
+		add_filter(
+			'query',
+			static function ( $query ) use ( $table ) {
+				return 0 === stripos( ltrim( $query ), 'INSERT INTO `' . $table ) ? '' : $query;
+			}
+		);
+
+		$result = $this->activity->purge_before( '2025-01-01 00:00:00' );
+
+		$this->assertSame( 0, $result['count'] );
+		$this->assertNotNull( $this->activity->get( $old ) );
+		$this->assertSame( 0, $fired );
+	}
+
+	/**
+	 * A delete that fails leaves no claim that it happened.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_purge_removes_the_record_when_the_delete_fails() {
+		$old = $this->old_row();
+
+		add_filter(
+			'query',
+			static function ( $query ) {
+				return false !== stripos( $query, ' WHERE id IN (' ) ? '' : $query;
+			}
+		);
+
+		$result = $this->activity->purge_before( '2025-01-01 00:00:00' );
+
+		$this->assertSame( 0, $result['count'] );
+		$this->assertNotNull( $this->activity->get( $old ) );
+		$this->assertSame( array(), $this->activity->get_batch( array( 'actions' => array( 'activity_pruned' ) ) ) );
+	}
+
+	/**
+	 * The record states what really went, when fewer rows did.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_purge_record_is_corrected_when_fewer_rows_are_deleted() {
+		$this->old_row();
+		$this->old_row();
+
+		add_filter(
+			'query',
+			static function ( $query ) {
+				return preg_replace( '/ WHERE id IN \( (\d+), \d+ \)/', ' WHERE id IN ( $1 )', $query );
+			}
+		);
+
+		$this->assertSame( 1, $this->activity->purge_before( '2025-01-01 00:00:00' )['count'] );
+
+		$records = $this->activity->get_batch( array( 'actions' => array( 'activity_pruned' ) ) );
+
+		$this->assertSame( 1, $records[0]->get_context()['count'] );
+	}
+
+	/**
+	 * A failing `sit_cwm_activity_logged` listener cannot cost add-ons the
+	 * prune action: Pro's checkpoint hangs on it.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_failing_activity_listener_does_not_cancel_the_prune_action() {
+		$old   = $this->old_row();
+		$fired = 0;
+
+		add_action(
+			'sit_cwm_activity_logged',
+			static function () {
+				throw new \RuntimeException( 'boom' );
+			}
+		);
+		add_action(
+			'sit_cwm_activity_pruned',
+			static function () use ( &$fired ) {
+				++$fired;
+			}
+		);
+
+		$result = $this->activity->purge_before( '2025-01-01 00:00:00' );
+
+		$this->assertSame( 1, $result['count'] );
+		$this->assertSame( 1, $fired );
+		$this->assertNull( $this->activity->get( $old ) );
+	}
+
+	/**
+	 * Logs a row old enough to prune.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return int Activity id.
+	 */
+	private function old_row(): int {
+		return $this->activity->log(
+			$this->post,
+			'comment_added',
+			array(
+				'message'    => 'old',
+				'created_at' => '2024-01-01 00:00:00',
+			)
+		);
+	}
+
+	/**
+	 * `log()` still refuses a row with no post.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_log_still_refuses_post_id_zero() {
+		$this->assertSame( 0, $this->activity->log( 0, 'activity_pruned' ) );
+	}
+
+	/**
 	 * Each valid action inserts exactly one row with the given columns.
 	 *
 	 * @return void

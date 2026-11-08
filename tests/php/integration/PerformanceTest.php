@@ -75,6 +75,28 @@ final class PerformanceTest extends TestCase {
 	}
 
 	/**
+	 * A no-op `sit_cwm_posts_item` filter costs no queries.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_posts_collection_budget_holds_with_item_filter() {
+		$reviewers = $this->make_reviewers( 3 );
+		$posts     = $this->make_posts( 30, $reviewers );
+
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+		add_filter(
+			'sit_cwm_posts_item',
+			static function ( $item ) {
+				return $item;
+			}
+		);
+
+		$this->assertLessThanOrEqual( 8, $this->measure_collection( $posts ) );
+	}
+
+	/**
 	 * `GET /posts/<id>/workflow` stays within 5 queries with a cold post.
 	 *
 	 * @return void

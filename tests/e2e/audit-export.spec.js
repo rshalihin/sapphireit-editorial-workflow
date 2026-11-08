@@ -49,6 +49,8 @@ const HEADER = [
 	'via',
 	'attested',
 	'attestation',
+	'content_hash',
+	'revision_id',
 ].join( ',' );
 
 test.describe( 'Activity log CSV export', () => {

@@ -291,6 +291,215 @@ final class AdminShellTest extends TestCase {
 	}
 
 	/**
+	 * The API revision tells add-ons which seams this build offers.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_api_revision_constant_is_two() {
+		$this->assertTrue( defined( 'SIT_CWM_API_REVISION' ) );
+		$this->assertSame( 2, SIT_CWM_API_REVISION );
+	}
+
+	/**
+	 * An add-on's tab sits after the core tabs and before Getting Started.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_filtered_tab_appears_after_core_tabs_and_before_getting_started() {
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+		$this->register_menus();
+		$this->register_submenu( 'sit-cwm-pro-workflows', 'sit_cwm_manage_workflows' );
+		add_filter( 'sit_cwm_admin_tabs', array( $this, 'add_workflows_tab' ) );
+
+		$slugs = array_keys( $this->shell->tabs() );
+
+		$this->assertSame( 'sit-cwm-getting-started', end( $slugs ) );
+		$this->assertSame( array_search( 'sit-cwm-settings', $slugs, true ) + 1, array_search( 'sit-cwm-pro-workflows', $slugs, true ) );
+		$this->assertSame( 'Workflows', $this->shell->tabs()['sit-cwm-pro-workflows'] );
+	}
+
+	/**
+	 * A slug nobody registered under the Workflow menu gets no tab.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_filtered_tab_hidden_when_not_registered() {
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+		$this->register_menus();
+		add_filter( 'sit_cwm_admin_tabs', array( $this, 'add_workflows_tab' ) );
+
+		$this->assertArrayNotHasKey( 'sit-cwm-pro-workflows', $this->shell->tabs() );
+	}
+
+	/**
+	 * A registered page stays hidden from users without its capability.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_filtered_tab_hidden_without_the_capability() {
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+		$this->register_menus();
+		$this->register_submenu( 'sit-cwm-pro-workflows', 'sit_cwm_manage_workflows' );
+		add_filter( 'sit_cwm_admin_tabs', array( $this, 'add_workflows_tab' ) );
+
+		wp_set_current_user( self::fixture_user( 'editor' ) );
+
+		$this->assertArrayNotHasKey( 'sit-cwm-pro-workflows', $this->shell->tabs() );
+	}
+
+	/**
+	 * The filter cannot drop or rename a core tab.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_core_tabs_cannot_be_removed_or_relabelled() {
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+		$this->register_menus();
+		add_filter(
+			'sit_cwm_admin_tabs',
+			static function () {
+				return array( 'sit-cwm-dashboard' => 'Hacked' );
+			}
+		);
+
+		$tabs = $this->shell->tabs();
+
+		$this->assertNotSame( 'Hacked', $tabs['sit-cwm-dashboard'] );
+		$this->assertArrayHasKey( 'sit-cwm-settings', $tabs );
+		$this->assertSame( array( 'sit-cwm-dashboard', 'sit-cwm-settings', 'sit-cwm-getting-started' ), array_keys( $tabs ) );
+	}
+
+	/**
+	 * An add-on's slug gets the body class, so its screen gets the tokens.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_filtered_slug_counts_as_plugin_screen() {
+		add_filter( 'sit_cwm_admin_tabs', array( $this, 'add_workflows_tab' ) );
+		$GLOBALS['plugin_page'] = 'sit-cwm-pro-workflows'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Simulates the add-on's screen.
+
+		$this->assertTrue( $this->shell->is_plugin_screen() );
+		$this->assertStringContainsString( 'sit-cwm-admin', $this->shell->filter_body_class( '' ) );
+	}
+
+	/**
+	 * Slugs outside the plugin's prefix, and labels that are not text, are dropped.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_invalid_filtered_tabs_are_dropped() {
+		add_filter(
+			'sit_cwm_admin_tabs',
+			static function () {
+				return array(
+					'other-plugin-page' => 'Other',
+					'sit-cwm-Upper'     => 'Upper',
+					'sit-cwm-empty'     => '   ',
+					'sit-cwm-array'     => array( 'x' ),
+					7                   => 'Numeric',
+				);
+			}
+		);
+
+		foreach ( array( 'other-plugin-page', 'sit-cwm-Upper', 'sit-cwm-empty', 'sit-cwm-array' ) as $slug ) {
+			$GLOBALS['plugin_page'] = $slug; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Simulates the requested page.
+			$this->assertFalse( $this->shell->is_plugin_screen(), $slug );
+		}
+	}
+
+	/**
+	 * A filter that returns something other than an array changes nothing.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_non_array_filter_result_is_ignored() {
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+		$this->register_menus();
+		add_filter( 'sit_cwm_admin_tabs', '__return_null' );
+
+		$this->assertArrayHasKey( 'sit-cwm-dashboard', $this->shell->tabs() );
+	}
+
+	/**
+	 * The add-on tab prints in the header, marked current on its own screen.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_header_prints_filtered_tab_on_its_own_screen() {
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+		$this->register_menus();
+		$this->register_submenu( 'sit-cwm-pro-workflows', 'sit_cwm_manage_workflows' );
+		add_filter( 'sit_cwm_admin_tabs', array( $this, 'add_workflows_tab' ) );
+		$GLOBALS['plugin_page'] = 'sit-cwm-pro-workflows'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Simulates the add-on's screen.
+
+		ob_start();
+		$this->shell->render_header();
+		$html = (string) ob_get_clean();
+
+		$this->assertMatchesRegularExpression( '/page=sit-cwm-pro-workflows"[^>]*aria-current="page">Workflows</', $html );
+	}
+
+	/**
+	 * Filter callback: an add-on's tab.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param array<string, string> $tabs Tabs so far.
+	 * @return array<string, string>
+	 */
+	public function add_workflows_tab( $tabs ) {
+		$tabs['sit-cwm-pro-workflows'] = 'Workflows';
+
+		return $tabs;
+	}
+
+	/**
+	 * Registers the core pages as the current user.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	private function register_menus() {
+		$this->reset_admin_state();
+
+		$this->dashboard->add_menu();
+		$this->settings_page->add_menu();
+		$this->getting_started->add_menu();
+	}
+
+	/**
+	 * Registers a page under the Workflow menu, as an add-on would.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param string $slug       Page slug.
+	 * @param string $capability Capability the page needs.
+	 * @return void
+	 */
+	private function register_submenu( string $slug, string $capability ) {
+		add_submenu_page( Dashboard::MENU_SLUG, 'Workflows', 'Workflows', $capability, $slug, '__return_null' );
+	}
+
+	/**
 	 * Registers every page's menu as the current user and buffers the header
 	 * for a given `$plugin_page`.
 	 *

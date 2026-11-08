@@ -285,10 +285,45 @@ final class Assets {
 
 		$handle = $this->script_handle( $entry );
 
-		wp_register_script( $handle, $this->build_url . $entry . '.js', $asset['dependencies'], $asset['version'], true );
+		wp_register_script( $handle, $this->build_url . $entry . '.js', $this->dependencies( $entry, $asset['dependencies'] ), $asset['version'], true );
 		wp_set_script_translations( $handle, 'sapphireit-editorial-workflow', $this->languages_dir );
 
 		return $asset;
+	}
+
+	/**
+	 * An entry's dependencies plus the handles add-ons need loaded before it.
+	 *
+	 * WordPress drops a script when one of its dependencies is missing, so a
+	 * handle that is not registered yet is left out.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param string   $entry        Entry name.
+	 * @param string[] $dependencies The entry's own dependencies.
+	 * @return string[]
+	 */
+	private function dependencies( string $entry, array $dependencies ): array {
+		/**
+		 * Filters the extra script handles to load before a build entry.
+		 *
+		 * Register the handle first. The entry's own dependencies cannot be
+		 * removed.
+		 *
+		 * @since 1.2.0
+		 *
+		 * @param string[] $deps  Extra handles. Default empty.
+		 * @param string   $entry Entry name, such as `dashboard` or `sidebar`.
+		 */
+		$extra = (array) apply_filters( 'sit_cwm_script_dependencies', array(), $entry );
+
+		foreach ( $extra as $handle ) {
+			if ( is_string( $handle ) && wp_script_is( $handle, 'registered' ) && ! in_array( $handle, $dependencies, true ) ) {
+				$dependencies[] = $handle;
+			}
+		}
+
+		return $dependencies;
 	}
 
 	/**

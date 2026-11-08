@@ -6,11 +6,15 @@
  * `wp-admin/admin.php`), and are only written when they differ from the
  * default view. Everything read back is validated: unknown layouts, sort
  * fields, filter fields and operators are dropped.
+ *
+ * An add-on's filter uses its field id as the key, and is dropped when that key
+ * is taken.
  */
 
 /**
  * Internal dependencies
  */
+import { addonFields, addonFilterFields } from './fields';
 import {
 	DEFAULT_PER_PAGE,
 	FILTER_OPERATORS,
@@ -118,6 +122,60 @@ const OWN_KEYS = [
 ];
 
 /**
+ * Keys WordPress reads on this screen.
+ *
+ * @type {string[]}
+ */
+const ADMIN_KEYS = [ 'page', 'post_type' ];
+
+/**
+ * Add-on fields whose filter can live in the query string.
+ *
+ * @return {Object[]} DataViews fields.
+ */
+function urlFilterFields() {
+	return addonFilterFields().filter(
+		( field ) =>
+			! OWN_KEYS.includes( field.id ) && ! ADMIN_KEYS.includes( field.id )
+	);
+}
+
+/**
+ * Adds the add-on fields marked `defaultVisible` to a layout.
+ *
+ * @param {Object} layout Layout settings.
+ * @return {Object} Layout settings.
+ */
+function withDefaultVisible( layout ) {
+	const added = addonFields()
+		.filter( ( field ) => field.defaultVisible === true )
+		.map( ( field ) => field.id );
+
+	return { ...layout, fields: [ ...layout.fields, ...added ] };
+}
+
+/**
+ * `DEFAULT_LAYOUTS` with add-on columns. Read at mount: add-ons load first.
+ *
+ * @return {Object} Layouts.
+ */
+export function defaultLayouts() {
+	return {
+		table: withDefaultVisible( DEFAULT_LAYOUTS.table ),
+		grid: withDefaultVisible( DEFAULT_LAYOUTS.grid ),
+	};
+}
+
+/**
+ * `DEFAULT_VIEW` with add-on columns.
+ *
+ * @return {Object} DataViews view.
+ */
+export function defaultView() {
+	return { ...DEFAULT_VIEW, ...defaultLayouts().table };
+}
+
+/**
  * Own-property lookup that ignores inherited keys.
  *
  * @param {Object} object Object.
@@ -147,8 +205,10 @@ function positiveInt( value ) {
  */
 export function viewToSearchParams( view, current = '' ) {
 	const params = new URLSearchParams( current );
+	const addonIds = urlFilterFields().map( ( field ) => field.id );
 
 	OWN_KEYS.forEach( ( key ) => params.delete( key ) );
+	addonIds.forEach( ( key ) => params.delete( key ) );
 
 	if (
 		view.type !== DEFAULT_VIEW.type &&
@@ -178,6 +238,18 @@ export function viewToSearchParams( view, current = '' ) {
 	}
 
 	( view.filters || [] ).forEach( ( filter ) => {
+		if (
+			filter &&
+			addonIds.includes( filter.field ) &&
+			filter.operator === 'is' &&
+			filter.value !== undefined &&
+			filter.value !== null &&
+			filter.value !== ''
+		) {
+			params.set( filter.field, String( filter.value ) );
+			return;
+		}
+
 		if (
 			! filter ||
 			! hasOwn( FILTER_KEYS, filter.field ) ||
@@ -251,7 +323,7 @@ export function viewFromSearchParams( search ) {
 			: DEFAULT_VIEW.type;
 	const view = {
 		...DEFAULT_VIEW,
-		...DEFAULT_LAYOUTS[ type ],
+		...defaultLayouts()[ type ],
 		type,
 		filters: [],
 	};
@@ -299,6 +371,21 @@ export function viewFromSearchParams( search ) {
 
 		if ( value !== null ) {
 			view.filters.push( { field, operator, value } );
+		}
+	} );
+
+	urlFilterFields().forEach( ( { id, elements } ) => {
+		const raw = params.get( id );
+		const element = elements.find(
+			( candidate ) => String( candidate.value ) === raw
+		);
+
+		if ( element ) {
+			view.filters.push( {
+				field: id,
+				operator: 'is',
+				value: element.value,
+			} );
 		}
 	} );
 

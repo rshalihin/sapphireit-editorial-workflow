@@ -21,10 +21,18 @@ import { FALLBACK_STATUS_COLOR, getStatusDefinition } from '../utils/format';
  * @param {string} slug Status slug.
  * @return {Object} DataViews filter.
  */
-const statusFilter = ( slug ) => ( {
+const statusFilter = ( slug ) => statusesFilter( [ slug ] );
+
+/**
+ * A filter on several statuses, as DataViews stores it.
+ *
+ * @param {string[]} slugs Status slugs.
+ * @return {Object} DataViews filter.
+ */
+const statusesFilter = ( slugs ) => ( {
 	field: 'status',
 	operator: 'isAny',
-	value: [ slug ],
+	value: slugs,
 } );
 
 /**
@@ -36,6 +44,12 @@ const statusFilter = ( slug ) => ( {
 function tilesFor( summary ) {
 	const count = ( key ) => Number( summary[ key ] ) || 0;
 	const mine = count( 'in_review_mine' );
+	// An older server sends no list.
+	const reviewStatuses =
+		Array.isArray( summary.review_statuses ) &&
+		summary.review_statuses.length
+			? summary.review_statuses
+			: [ 'review' ];
 
 	return [
 		{
@@ -53,7 +67,7 @@ function tilesFor( summary ) {
 				new Intl.NumberFormat().format( mine )
 			),
 			status: 'review',
-			filter: statusFilter( 'review' ),
+			filter: statusesFilter( reviewStatuses ),
 		},
 		{
 			key: 'needs_changes',

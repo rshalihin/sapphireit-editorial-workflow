@@ -56,9 +56,12 @@ test.describe( 'Admin shell and Getting Started', () => {
 	} ) => {
 		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-dashboard' );
 
-		await expect( tabs( page ).getByRole( 'link' ) ).toHaveText(
-			ADMIN_TABS.map( ( [ label ] ) => label )
-		);
+		// Pro is on sale and not active here, so the SDK's Add-Ons page is
+		// the last tab (phase 49); promotions.spec.js covers it.
+		await expect( tabs( page ).getByRole( 'link' ) ).toHaveText( [
+			...ADMIN_TABS.map( ( [ label ] ) => label ),
+			'Add-Ons',
+		] );
 	} );
 
 	test( 'editor sees only Dashboard and Getting Started, and no setup steps', async ( {

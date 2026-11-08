@@ -1,4 +1,9 @@
 /**
+ * WordPress dependencies
+ */
+import { addFilter, removeAllFilters } from '@wordpress/hooks';
+
+/**
  * Internal dependencies
  */
 import {
@@ -9,6 +14,80 @@ import {
 } from '../../src/dashboard/urlState';
 
 const BASE = 'page=sit-cwm-dashboard';
+
+describe( 'add-on filters in the URL', () => {
+	const elements = [
+		{ value: 'my_groups', label: 'My groups' },
+		{ value: 'all', label: 'All' },
+	];
+	const filterable = ( id ) => ( {
+		id,
+		label: id,
+		elements,
+		filterBy: { operators: [ 'is' ] },
+	} );
+
+	afterEach( () => removeAllFilters( 'sitCwm.dashboard.fields' ) );
+
+	it( 'round-trips an add-on filter', () => {
+		addFilter( 'sitCwm.dashboard.fields', 't', () => [
+			filterable( 'pro_view' ),
+		] );
+
+		const filter = {
+			field: 'pro_view',
+			operator: 'is',
+			value: 'my_groups',
+		};
+		const params = viewToSearchParams(
+			{ ...DEFAULT_VIEW, filters: [ filter ] },
+			BASE
+		);
+
+		expect( params.toString() ).toBe( `${ BASE }&pro_view=my_groups` );
+		expect( viewFromSearchParams( params ).filters ).toEqual( [ filter ] );
+	} );
+
+	it( 'removes the key once the filter is cleared', () => {
+		addFilter( 'sitCwm.dashboard.fields', 't', () => [
+			filterable( 'pro_view' ),
+		] );
+
+		expect(
+			viewToSearchParams(
+				DEFAULT_VIEW,
+				`${ BASE }&pro_view=my_groups`
+			).toString()
+		).toBe( BASE );
+	} );
+
+	it( 'drops a value the field does not offer', () => {
+		addFilter( 'sitCwm.dashboard.fields', 't', () => [
+			filterable( 'pro_view' ),
+		] );
+
+		expect( viewFromSearchParams( 'pro_view=nope' ).filters ).toEqual( [] );
+	} );
+
+	it( 'never lets an add-on field take a key this module owns', () => {
+		addFilter( 'sitCwm.dashboard.fields', 't', () => [
+			filterable( 'search' ),
+			filterable( 'paged' ),
+			filterable( 'page' ),
+		] );
+
+		const view = {
+			...DEFAULT_VIEW,
+			filters: [ { field: 'page', operator: 'is', value: 'all' } ],
+		};
+
+		expect( viewToSearchParams( view, BASE ).toString() ).toBe( BASE );
+		expect( viewFromSearchParams( 'search=all&paged=2' ).filters ).toEqual(
+			[]
+		);
+		expect( viewFromSearchParams( 'page=all' ).filters ).toEqual( [] );
+	} );
+} );
 
 describe( 'dashboard URL state', () => {
 	it( 'writes nothing for the default view and keeps unrelated params', () => {

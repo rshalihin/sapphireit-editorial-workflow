@@ -91,8 +91,11 @@ describe( 'ClassicPanel', () => {
 
 		render( <ClassicPanel postId={ 42 } postType="product" /> );
 
+		// The notice also speaks its message into the a11y live region.
 		expect(
-			screen.getByText( /Workflow is not available for this post type/ )
+			screen.getByText( /Workflow is not available for this post type/, {
+				ignore: '.a11y-speak-region',
+			} )
 		).toBeTruthy();
 		expect( screen.queryByTestId( 'workflow-panel' ) ).toBeNull();
 	} );

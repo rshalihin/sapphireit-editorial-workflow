@@ -71,6 +71,137 @@ final class PostRepositoryTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The fingerprint follows the title, the content and the excerpt.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_fingerprint_changes_with_title_content_and_excerpt() {
+		$post = self::factory()->post->create( array( 'post_status' => 'draft' ) );
+		$seen = array( $this->posts->content_fingerprint( $post ) );
+
+		$this->assertMatchesRegularExpression( '/^[a-f0-9]{64}$/', $seen[0] );
+
+		foreach ( array( 'post_title', 'post_content', 'post_excerpt' ) as $field ) {
+			wp_update_post(
+				array(
+					'ID'   => $post,
+					$field => 'Changed ' . $field,
+				)
+			);
+			$seen[] = $this->posts->content_fingerprint( $post );
+		}
+
+		$this->assertCount( 4, array_unique( $seen ) );
+	}
+
+	/**
+	 * The date and meta are not part of what was reviewed.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_fingerprint_ignores_the_date_and_meta() {
+		$post = self::factory()->post->create( array( 'post_status' => 'draft' ) );
+		$hash = $this->posts->content_fingerprint( $post );
+
+		update_post_meta( $post, 'some_key', 'some value' );
+		wp_update_post(
+			array(
+				'ID'            => $post,
+				'post_date'     => '2026-01-01 10:00:00',
+				'post_date_gmt' => '2026-01-01 10:00:00',
+			)
+		);
+
+		$this->assertSame( $hash, $this->posts->content_fingerprint( $post ) );
+	}
+
+	/**
+	 * The fingerprint is fixed: the same text always gives the same hash, so a
+	 * stored one can be checked later.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_fingerprint_of_is_sha256_of_the_json_triple() {
+		$post = self::factory()->post->create_and_get(
+			array(
+				'post_title'   => 'A/B',
+				'post_content' => 'Café',
+				'post_excerpt' => '',
+				'post_status'  => 'draft',
+			)
+		);
+
+		$this->assertSame( hash( 'sha256', '["A/B","Café",""]' ), $this->posts->fingerprint_of( $post ) );
+	}
+
+	/**
+	 * A missing post has no fingerprint.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_fingerprint_of_a_missing_post_is_empty() {
+		$this->assertSame( '', $this->posts->content_fingerprint( 999999 ) );
+		$this->assertSame( '', $this->posts->content_fingerprint( 0 ) );
+	}
+
+	/**
+	 * The newest revision wins, and no revision reads as `0`.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_latest_revision_id() {
+		$post = self::factory()->post->create( array( 'post_status' => 'draft' ) );
+
+		$this->assertSame( 0, $this->posts->latest_revision_id( $post ) );
+
+		_wp_put_post_revision( get_post( $post ) );
+		$newest = _wp_put_post_revision( get_post( $post ) );
+
+		$this->assertSame( $newest, $this->posts->latest_revision_id( $post ) );
+	}
+
+	/**
+	 * An autosave is someone's unsaved work, never what was approved.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_latest_revision_id_skips_autosaves() {
+		$post     = self::factory()->post->create( array( 'post_status' => 'draft' ) );
+		$revision = _wp_put_post_revision( get_post( $post ) );
+
+		_wp_put_post_revision( get_post( $post ), true );
+
+		$this->assertSame( $revision, $this->posts->latest_revision_id( $post ) );
+	}
+
+	/**
+	 * A post with only an autosave has no revision.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_latest_revision_id_with_only_an_autosave_is_zero() {
+		$post = self::factory()->post->create( array( 'post_status' => 'draft' ) );
+
+		_wp_put_post_revision( get_post( $post ), true );
+
+		$this->assertSame( 0, $this->posts->latest_revision_id( $post ) );
+	}
+
+	/**
 	 * A status registered for one post is stored and read back on that post,
 	 * and refused on another (F2).
 	 *

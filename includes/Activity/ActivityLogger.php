@@ -12,6 +12,7 @@ use DateTimeImmutable;
 use Sit_Cwm\Core\Database;
 use Sit_Cwm\Core\Interfaces\Bootable;
 use Sit_Cwm\Governance\AiOrigin;
+use Throwable;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -39,7 +40,7 @@ final class ActivityLogger implements Bootable {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Adds the publication actions.
-	 * @since 1.2.0 Adds `ai_origin_changed`.
+	 * @since 1.2.0 Adds `ai_origin_changed`, `activity_pruned` and `content_changed`.
 	 * @api
 	 * @var string[]
 	 */
@@ -51,6 +52,8 @@ final class ActivityLogger implements Bootable {
 		'due_date_cleared',
 		'comment_added',
 		'ai_origin_changed',
+		'activity_pruned',
+		'content_changed',
 		...self::PUBLICATION_ACTIONS,
 	);
 
@@ -75,11 +78,11 @@ final class ActivityLogger implements Bootable {
 	 * these.
 	 *
 	 * @since 1.1.0
-	 * @since 1.2.0 Adds `via`, `ai_origin`, `attested` and `attestation`.
+	 * @since 1.2.0 Adds `via`, `ai_origin`, `attested`, `attestation`, `content_hash` and `revision_id`.
 	 * @internal
 	 * @var string[]
 	 */
-	const CONTEXT_KEYS = array( 'workflow_status', 'gate_mode', 'layer', 'source', 'reason', 'via', 'ai_origin', 'attested', 'attestation' );
+	const CONTEXT_KEYS = array( 'workflow_status', 'gate_mode', 'layer', 'source', 'reason', 'via', 'ai_origin', 'attested', 'attestation', 'content_hash', 'revision_id' );
 
 	/**
 	 * Routes an AI origin change can arrive by, stored as `context.via` (F9):
@@ -257,13 +260,32 @@ final class ActivityLogger implements Bootable {
 	 * @return int Inserted id, `0` on failure or an unknown action.
 	 */
 	public function log( int $post_id, string $action, array $args = array() ): int {
-		global $wpdb;
-
 		if ( $post_id <= 0 || ! $this->is_valid_action( $action ) ) {
 			return 0;
 		}
 
-		$row = array(
+		$row = $this->build_row( $post_id, $action, $args );
+		$id  = $this->insert_row( $row );
+
+		if ( $id > 0 ) {
+			$this->announce( $id, $row );
+		}
+
+		return $id;
+	}
+
+	/**
+	 * A sanitized row, ready to store.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param int    $post_id Post id.
+	 * @param string $action  Action slug, already validated.
+	 * @param array  $args    Entry fields; see `log()`.
+	 * @return array
+	 */
+	private function build_row( int $post_id, string $action, array $args ): array {
+		return array(
 			'post_id'    => $post_id,
 			'user_id'    => array_key_exists( 'user_id', $args ) ? $this->sanitize_user_id( $args['user_id'] ) : get_current_user_id(),
 			'action'     => $action,
@@ -273,6 +295,19 @@ final class ActivityLogger implements Bootable {
 			'context'    => $this->encode_context( $args['context'] ?? null ),
 			'created_at' => $this->sanitize_created_at( $args['created_at'] ?? null ),
 		);
+	}
+
+	/**
+	 * Stores one row. `log()` is the public way in; only a prune record may
+	 * use post id `0`.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param array $row Row from `build_row()`.
+	 * @return int Inserted id, `0` on failure.
+	 */
+	private function insert_row( array $row ): int {
+		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Plugin's own table; no core API exists.
 		$inserted = $wpdb->insert(
@@ -283,10 +318,19 @@ final class ActivityLogger implements Bootable {
 
 		$id = (int) $wpdb->insert_id;
 
-		if ( false === $inserted || $id <= 0 ) {
-			return 0;
-		}
+		return false === $inserted || $id <= 0 ? 0 : $id;
+	}
 
+	/**
+	 * Tells listeners a row was stored.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param int   $id  Activity id.
+	 * @param array $row Stored row.
+	 * @return void
+	 */
+	private function announce( int $id, array $row ): void {
 		$entry = ActivityEntry::from_row( (object) array_merge( array( 'id' => $id ), $row ) );
 
 		/**
@@ -298,8 +342,6 @@ final class ActivityLogger implements Bootable {
 		 * @param ActivityEntry $entry The stored entry.
 		 */
 		do_action( 'sit_cwm_activity_logged', $id, $entry );
-
-		return $id;
 	}
 
 	/**
@@ -307,7 +349,9 @@ final class ActivityLogger implements Bootable {
 	 *
 	 * Context keeps only an attestation (F10): `attested` when it is exactly
 	 * `'1'`, and the `attestation` statement as plain text, truncated to
-	 * `ATTESTATION_MAX_LENGTH`. Anything else is dropped.
+	 * `ATTESTATION_MAX_LENGTH`; and what was approved: `content_hash` when it is
+	 * a SHA-256 hex string, and `revision_id` when it is a positive integer.
+	 * Anything else is dropped.
 	 *
 	 * @since 1.0.0
 	 * @since 1.2.0 Added $context.
@@ -317,7 +361,7 @@ final class ActivityLogger implements Bootable {
 	 * @param string   $from    Previous status slug.
 	 * @param string   $to      New status slug.
 	 * @param int|null $user_id Acting user; `null` for the current user.
-	 * @param array    $context Optional. `attested` and `attestation`.
+	 * @param array    $context Optional. `attested`, `attestation`, `content_hash` and `revision_id`.
 	 * @return int Inserted id, `0` on failure.
 	 */
 	public function log_status_change( int $post_id, string $from, string $to, ?int $user_id = null, array $context = array() ): int {
@@ -333,6 +377,14 @@ final class ActivityLogger implements Bootable {
 			if ( '' !== $statement ) {
 				$clean['attestation'] = $statement;
 			}
+		}
+
+		if ( isset( $context['content_hash'] ) && is_string( $context['content_hash'] ) && 1 === preg_match( '/^[a-f0-9]{64}$/', $context['content_hash'] ) ) {
+			$clean['content_hash'] = $context['content_hash'];
+		}
+
+		if ( isset( $context['revision_id'] ) && is_int( $context['revision_id'] ) && $context['revision_id'] > 0 ) {
+			$clean['revision_id'] = $context['revision_id'];
 		}
 
 		return $this->log(
@@ -737,6 +789,7 @@ final class ActivityLogger implements Bootable {
 	 * whatever the log's size.
 	 *
 	 * @since 1.2.0
+	 * @since 1.2.0 Added until, user_id, post_id.
 	 * @api
 	 *
 	 * @param array $args {
@@ -749,6 +802,12 @@ final class ActivityLogger implements Bootable {
 	 *                              none that is known matches nothing.
 	 *     @type string   $since    Only entries created at or after this UTC
 	 *                              `Y-m-d H:i:s`; an invalid value is ignored.
+	 *     @type string   $until    Only entries created before this UTC
+	 *                              `Y-m-d H:i:s`; an invalid value is ignored.
+	 *     @type int      $user_id  Only this user's entries; ignored unless a
+	 *                              positive integer.
+	 *     @type int      $post_id  Only this post's entries; ignored unless a
+	 *                              positive integer.
 	 * }
 	 * @return ActivityEntry[] Ordered by id ascending.
 	 */
@@ -785,6 +844,18 @@ final class ActivityLogger implements Bootable {
 			$values[] = $args['since'];
 		}
 
+		if ( isset( $args['until'] ) && $this->is_utc_datetime( $args['until'] ) ) {
+			$sql     .= ' AND created_at < %s';
+			$values[] = $args['until'];
+		}
+
+		foreach ( array( 'user_id', 'post_id' ) as $column ) {
+			if ( isset( $args[ $column ] ) && is_numeric( $args[ $column ] ) && (int) $args[ $column ] > 0 ) {
+				$sql     .= " AND {$column} = %d";
+				$values[] = (int) $args[ $column ];
+			}
+		}
+
 		$sql     .= ' ORDER BY id ASC LIMIT %d';
 		$values[] = $limit;
 
@@ -794,6 +865,108 @@ final class ActivityLogger implements Bootable {
 		);
 
 		return $this->to_entries( $rows );
+	}
+
+	/**
+	 * Deletes the oldest entries created before a cutoff, and records the prune.
+	 *
+	 * Free never calls this; it exists so add-ons can apply a retention policy.
+	 * The prune itself is recorded and cannot be pruned by the same call: it
+	 * leaves one `activity_pruned` row (post id `0`) and fires
+	 * `sit_cwm_activity_pruned`. A cutoff that is invalid, or under 24 hours old,
+	 * deletes nothing.
+	 *
+	 * The record is written before the delete, so rows can never disappear
+	 * unrecorded: without a record nothing is deleted, and a failed delete takes
+	 * the record back.
+	 *
+	 * @since 1.2.0
+	 * @api Callers must authorize first.
+	 *
+	 * @param string $before_utc Delete entries created before this UTC `Y-m-d H:i:s`.
+	 * @param int    $limit      Most entries to delete, 1 to 5000; default 1000.
+	 * @return array{count: int, first_id: int, last_id: int} Zeros when nothing was deleted.
+	 */
+	public function purge_before( string $before_utc, int $limit = 1000 ): array {
+		global $wpdb;
+
+		$nothing = array(
+			'count'    => 0,
+			'first_id' => 0,
+			'last_id'  => 0,
+		);
+
+		if ( ! $this->is_utc_datetime( $before_utc ) || strtotime( $before_utc . ' UTC' ) > time() - DAY_IN_SECONDS ) {
+			return $nothing;
+		}
+
+		$table = $this->database->table_name();
+		$limit = max( 1, min( self::MAX_BATCH_SIZE, $limit ) );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin's own table.
+		$ids = $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM %i WHERE created_at < %s ORDER BY id ASC LIMIT %d', $table, $before_utc, $limit ) );
+		$ids = array_map( 'intval', $ids );
+
+		if ( array() === $ids ) {
+			return $nothing;
+		}
+
+		$result = array(
+			'count'    => count( $ids ),
+			'first_id' => $ids[0],
+			'last_id'  => $ids[ count( $ids ) - 1 ],
+		);
+		$record = $this->build_row( 0, 'activity_pruned', array( 'context' => array( 'before' => $before_utc ) + $result ) );
+		$id     = $this->insert_row( $record );
+
+		if ( 0 === $id ) {
+			return $nothing;
+		}
+
+		$placeholders = implode( ', ', array_fill( 0, count( $ids ), '%d' ) );
+
+		$deleted = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin's own table.
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- The list holds only %d placeholders.
+			$wpdb->prepare( "DELETE FROM %i WHERE id IN ( {$placeholders} )", array_merge( array( $table ), $ids ) )
+		);
+
+		if ( false === $deleted || 0 === (int) $deleted ) {
+			$wpdb->delete( $table, array( 'id' => $id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin's own table.
+
+			return $nothing;
+		}
+
+		// A post deleted in between takes its rows with it, so correct the count.
+		if ( (int) $deleted !== $result['count'] ) {
+			$result['count']   = (int) $deleted;
+			$record['context'] = $this->encode_context( array( 'before' => $before_utc ) + $result );
+
+			$wpdb->update( $table, array( 'context' => $record['context'] ), array( 'id' => $id ), array( '%s' ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin's own table.
+		}
+
+		// The rows are gone: a failing listener must not cost add-ons the prune action.
+		try {
+			$this->announce( $id, $record );
+		} catch ( Throwable $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Developer diagnostics; the prune went ahead.
+				error_log( sprintf( 'SapphireIT Editorial Workflow: a listener failed after a prune, with %1$s: %2$s', get_class( $e ), $e->getMessage() ) );
+			}
+		}
+
+		/**
+		 * Fires after old activity entries were deleted and the prune recorded.
+		 *
+		 * @since 1.2.0
+		 *
+		 * @param int    $count      Entries deleted.
+		 * @param int    $first_id   Lowest id deleted.
+		 * @param int    $last_id    Highest id deleted.
+		 * @param string $before_utc The cutoff, UTC `Y-m-d H:i:s`.
+		 */
+		do_action( 'sit_cwm_activity_pruned', $result['count'], $result['first_id'], $result['last_id'], $before_utc );
+
+		return $result;
 	}
 
 	/**

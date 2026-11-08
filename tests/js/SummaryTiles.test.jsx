@@ -77,6 +77,40 @@ describe( 'Dashboard summary tiles', () => {
 		} );
 	} );
 
+	it( 'filters "In review" on every status the server counts', async () => {
+		const onSelect = jest.fn();
+
+		getPostsSummary.mockResolvedValue( {
+			...SUMMARY,
+			review_statuses: [ 'review', 'legal_review' ],
+		} );
+		render( <SummaryTiles refreshKey={ 0 } onSelect={ onSelect } /> );
+		await screen.findByText( 'In review' );
+
+		await userEvent.click( tile( 'In review' ) );
+
+		expect( onSelect ).toHaveBeenLastCalledWith( {
+			field: 'status',
+			operator: 'isAny',
+			value: [ 'review', 'legal_review' ],
+		} );
+	} );
+
+	it( 'falls back to Review for an older server', async () => {
+		const onSelect = jest.fn();
+
+		render( <SummaryTiles refreshKey={ 0 } onSelect={ onSelect } /> );
+		await screen.findByText( 'In review' );
+
+		await userEvent.click( tile( 'In review' ) );
+
+		expect( onSelect ).toHaveBeenLastCalledWith( {
+			field: 'status',
+			operator: 'isAny',
+			value: [ 'review' ],
+		} );
+	} );
+
 	it( 'refetches when the refresh key changes', async () => {
 		const { rerender } = render(
 			<SummaryTiles refreshKey={ 0 } onSelect={ () => {} } />

@@ -8,6 +8,9 @@
  *
  * Cell renderers are memoized components: DataViews re-renders every row on
  * selection or hover changes, and a row whose `item` did not change skips it.
+ *
+ * Add-ons append fields through the `sitCwm.dashboard.fields` filter. They can
+ * never replace or remove a core field.
  */
 
 /**
@@ -15,6 +18,7 @@
  */
 import { dateI18n, getSettings, humanTimeDiff } from '@wordpress/date';
 import { memo } from '@wordpress/element';
+import { applyFilters } from '@wordpress/hooks';
 import { __, sprintf } from '@wordpress/i18n';
 import { caution, Icon } from '@wordpress/icons';
 
@@ -231,14 +235,126 @@ const OverdueCell = memo( ( { item } ) => {
 } );
 
 /**
- * Builds the dashboard fields.
+ * Whether an add-on field can be filtered: the server gets one value from a
+ * fixed list, as `<field.id>=<value>`.
+ *
+ * @param {Object} field Field from the filter.
+ * @return {boolean} True for `elements` plus the `is` operator alone.
+ */
+function isFilterable( field ) {
+	const operators = field.filterBy?.operators;
+
+	return (
+		Array.isArray( field.elements ) &&
+		field.elements.length > 0 &&
+		Array.isArray( operators ) &&
+		operators.length === 1 &&
+		operators[ 0 ] === 'is'
+	);
+}
+
+/**
+ * Applies the add-on filter and keeps what it may change.
+ *
+ * Fields can always be hidden, and never sort, because the route only sorts on
+ * its own columns.
+ *
+ * @param {Object[]} core Core fields.
+ * @return {Object[]} Added fields.
+ */
+function filteredFields( core ) {
+	let filtered = [];
+
+	// A filter callback that throws costs the added fields, not the dashboard.
+	try {
+		filtered = applyFilters( 'sitCwm.dashboard.fields', [ ...core ] );
+	} catch ( error ) {
+		// eslint-disable-next-line no-console
+		console.error( error );
+	}
+
+	const seen = new Set( core.map( ( field ) => field.id ) );
+
+	return ( Array.isArray( filtered ) ? filtered : [] )
+		.filter( ( field ) => {
+			if ( ! field || typeof field.id !== 'string' || ! field.id ) {
+				return false;
+			}
+
+			const isNew = ! seen.has( field.id );
+
+			seen.add( field.id );
+
+			return isNew;
+		} )
+		.map( withValidElements )
+		.map( ( field ) => ( {
+			...field,
+			enableHiding: true,
+			enableSorting: false,
+			filterBy: isFilterable( field ) ? field.filterBy : false,
+		} ) );
+}
+
+/**
+ * Drops `elements` entries that are not objects.
+ *
+ * @param {Object} field Field from the filter.
+ * @return {Object} Field.
+ */
+function withValidElements( field ) {
+	return Array.isArray( field.elements )
+		? {
+				...field,
+				elements: field.elements.filter(
+					( element ) => element && typeof element === 'object'
+				),
+			}
+		: field;
+}
+
+/**
+ * The fields add-ons added.
+ *
+ * @return {Object[]} DataViews fields.
+ */
+export function addonFields() {
+	return filteredFields( coreFields() );
+}
+
+/**
+ * The add-on fields the dashboard can filter on.
+ *
+ * @return {Object[]} DataViews fields.
+ */
+export function addonFilterFields() {
+	return addonFields().filter( ( field ) => field.filterBy !== false );
+}
+
+/**
+ * Builds the dashboard fields: the core ones in their fixed order, then any
+ * added by add-ons.
  *
  * @param {Object}   [options]           Options.
  * @param {Object[]} [options.reviewers] Known reviewers `{ id, name }`.
  * @param {Object[]} [options.authors]   Known authors `{ id, name }`.
  * @return {Object[]} DataViews fields.
  */
-export default function buildFields( { reviewers = [], authors = [] } = {} ) {
+export default function buildFields( options ) {
+	const core = coreFields( options );
+
+	return [ ...core, ...filteredFields( core ) ];
+}
+
+/**
+ * Builds the core fields.
+ *
+ * @param {Object}   [options]           Options.
+ * @param {Object[]} [options.reviewers] Known reviewers `{ id, name }`.
+ * @param {Object[]} [options.authors]   Known authors `{ id, name }`.
+ * @return {Object[]} DataViews fields.
+ */
+function coreFields( { reviewers = [], authors = [] } = {} ) {
 	const { statuses, postTypes } = getBootstrap();
 	const authorElements = userElements( authors );
 

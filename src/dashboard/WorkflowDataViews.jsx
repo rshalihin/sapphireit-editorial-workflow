@@ -23,10 +23,11 @@ import buildActions from './actions';
 import EmptyState from './EmptyState';
 import SummaryTiles from './SummaryTiles';
 import BulkActions from './bulk/BulkActions';
-import buildFields, { mergeUsers } from './fields';
+import buildFields, { addonFilterFields, mergeUsers } from './fields';
 import {
-	DEFAULT_LAYOUTS,
 	DEFAULT_VIEW,
+	defaultLayouts,
+	defaultView,
 	hasActiveQuery,
 	viewFromSearchParams,
 	viewToSearchParams,
@@ -73,7 +74,7 @@ function getInitialView() {
 		typeof window.matchMedia === 'function' &&
 		window.matchMedia( SMALL_SCREEN_QUERY ).matches
 	) {
-		return { ...view, ...DEFAULT_LAYOUTS.grid, type: 'grid' };
+		return { ...view, ...defaultLayouts().grid, type: 'grid' };
 	}
 
 	return view;
@@ -163,12 +164,28 @@ function LoadFailed() {
 }
 
 /**
+ * The add-on field ids the dashboard can filter on.
+ *
+ * @return {string[]} Field ids.
+ */
+function getAddonFilterIds() {
+	return addonFilterFields().map( ( field ) => field.id );
+}
+
+/**
  * @return {Element} Dashboard table.
  */
 export default function WorkflowDataViews() {
 	const [ view, setView ] = useState( getInitialView );
 	const [ selection, setSelection ] = useState( [] );
-	const query = useMemo( () => viewToQuery( view ), [ view ] );
+	// Add-ons load before this script, so these never change after mount.
+	const [ layouts ] = useState( defaultLayouts );
+	const [ resetView ] = useState( defaultView );
+	const [ addonFilterIds ] = useState( getAddonFilterIds );
+	const query = useMemo(
+		() => viewToQuery( view, addonFilterIds ),
+		[ view, addonFilterIds ]
+	);
 	const {
 		records,
 		totalItems,
@@ -313,13 +330,13 @@ export default function WorkflowDataViews() {
 				selection={ selection }
 				onChangeSelection={ setSelection }
 				paginationInfo={ { totalItems, totalPages } }
-				defaultLayouts={ DEFAULT_LAYOUTS }
+				defaultLayouts={ layouts }
 				getItemId={ getItemId }
 				isLoading={ isLoading }
 				config={ CONFIG }
 				empty={ empty }
 				onReset={
-					isDefaultView ? false : () => setView( DEFAULT_VIEW )
+					isDefaultView ? false : () => setView( resetView )
 				}
 			>
 				{ /* DataViews' default layout, plus "Clear all filters" beside

@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * `sit_cwm_settings` option.
  *
  * @since 1.1.0
- * @internal
+ * @api
  */
 final class NotificationEvents {
 
@@ -27,6 +27,7 @@ final class NotificationEvents {
 	 * A reviewer is assigned (sent to the reviewer).
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const REVIEWER_ASSIGNED = 'reviewer_assigned';
@@ -35,6 +36,7 @@ final class NotificationEvents {
 	 * Content is submitted for review (sent to the assigned reviewer).
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const REVIEW_REQUESTED = 'review_requested';
@@ -43,6 +45,7 @@ final class NotificationEvents {
 	 * Changes are requested (sent to the author).
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const CHANGES_REQUESTED = 'changes_requested';
@@ -51,6 +54,7 @@ final class NotificationEvents {
 	 * Content is approved (sent to the author).
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const APPROVED = 'approved';
@@ -59,6 +63,7 @@ final class NotificationEvents {
 	 * A workflow comment is added (sent to the author and the reviewer).
 	 *
 	 * @since 1.1.0
+	 * @api
 	 * @var string
 	 */
 	const COMMENT_ADDED = 'comment_added';
@@ -67,6 +72,7 @@ final class NotificationEvents {
 	 * All event keys, in settings-screen order.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @return string[]
 	 */
@@ -84,6 +90,7 @@ final class NotificationEvents {
 	 * Translated label for every event, keyed by event, in `all()` order.
 	 *
 	 * @since 1.1.0
+	 * @api
 	 *
 	 * @return array<string, string>
 	 */
@@ -101,6 +108,7 @@ final class NotificationEvents {
 	 * The event a workflow status change notifies about, if any.
 	 *
 	 * @since 1.1.0
+	 * @internal
 	 *
 	 * @param string $to Target workflow status slug.
 	 * @return string|null Event key, or null when the target does not notify.

@@ -189,6 +189,7 @@ class PostsController extends AbstractController {
 
 		$user_id    = get_current_user_id();
 		$post_types = $this->permissions->dashboard_post_types( $user_id );
+		$in_review  = $this->review_statuses();
 		$base       = array(
 			'post_types' => $post_types,
 			'page'       => 1,
@@ -204,18 +205,49 @@ class PostsController extends AbstractController {
 
 		return rest_ensure_response(
 			array(
-				'in_review'      => $count( array( 'statuses' => array( 'review' ) ) ),
-				'in_review_mine' => $count(
+				'in_review'       => $count( array( 'statuses' => $in_review ) ),
+				'in_review_mine'  => $count(
 					array(
-						'statuses'    => array( 'review' ),
+						'statuses'    => $in_review,
 						'reviewer_id' => $user_id,
 					)
 				),
-				'needs_changes'  => $count( array( 'statuses' => array( 'needs_changes' ) ) ),
-				'overdue'        => $count( array( 'overdue' => true ) ),
-				'approved'       => $count( array( 'statuses' => array( 'approved' ) ) ),
+				'needs_changes'   => $count( array( 'statuses' => array( 'needs_changes' ) ) ),
+				'overdue'         => $count( array( 'overdue' => true ) ),
+				'approved'        => $count( array( 'statuses' => array( 'approved' ) ) ),
+				'review_statuses' => $in_review,
 			)
 		);
+	}
+
+	/**
+	 * The statuses the "In review" tile counts.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return string[] `review` first, then each extra registered status.
+	 */
+	private function review_statuses(): array {
+		/**
+		 * Filters the statuses that count as "in review" on the dashboard.
+		 *
+		 * `review` is always kept, and slugs the site-wide registry does not
+		 * know are dropped.
+		 *
+		 * @since 1.2.0
+		 *
+		 * @param string[] $statuses Status slugs. Default `[ 'review' ]`.
+		 */
+		$filtered = apply_filters( 'sit_cwm_review_statuses', array( 'review' ) );
+		$statuses = array( 'review' );
+
+		foreach ( is_array( $filtered ) ? $filtered : array() as $slug ) {
+			if ( is_string( $slug ) && $this->statuses->exists( $slug ) && ! in_array( $slug, $statuses, true ) ) {
+				$statuses[] = $slug;
+			}
+		}
+
+		return $statuses;
 	}
 
 	/**
@@ -237,11 +269,17 @@ class PostsController extends AbstractController {
 			'title'      => 'sit-cwm-posts-summary',
 			'type'       => 'object',
 			'properties' => array(
-				'in_review'      => $count + array( 'description' => __( 'Content in Review.', 'sapphireit-editorial-workflow' ) ),
-				'in_review_mine' => $count + array( 'description' => __( 'Content in Review with the current user as reviewer.', 'sapphireit-editorial-workflow' ) ),
-				'needs_changes'  => $count + array( 'description' => __( 'Content in Needs Changes.', 'sapphireit-editorial-workflow' ) ),
-				'overdue'        => $count + array( 'description' => __( 'Content past its due date and not in a final status.', 'sapphireit-editorial-workflow' ) ),
-				'approved'       => $count + array( 'description' => __( 'Content Approved in the workflow and not yet Published.', 'sapphireit-editorial-workflow' ) ),
+				'in_review'       => $count + array( 'description' => __( 'Content in Review, or a status an add-on counts as review.', 'sapphireit-editorial-workflow' ) ),
+				'in_review_mine'  => $count + array( 'description' => __( 'The same content, with the current user as reviewer.', 'sapphireit-editorial-workflow' ) ),
+				'needs_changes'   => $count + array( 'description' => __( 'Content in Needs Changes.', 'sapphireit-editorial-workflow' ) ),
+				'overdue'         => $count + array( 'description' => __( 'Content past its due date and not in a final status.', 'sapphireit-editorial-workflow' ) ),
+				'approved'        => $count + array( 'description' => __( 'Content Approved in the workflow and not yet Published.', 'sapphireit-editorial-workflow' ) ),
+				'review_statuses' => array(
+					'description' => __( 'The statuses counted as in review.', 'sapphireit-editorial-workflow' ),
+					'type'        => 'array',
+					'items'       => array( 'type' => 'string' ),
+					'context'     => array( 'view' ),
+				),
 			),
 		);
 	}
@@ -427,7 +465,7 @@ class PostsController extends AbstractController {
 	 * Dashboard row schema.
 	 *
 	 * @since 1.0.0
-	 * @since 1.2.0 Added ai_origin.
+	 * @since 1.2.0 Added ai_origin and the `sit_cwm_posts_item_schema` filter.
 	 *
 	 * @return array
 	 */
@@ -556,6 +594,21 @@ class PostsController extends AbstractController {
 			),
 		);
 
+		/**
+		 * Filters the extra properties of a dashboard row's schema.
+		 *
+		 * Adds properties only: core property names are skipped.
+		 *
+		 * @since 1.2.0
+		 *
+		 * @param array $properties Extra properties, keyed by name. Default empty.
+		 */
+		$extra = apply_filters( 'sit_cwm_posts_item_schema', array() );
+
+		if ( is_array( $extra ) ) {
+			$this->schema['properties'] += $extra;
+		}
+
 		return $this->add_additional_fields_schema( $this->schema );
 	}
 
@@ -605,7 +658,7 @@ class PostsController extends AbstractController {
 	 * One dashboard row. All lookups must already be primed.
 	 *
 	 * @since 1.0.0
-	 * @since 1.2.0 Added ai_origin.
+	 * @since 1.2.0 Added ai_origin and the `sit_cwm_posts_item` filter.
 	 *
 	 * @param WP_Post $post     Post.
 	 * @param int     $user_id  Requesting user id.
@@ -621,7 +674,7 @@ class PostsController extends AbstractController {
 		$author_id   = (int) $post->post_author;
 		$transitions = $this->workflow->get_available_transitions( $post->ID, $user_id );
 
-		return array(
+		$core = array(
 			'post_id'               => $post->ID,
 			'title'                 => $post->post_title,
 			'post_type'             => $post->post_type,
@@ -642,5 +695,21 @@ class PostsController extends AbstractController {
 			'available_transitions' => $transitions,
 			'capabilities'          => $this->workflow->get_capability_hints( $post->ID, $transitions, $user_id ),
 		);
+
+		/**
+		 * Filters a dashboard row. Runs once per row, after Free's lookups, so
+		 * an add-on must prime anything it reads to avoid a query per row.
+		 *
+		 * May add keys only: core keys are restored afterwards.
+		 *
+		 * @since 1.2.0
+		 *
+		 * @param array   $item    Row.
+		 * @param WP_Post $post    Post.
+		 * @param int     $user_id Requesting user id.
+		 */
+		$filtered = apply_filters( 'sit_cwm_posts_item', $core, $post, $user_id );
+
+		return is_array( $filtered ) ? array_merge( $filtered, $core ) : $core;
 	}
 }

@@ -76,7 +76,8 @@ final class ReviewDisclosure {
 	/**
 	 * What the disclosure may say about a post.
 	 *
-	 * Null unless, in this order: the setting is on, the post's type is in
+	 * Null unless, in this order: the setting (after `sit_cwm_disclosure_enabled`)
+	 * is on, the post's type is in
 	 * the workflow, it is published, its workflow status is approved or
 	 * published, and an approval row exists.
 	 *
@@ -88,7 +89,7 @@ final class ReviewDisclosure {
 	 *         `approved_at` is UTC `Y-m-d H:i:s`. Not escaped.
 	 */
 	public function data_for( int $post_id ): ?array {
-		if ( ! $this->settings->is_disclosure_enabled() || ! $this->posts->is_managed( $post_id ) ) {
+		if ( ! $this->is_enabled_for( $post_id ) || ! $this->posts->is_managed( $post_id ) ) {
 			return null;
 		}
 
@@ -170,6 +171,29 @@ final class ReviewDisclosure {
 		}
 
 		return sprintf( '<div class="%1$s">%2$s</div>', esc_attr( 'sit-cwm-disclosure' ), implode( '', $lines ) );
+	}
+
+	/**
+	 * Whether the disclosure may show for a post, before its other conditions.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param int $post_id Post id.
+	 * @return bool
+	 */
+	private function is_enabled_for( int $post_id ): bool {
+		/**
+		 * Filters whether the review disclosure is on for a post.
+		 *
+		 * Only boolean `true` enables, and the post must still be published,
+		 * approved and have an approval row.
+		 *
+		 * @since 1.2.0
+		 *
+		 * @param bool $enabled The `disclosure_enabled` setting.
+		 * @param int  $post_id Post id.
+		 */
+		return true === apply_filters( 'sit_cwm_disclosure_enabled', $this->settings->is_disclosure_enabled(), $post_id );
 	}
 
 	/**

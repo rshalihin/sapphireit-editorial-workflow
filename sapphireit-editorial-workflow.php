@@ -65,6 +65,17 @@ if ( ! defined( 'SIT_CWM_DB_VERSION' ) ) {
 	define( 'SIT_CWM_DB_VERSION', '1.0.0' );
 }
 
+if ( ! defined( 'SIT_CWM_API_REVISION' ) ) {
+	/**
+	 * Revision of the add-on API. 1 = a build without the seams (implicit),
+	 * 2 = the seams in this release. Add-ons check this, not the version,
+	 * because the version only changes at release.
+	 *
+	 * @since 1.2.0
+	 */
+	define( 'SIT_CWM_API_REVISION', 2 );
+}
+
 // Bail before loading any PHP 7.4+ code. Everything above parses on old PHP.
 if ( version_compare( PHP_VERSION, '7.4', '<' ) ) {
 	add_action( 'admin_notices', 'sit_cwm_php_version_notice' );
@@ -83,8 +94,10 @@ if ( ! function_exists( 'sit_cwm_fs' ) ) {
 	 * first call. The Pro add-on names this product as its parent.
 	 *
 	 * Free is WordPress.org compliant: nothing is sent unless an
-	 * administrator opts in, and nothing is sold until the Pro launch
-	 * release flips `has_addons` / `has_paid_plans` (F17, F18).
+	 * administrator opts in. From the Pro launch, `has_addons` is on, so the
+	 * SDK's Add-Ons page sells Pro; Free has no paid plans of its own, so
+	 * `has_paid_plans` and `menu.pricing` stay off and no "Upgrade" item or
+	 * "Activate License" link is added (F17, F18; phase 48, finding 1).
 	 *
 	 * @api
 	 * @since 1.2.0
@@ -105,7 +118,7 @@ if ( ! function_exists( 'sit_cwm_fs' ) ) {
 					'public_key'          => 'pk_aad89809d49fcd9369c18ff7d1561',
 					'is_premium'          => false,
 					'has_premium_version' => false,
-					'has_addons'          => false,
+					'has_addons'          => true,
 					'has_paid_plans'      => false,
 					'is_org_compliant'    => true,
 					'opt_in_moderation'   => array(
@@ -124,7 +137,7 @@ if ( ! function_exists( 'sit_cwm_fs' ) ) {
 						'account'     => true,
 						'contact'     => false,
 						'support'     => false,
-						'addons'      => false,
+						'addons'      => true,
 						'pricing'     => false,
 						'affiliation' => false,
 					),
@@ -141,10 +154,10 @@ if ( ! function_exists( 'sit_cwm_fs' ) ) {
 		/**
 		 * Points the SDK's pricing link at the Dashboard.
 		 *
-		 * Nothing is sold in 1.2.0 (R10), but the SDK still registers a hidden
-		 * pricing page. With a pricing URL set it adds a link instead, and
-		 * its page URL redirects here rather than loading the pricing app.
-		 * The Pro launch release removes this filter.
+		 * Free has no paid plans of its own (R10), but the SDK still registers
+		 * a hidden pricing page. With a pricing URL set it adds a link instead,
+		 * and its page URL redirects here rather than loading the pricing app.
+		 * Pro is sold from the Add-Ons page, so this filter stays.
 		 *
 		 * @internal
 		 * @since 1.2.0

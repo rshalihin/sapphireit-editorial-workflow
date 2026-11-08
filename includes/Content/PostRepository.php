@@ -145,6 +145,72 @@ final class PostRepository implements Bootable {
 	}
 
 	/**
+	 * Fingerprint of what a post says now: its title, content and excerpt.
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @param int $post_id Post id.
+	 * @return string SHA-256 hex, `''` for a missing post.
+	 */
+	public function content_fingerprint( int $post_id ): string {
+		$post = $post_id > 0 ? get_post( $post_id ) : null;
+
+		return $post instanceof WP_Post ? $this->fingerprint_of( $post ) : '';
+	}
+
+	/**
+	 * Fingerprint of a post object, for comparing before and after a save.
+	 *
+	 * The encoding is fixed, because stored fingerprints are compared with new
+	 * ones long after they were written.
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @param WP_Post $post Post.
+	 * @return string SHA-256 hex.
+	 */
+	public function fingerprint_of( WP_Post $post ): string {
+		return hash(
+			'sha256',
+			(string) wp_json_encode(
+				array( (string) $post->post_title, (string) $post->post_content, (string) $post->post_excerpt ),
+				JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+			)
+		);
+	}
+
+	/**
+	 * The newest revision of a post. Autosaves are skipped: they hold someone's
+	 * unsaved work, not what the post says.
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @param int $post_id Post id.
+	 * @return int Revision id, `0` when there is none.
+	 */
+	public function latest_revision_id( int $post_id ): int {
+		$revisions = wp_get_post_revisions(
+			$post_id,
+			array(
+				'fields'  => 'ids',
+				'orderby' => 'ID',
+				'order'   => 'DESC',
+			)
+		);
+
+		foreach ( $revisions as $revision_id ) {
+			if ( false === wp_is_post_autosave( $revision_id ) ) {
+				return (int) $revision_id;
+			}
+		}
+
+		return 0;
+	}
+
+	/**
 	 * Attaches the user-deletion cleanup.
 	 *
 	 * @since 1.0.0

@@ -182,6 +182,7 @@ never moves the workflow.
 | Class | Responsibility |
 |---|---|
 | `ActivityEntry` | An immutable value object for one row. |
+| `ContentChangeLogger` | Logs an edit made after review started (`content_changed`) and fires `sit_cwm_content_changed`, on `post_updated`. Refuses nothing and never breaks a save. |
 | `ActivityLogger` | Writes and reads the activity table. `get_for_posts()` batch-loads the last entry of many posts in one query (the dashboard's N+1 fix). Fires `sit_cwm_activity_logged`. |
 
 ### `includes/Governance/`
@@ -205,7 +206,7 @@ never moves the workflow.
 
 | Class | Responsibility |
 |---|---|
-| `ActivityExporter` | Streams the whole activity log as CSV in keyset batches (`ActivityLogger::get_batch()`), priming posts and users once per batch, so memory follows the batch size. |
+| `ActivityExporter` | Streams the activity log as CSV in keyset batches (`ActivityLogger::get_batch()`), priming posts and users once per batch, so memory follows the batch size. `export()` writes all of it; `export_with()` adds filters and columns for add-ons. |
 | `CsvWriter` | Writes CSV rows, prefixing any cell that starts with `=`, `+`, `-`, `@`, tab or CR with `'` so spreadsheets never run it as a formula. |
 
 ### `includes/REST/`
@@ -234,6 +235,7 @@ never moves the workflow.
 | `Settings` | The settings screen, via the Settings API only — `options.php` handles the nonce, and `option_page_capability_sit_cwm_settings_group` makes it require `sit_cwm_manage_workflows` instead of `manage_options`. |
 | `GettingStartedPage` | `Workflow → Getting Started`, the last tab: setup steps (managers only, worked out from real settings and content on every render), video tour, tutorials, docs, help links and "How content moves". Plain PHP; no React, no embed, no remote request. Freemius's `first-path` lands here. |
 | `AdminFooter` | The review request and plugin version in the footer, on plugin screens only (asks `AdminShell`). |
+| `Promotions` | The only promotion code (roadmap §4.5, phase 49). `stage()` is derived, never fetched: `owned` when Pro is loaded (`sit_cwm_pro_fs()` exists or `sit_cwm_pro_loaded` fired) or `sit_cwm_show_promotions` returns false; `none` when the SDK reports no add-ons or paid plans; otherwise `on_sale`. Only in `on_sale`, for `can_manage()` users, on core plugin screens: the Add-Ons tab (last), a plain "Pro" text link in `.sit-cwm-shell__aside`, the "Go Pro" plugin-row link (Plugins screen), and four one-line hints (`export` on the governance report, `overdue` on the dashboard above the tiles, `notifications` and `workflows` in Settings). Each hint is dismissed per user, for good, through `admin_post_sit_cwm_dismiss_hint` (nonce, then `can_manage()`), stored in user meta `sit_cwm_dismissed_hints`. Nothing in the editors, no notices, no dashboard widgets, nothing on the front end. No founding-customer notice: the SDK does not expose the coupons left. |
 
 ### The admin shell
 
@@ -242,18 +244,23 @@ never moves the workflow.
   `$plugin_page`, which WordPress sets from `?page=` before `admin_menu`. The
   value is only compared, never printed. Pages others add under our menu
   (Freemius's Account) are not plugin screens: no header, no body class, no
-  footer text.
+  footer text. An add-on joins the list through `sit_cwm_admin_tabs`.
 - **The shell does not depend on the pages.** Every page calls
-  `render_header()`, so the shell takes only `Assets`; depending on the pages
-  would put a cycle in the container. `admin.shell` boots first in the `admin`
-  phase.
-- **Tabs mirror the submenu.** A tab shows when its slug is in `TAB_SLUGS`, is
+  `render_header()`, so the shell takes only `Assets` and `Promotions`;
+  depending on the pages would put a cycle in the container. `Promotions` takes
+  only `PermissionManager` and compares `$plugin_page` with `TAB_SLUGS` itself,
+  so it does not need the shell either. `admin.shell` boots first in the
+  `admin` phase.
+- **Tabs mirror the submenu.** A tab shows when its slug is in `TAB_SLUGS` or
+  comes from `sit_cwm_admin_tabs`, is
   registered under `sit-cwm-dashboard` in `$submenu`, and `current_user_can()`
   passes for the capability that submenu item was registered with — the same
   check core uses to print the menu. Editors see Dashboard and Getting Started;
   managers see every tab. The tabs are a `<nav>` of links with
   `aria-current="page"` on the current one, not ARIA tabs, since each loads a
-  page.
+  page. While Pro is on sale, `Promotions::addons_tab()` adds the SDK's
+  Add-Ons page (`sit-cwm-settings-addons`, `manage_options`) as the last tab,
+  under the same checks; it is a tab, not a plugin screen.
 - **Tokens.** `src/admin-shell/tokens.scss` declares every colour and spacing
   value as `--sit-cwm-*` on `.sit-cwm-admin`; the shell, Getting Started and
   later screens use only those variables.
@@ -646,7 +653,8 @@ use, as a block (`sit-cwm/review-disclosure`) and a shortcode
 (`[sit_cwm_review_disclosure]`). `ReviewDisclosure::data_for()` returns data
 only when **all** of these hold:
 
-- the `disclosure_enabled` setting is on;
+- the `disclosure_enabled` setting is on, or `sit_cwm_disclosure_enabled`
+  returns `true` for the post;
 - the post type is in the workflow;
 - the WordPress post status is `publish`;
 - the workflow status is in `PublishGate::PUBLISHABLE_STATUSES`
@@ -659,6 +667,9 @@ deleted); with both lines omitted the output is `''`. Markup is late-escaped
 and ships no stylesheet; themes style it through block supports and the BEM
 classes. Both the block and the shortcode stay registered while the setting is
 off, so saved content stays valid and simply renders nothing.
+
+The line describes the last approval. It does not check whether the content
+changed since: a later edit is recorded as `content_changed`, and the line stays.
 
 ### Governance report
 
@@ -696,7 +707,7 @@ follows the batch size, not the log size. Columns, in order:
 `id, created_at_utc, post_id, post_title, post_type, user_id, user_login,
 user_name, action, action_label, old_value, new_value, message,
 workflow_status, gate_mode, gate_layer, gate_reason, source, ai_origin, via,
-attested, attestation`
+attested, attestation, content_hash, revision_id`
 
 `Audit\CsvWriter` prefixes any cell starting with `=`, `+`, `-`, `@`, tab or CR
 with `'`, so spreadsheets never run it as a formula. Filtered, scheduled and
@@ -724,6 +735,7 @@ Get services from the booted plugin, either on the `sit_cwm_loaded` action
 - Breaking an `@api` signature or documented behaviour requires a **major** version (2.0.0).
 - Adding an optional trailing parameter, a new method, or a new key in a returned array is a minor change.
 - Every `sit_cwm_*` hook in the [Hooks](#hooks) table is covered by the same rule.
+- `SIT_CWM_API_REVISION` goes up whenever this surface gains a seam, so an add-on can check for the seams it needs without comparing plugin versions.
 
 Everything tagged `@internal` (every REST controller, enforcement layer, admin
 screen and notification class among them) may change in any release. Reach
@@ -734,6 +746,12 @@ that behaviour through hooks and REST, not PHP calls.
 Signatures are written as they appear in code; "Returns" is the docblock type
 where the code cannot declare it (`true|WP_Error`). "Since" lists the version
 that added the method, then each version that changed it.
+
+Global constants:
+
+- `SIT_CWM_API_REVISION` (1.2.0), the revision of this add-on API: `2` in this
+  release. A build without the constant counts as `1`. It is defined before the
+  PHP version check, so it is readable from the moment the main file has loaded.
 
 Global functions:
 
@@ -868,6 +886,9 @@ Constants (`@api`): `MANAGE_WORKFLOWS`, `CHANGE_WORKFLOW`, `ASSIGN_REVIEWER`, `R
 | `Content\PostRepository::get_workflow(` | `get_workflow( int $post_id ): array` | `array{post_id:` | 1.0.0 |
 | `Content\PostRepository::is_managed(` | `is_managed( int $post_id ): bool` | `bool` | 1.0.0 |
 | `Content\PostRepository::get_ai_origin(` | `get_ai_origin( int $post_id ): string` | `string` | 1.2.0 |
+| `Content\PostRepository::content_fingerprint(` | `content_fingerprint( int $post_id ): string`. SHA-256 hex of the title, content and excerpt; `''` for a missing post | `string` | 1.2.0 |
+| `Content\PostRepository::fingerprint_of(` | `fingerprint_of( WP_Post $post ): string`. The same, for a post object | `string` | 1.2.0 |
+| `Content\PostRepository::latest_revision_id(` | `latest_revision_id( int $post_id ): int`. `0` when there is none | `int` | 1.2.0 |
 
 Constants (`@api`): `META_STATUS`, `META_REVIEWER`, `META_DUE_DATE`, `META_PUBLISH_BYPASS`, `META_AI_ORIGIN`.
 
@@ -883,7 +904,8 @@ Constants (`@api`): `META_STATUS`, `META_REVIEWER`, `META_DUE_DATE`, `META_PUBLI
 | `Activity\ActivityLogger::latest_for_post(` | `latest_for_post( int $post_id, string $action, ?string $new_value = null ): ?ActivityEntry` | `ActivityEntry\|null` | 1.2.0 |
 | `Activity\ActivityLogger::count_for_post(` | `count_for_post( int $post_id, array $args = array() ): int` | `int` | 1.0.0 |
 | `Activity\ActivityLogger::get_for_posts(` | `get_for_posts( array $post_ids, int $per_post = 1 ): array` | `array<int,` | 1.0.0 |
-| `Activity\ActivityLogger::get_batch(` | `get_batch( array $args = array() ): array` | `ActivityEntry[]` | 1.2.0 |
+| `Activity\ActivityLogger::get_batch(` | `get_batch( array $args = array() ): array`. Args: `after_id`, `limit`, `actions`, `since`, `until` (exclusive), `user_id`, `post_id` | `ActivityEntry[]` | 1.2.0 |
+| `Activity\ActivityLogger::purge_before(` | `purge_before( string $before_utc, int $limit = 1000 ): array`. Deletes up to `$limit` (at most 5000) of the oldest rows before the cutoff, records one `activity_pruned` row and fires `sit_cwm_activity_pruned`. Refuses a cutoff that is invalid or under 24 hours old. Free never calls it | `array{count, first_id, last_id}` | 1.2.0 |
 
 Constants (`@api`): `ACTIONS`, `PUBLICATION_ACTIONS`.
 
@@ -963,6 +985,41 @@ Constants (`@api`): `MODE_OFF`, `MODE_LOG_ONLY`, `MODE_ENFORCE`, `MODES`, `PUBLI
 
 Constants (`@api`): `OUTCOME_NOT_APPLICABLE`, `OUTCOME_ALLOWED`, `OUTCOME_BYPASSED`, `OUTCOME_REFUSED`, `OUTCOMES`, `REASON_NONE`, `REASON_APPROVED`, `REASON_LOG_ONLY`, `REASON_CAPABILITY`, `REASON_ERROR`.
 
+#### `Audit\ActivityExporter`
+
+Service id `activity_exporter`. Add-ons reuse it instead of writing their own
+CSV, so they get the same columns and formula neutralising. It does no
+authorization: check `PermissionManager::can_audit()` first.
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Audit\ActivityExporter::columns(` | `columns(): array` | `string[]` | 1.2.0 |
+| `Audit\ActivityExporter::export_with(` | `export_with( $handle, array $options = array() ): array`. Options: `filters` (`since`, `until`, `actions`, `user_id`, `post_id`), `extra_columns` (`string[]`, after Free's), `row_filter` (`callable( array $row, ActivityEntry $entry ): ?array`; `$row` is keyed by column, and `null` skips the row, which still counts as read), `max_rows` (`0` = no limit), `after_batch` (`callable(): void`) | `array{read, written, last_id}` | 1.2.0 |
+
+#### `Notifications\NotificationEvents`
+
+The events a site can switch on in Settings. Hooks such as
+`sit_cwm_notification_recipients` receive these keys.
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Notifications\NotificationEvents::all(` | `static all(): array` | `string[]` | 1.1.0 |
+| `Notifications\NotificationEvents::labels(` | `static labels(): array` | `array<string, string>` | 1.1.0 |
+
+Constants (`@api`): `REVIEWER_ASSIGNED`, `REVIEW_REQUESTED`, `CHANGES_REQUESTED`, `APPROVED`, `COMMENT_ADDED`.
+
+#### `Admin\AdminShell`
+
+The shared header, for add-on screens under the Workflow menu. Add the screen
+through `sit_cwm_admin_tabs`, then print `render_header()` and `page_head()`.
+
+| Method | Signature | Returns | Since |
+|---|---|---|---|
+| `Admin\AdminShell::render_header(` | `render_header(): void` | `void` | 1.2.0 |
+| `Admin\AdminShell::page_head(` | `page_head( string $title, string $subtitle = '', string $actions = '' ): string` | `string` | 1.2.0 |
+| `Admin\AdminShell::is_plugin_screen(` | `is_plugin_screen(): bool` | `bool` | 1.2.0 |
+| `Admin\AdminShell::tabs(` | `tabs(): array` | `array<string, string>` | 1.2.0 |
+
 ### Service ids
 
 `$container->get( $id )` returns the same shared instance every time. These
@@ -976,6 +1033,8 @@ ids are frozen; every other id is `@internal`.
 - `activity_logger`: `Activity\ActivityLogger`
 - `workflow_manager`: `Workflow\WorkflowManager`
 - `publish_gate`: `Publishing\PublishGate`
+- `admin_shell`: `Admin\AdminShell`, for wp-admin screens
+- `activity_exporter`: `Audit\ActivityExporter`
 
 ### Site-wide context contract
 
@@ -1006,6 +1065,8 @@ Every `sit_cwm_*` hook, covered by the [stability rule](#stability-rule).
 | action | `sit_cwm_comment_added` | `int $post_id, int $activity_id, string $message, int $user_id` | 1.0.0 |
 | action | `sit_cwm_ai_origin_changed` | `int $post_id, string $origin, string $previous, int $user_id, string $via`. `$previous` is `''` when nothing was declared; `$via` is `workflow`, `post_api` or `default` (the creation stamp, whose `$user_id` is `0` when nobody is logged in) | 1.2.0 |
 | action | `sit_cwm_activity_logged` | `int $activity_id, ActivityEntry $entry`. Publication rows fire it too; there is no separate publication action | 1.0.0 |
+| action | `sit_cwm_content_changed` | `int $post_id, string $old_hash, string $new_hash, int $user_id, string $workflow_status`. Fires on every edit to the title, content or excerpt outside `draft`, `writing` and `needs_changes`. Free refuses nothing because of an edit | 1.2.0 |
+| action | `sit_cwm_activity_pruned` | `int $count, int $first_id, int $last_id, string $before_utc`. Fires once per `purge_before()` call that deleted something | 1.2.0 |
 | action | `sit_cwm_db_upgraded` | `string $from_version, string $to_version` | 1.0.0 |
 | filter | `sit_cwm_statuses` | `array $statuses, int $post_id`. **Signature changed in 1.2.0** (added `$post_id`; see the [site-wide context contract](#site-wide-context-contract)) | 1.2.0 |
 | filter | `sit_cwm_transition_map` | `array $map, int $post_id`. **Signature changed in 1.2.0** | 1.2.0 |
@@ -1014,6 +1075,7 @@ Every `sit_cwm_*` hook, covered by the [stability rule](#stability-rule).
 | filter | `sit_cwm_can_transition` | `bool $allowed, int $post_id, string $from, string $to, int $user_id`; return `bool\|WP_Error`. **Signature changed in 1.2.0**: a `WP_Error` denies with its own code and message, but only when the capability checks passed (see [the contract](#the-sit_cwm_can_transition-contract)) | 1.2.0 |
 | filter | `sit_cwm_available_transitions` | `array $transitions, int $post_id, string $from, int $user_id` | 1.0.0 |
 | filter | `sit_cwm_require_attestation` | `bool $required, int $post_id`. Whether approving the post needs the approver to confirm they reviewed it; only boolean `true` requires | 1.2.0 |
+| filter | `sit_cwm_disclosure_enabled` | `bool $enabled, int $post_id`. Whether the review disclosure may show for the post, starting from the setting; only boolean `true` enables. The other conditions (published, approved, an approval row exists) still apply | 1.2.0 |
 | filter | `sit_cwm_enabled_post_types` | `string[] $post_types` | 1.0.0 |
 | filter | `sit_cwm_available_post_types` | `array $post_types` | 1.0.0 |
 | filter | `sit_cwm_activity_actions` | `string[] $actions` | 1.0.0 |
@@ -1030,8 +1092,43 @@ Every `sit_cwm_*` hook, covered by the [stability rule](#stability-rule).
 | filter | `sit_cwm_prevent_self_approval` | `bool $prevent, int $post_id`. Defaults to the "Prevent people from approving their own content" setting; only `true` prevents (E16) | 1.1.0 |
 | filter | `sit_cwm_posts_query_args` | `array $args, WP_REST_Request $request, int $user_id`. May add `meta_query`, `tax_query`, `date_query` and `post__in`; `post_types` can only narrow, and `visible_to` is always reset | 1.2.0 |
 | filter | `sit_cwm_admin_menu_position` | `int\|float $position`. Default `Dashboard::MENU_POSITION` (26, after Comments); a non-numeric value falls back to it | 1.2.0 |
+| filter | `sit_cwm_posts_item` | `array $item, WP_Post $post, int $user_id`. Adds keys to a `GET /posts` row; core keys are restored afterwards. Runs once per row, so prime anything it reads | 1.2.0 |
+| filter | `sit_cwm_posts_item_schema` | `array $properties`, starting empty. Adds properties to the row schema; core names are skipped | 1.2.0 |
+| filter | `sit_cwm_review_statuses` | `string[] $statuses`, default `[ 'review' ]`. The statuses counted by `in_review` and `in_review_mine` in `GET /posts/summary`, returned as `review_statuses`. `review` is always kept, and unknown slugs are dropped | 1.2.0 |
+| filter | `sit_cwm_script_dependencies` | `string[] $deps, string $entry`, starting empty. Handles to load before a build entry (`sidebar`, `classic`, `dashboard` …). Register the handle first: an unregistered one is left out, because WordPress would drop Free's script. The entry's own dependencies cannot be removed | 1.2.0 |
+| filter | `sit_cwm_admin_tabs` | `array<string, string> $tabs`, page slug ⇒ label, starting empty. Adds tabs between Settings and Getting Started. A slug must match `^sit-cwm-[a-z0-9-]+$`; it shows only when the page is registered under the Workflow menu and the user has its capability, and it makes the page a plugin screen (body class, tokens). Core tabs cannot be removed or relabelled | 1.2.0 |
+| filter | `sit_cwm_show_promotions` | `bool $show`, default `true`. Return `false` and Free shows no promotion of Pro anywhere (`Promotions::stage()` is `owned`); Pro does this. Returning `true` cannot turn promotion on before the SDK reports add-ons for sale | 1.2.0 |
 
 `$layer` is one of `rest`, `save`, `schedule`, `backstop`.
+
+### JavaScript extension points
+
+`@wordpress/hooks` names, covered by the [stability rule](#stability-rule). They
+fire in the block editor sidebar and the classic editor meta box.
+
+| Kind | Name | Args | Since |
+|---|---|---|---|
+| filter | `sitCwm.workflowPanel.sections` | `sections: Array<{ name: string, order: number, render: Component }>, context: { postId, isClassic, workflow }`. Returns the sections to show after the core controls and before the activity timeline, sorted by `order`, then `name`. `render` receives the context as props. Malformed entries are dropped, and a section that throws is hidden on its own | 1.2.0 |
+| action | `sitCwm.workflow.changed` | `{ postId, workflow }`. Fires whenever the panel stores a new server response: the first load, every refetch and every workflow change. Never dispatch `sitCwm.workflow.refresh` from it, or the two loop | 1.2.0 |
+| action | `sitCwm.workflow.refresh` | `{ postId }`. Free listens to this one: an add-on fires it after changing something on the server, and the panel showing that post refetches | 1.2.0 |
+
+The dashboard has one filter of its own:
+
+| Kind | Name | Args | Since |
+|---|---|---|---|
+| filter | `sitCwm.dashboard.fields` | `fields: Field[]`, the core fields. New entries with a string `id` are appended after them; core fields cannot be removed or replaced. Added fields can always be hidden and never sort. A field with `elements` and `filterBy: { operators: [ 'is' ] }` is filterable: Free sends its value as `<field.id>=<value>` on `GET /posts`, for `sit_cwm_posts_query_args` to read through `$request->get_param()`, and keeps it in the page URL. An id that is a core query argument or URL key cannot be filtered. `defaultVisible: true` starts the column visible in the table and grid | 1.2.0 |
+
+Load the add-on's script before Free's with `sit_cwm_script_dependencies`, so its
+filters exist at Free's first render.
+
+Keep a section's `render` the same function between renders (define it once,
+outside the filter callback), or React remounts it and it loses its state.
+Sections render only in these editor contexts. Promotion must never use them
+(roadmap §4.5).
+
+An activity row whose action Free does not know reads "{user} — {action_label}",
+with the label from `sit_cwm_activity_action_labels`, so an add-on's rows need no
+JavaScript.
 
 ---
 
@@ -1099,6 +1196,12 @@ Rules that keep an add-on safe across releases:
   `context`, not in new tables, unless volume demands it.
 - Load after Free: hook into `sit_cwm_loaded` rather than `plugins_loaded`.
 
+**A real add-on.** SapphireIT Editorial Workflow Pro is built only on this public
+surface: the hooks, the `@api` classes, the service ids and REST. It adds stages,
+workflow templates, reviewer groups and approval rules without editing a file here
+or calling an `@internal` class. Its own `ARCHITECTURE.md` lists each seam it uses
+and why, so it is the place to look for these patterns at full scale.
+
 ---
 
 ## Data model
@@ -1133,7 +1236,7 @@ that the status can only change by going through the state machine.
 | `id` | `bigint(20) unsigned` | `AUTO_INCREMENT`, primary key |
 | `post_id` | `bigint(20) unsigned` | |
 | `user_id` | `bigint(20) unsigned` | `0` = system |
-| `action` | `varchar(50)` | Closed set: `status_changed`, `reviewer_assigned`, `reviewer_cleared`, `due_date_set`, `due_date_cleared`, `comment_added`, since 1.1 `post_published`, `post_unpublished`, `publish_gate_refused`, `publish_gate_bypassed` (`ActivityLogger::PUBLICATION_ACTIONS`), and since 1.2 `ai_origin_changed` (old value `null` when nothing was declared, `context.via` one of `workflow`, `post_api`, `default`). No schema change |
+| `action` | `varchar(50)` | Closed set: `status_changed`, `reviewer_assigned`, `reviewer_cleared`, `due_date_set`, `due_date_cleared`, `comment_added`, since 1.1 `post_published`, `post_unpublished`, `publish_gate_refused`, `publish_gate_bypassed` (`ActivityLogger::PUBLICATION_ACTIONS`), and since 1.2 `ai_origin_changed` (old value `null` when nothing was declared, `context.via` one of `workflow`, `post_api`, `default`), `activity_pruned` (post id `0`, `context` `{before, count, first_id, last_id}`; no per-post query lists it) and `content_changed` (old and new value are the fingerprints, `context` `{workflow_status, source}`; at most one row per post and user in five minutes). An approval's `status_changed` row carries `context.content_hash` and `context.revision_id`, and `post_published` and `post_unpublished` carry `context.content_hash`. No schema change |
 | `old_value` | `varchar(191)` NULL | Status slug or user ID, as text |
 | `new_value` | `varchar(191)` NULL | |
 | `message` | `text` NULL | Comment body, `wp_kses_post()` |
@@ -1178,7 +1281,9 @@ Only when `delete_data_on_uninstall` is on, it drops the activity table,
 deletes the options, removes all `_sit_cwm_*` post meta with a prepared `LIKE`
 delete, and strips the plugin's capabilities from **every** role — not just the four
 in `role_map()`, so grants a site owner added to custom roles are cleaned up
-too. On a network it runs for every site. Behaviour is unchanged from 1.1.
+too. It also deletes every user's `sit_cwm_dismissed_hints` user meta
+(`Promotions`, 1.2.0). On a network it runs for every site. Otherwise
+behaviour is unchanged from 1.1.
 
 ---
 
@@ -1261,7 +1366,7 @@ page.
 
 *Pro follow-up:* an Action Scheduler-backed queue with progress reporting.
 
-### 6. The activity log is append-only and never pruned
+### 6. Free never prunes the activity log
 
 Rows accumulate forever and are only removed at uninstall. A busy site
 accumulates a few rows per post per cycle.
@@ -1269,8 +1374,8 @@ accumulates a few rows per post per cycle.
 *Why accepted:* an audit log that deletes itself is not an audit log, and the
 table is narrow and indexed.
 
-*Pro follow-up:* retention policy plus CSV/JSON export, as part of advanced
-audit logs.
+*Pro follow-up:* pruning is available to add-ons through `purge_before()`; Free
+never calls it. Pro's retention policy archives rows before pruning them.
 
 ### 7. `@wordpress/dataviews` is bundled, not a core script
 

@@ -228,8 +228,11 @@ describe( 'Governance report', () => {
 
 		render( <App /> );
 
+		// The notice also speaks its message into the a11y live region.
 		expect(
-			await screen.findByText( 'Sorry, you are not allowed to do that.' )
+			await screen.findByText( 'Sorry, you are not allowed to do that.', {
+				ignore: '.a11y-speak-region',
+			} )
 		).toBeTruthy();
 		expect( screen.queryByText( 'Publishing blocked' ) ).toBeNull();
 

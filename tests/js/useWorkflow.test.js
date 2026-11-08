@@ -3,6 +3,7 @@
  */
 import apiFetch from '@wordpress/api-fetch';
 import { dispatch, select } from '@wordpress/data';
+import { addAction, removeAllActions } from '@wordpress/hooks';
 import { store as noticesStore } from '@wordpress/notices';
 
 /**
@@ -46,6 +47,127 @@ describe( 'useWorkflow', () => {
 	afterEach( () => {
 		apiFetch.mockReset();
 		dispatch( noticesStore ).removeNotice( 'sit-cwm-status-changed' );
+		removeAllActions( 'sitCwm.workflow.changed' );
+	} );
+
+	describe( 'the sitCwm.workflow.changed action', () => {
+		const listen = () => {
+			const listener = jest.fn();
+
+			addAction( 'sitCwm.workflow.changed', 'test', listener );
+
+			return listener;
+		};
+
+		it( 'fires once after the initial load', async () => {
+			const listener = listen();
+
+			apiFetch.mockResolvedValueOnce( workflow() );
+
+			const { result } = renderHook( () => useWorkflow( 42 ) );
+
+			await waitFor( () =>
+				expect( result.current.isLoading ).toBe( false )
+			);
+
+			expect( listener ).toHaveBeenCalledTimes( 1 );
+			expect( listener ).toHaveBeenCalledWith( {
+				postId: 42,
+				workflow: workflow(),
+			} );
+		} );
+
+		it( 'fires with the server response after a successful change', async () => {
+			const listener = listen();
+
+			apiFetch.mockResolvedValueOnce( workflow() );
+
+			const { result } = renderHook( () => useWorkflow( 42 ) );
+
+			await waitFor( () =>
+				expect( result.current.isLoading ).toBe( false )
+			);
+
+			const approved = workflow( {
+				status: 'approved',
+				status_label: 'Approved',
+			} );
+
+			apiFetch.mockResolvedValueOnce( approved );
+
+			await act( async () => {
+				await result.current.updateStatus( 'approved' );
+			} );
+
+			expect( listener ).toHaveBeenCalledTimes( 2 );
+			expect( listener ).toHaveBeenLastCalledWith( {
+				postId: 42,
+				workflow: approved,
+			} );
+		} );
+
+		it( 'fires again after a 409 refetch', async () => {
+			const listener = listen();
+
+			apiFetch.mockResolvedValueOnce( workflow() );
+
+			const { result } = renderHook( () => useWorkflow( 42 ) );
+
+			await waitFor( () =>
+				expect( result.current.isLoading ).toBe( false )
+			);
+
+			const moved = workflow( { status: 'needs_changes' } );
+
+			apiFetch
+				.mockRejectedValueOnce(
+					restError( 'sit_cwm_status_conflict', 'Changed.', 409 )
+				)
+				.mockResolvedValueOnce( moved );
+
+			await act( async () => {
+				await result.current.updateStatus( 'approved' );
+			} );
+
+			expect( listener ).toHaveBeenCalledTimes( 2 );
+			expect( listener ).toHaveBeenLastCalledWith( {
+				postId: 42,
+				workflow: moved,
+			} );
+		} );
+
+		it( 'a listener that throws does not turn the load into an error', async () => {
+			addAction( 'sitCwm.workflow.changed', 'test', () => {
+				throw new Error( 'boom' );
+			} );
+			apiFetch.mockResolvedValueOnce( workflow() );
+
+			const { result } = renderHook( () => useWorkflow( 42 ) );
+
+			await waitFor( () =>
+				expect( result.current.isLoading ).toBe( false )
+			);
+
+			expect( result.current.workflow ).toEqual( workflow() );
+			expect( result.current.error ).toBeNull();
+			expect( console ).toHaveErrored();
+		} );
+
+		it( 'stays quiet when the load fails', async () => {
+			const listener = listen();
+
+			apiFetch.mockRejectedValueOnce(
+				restError( 'sit_cwm_not_managed', 'No workflow.', 404 )
+			);
+
+			const { result } = renderHook( () => useWorkflow( 42 ) );
+
+			await waitFor( () =>
+				expect( result.current.isLoading ).toBe( false )
+			);
+
+			expect( listener ).not.toHaveBeenCalled();
+		} );
 	} );
 
 	it( 'loads the workflow on mount', async () => {

@@ -953,6 +953,62 @@ final class WorkflowManagerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * An approval row names the content that was approved.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_approval_records_content_hash_and_revision() {
+		$editor   = $this->make_user( 'editor' );
+		$post     = $this->make_post( $this->make_user( 'author' ), 'review' );
+		$revision = _wp_put_post_revision( get_post( $post ) );
+		$hash     = $this->posts->content_fingerprint( $post );
+
+		$this->assertTrue( $this->workflow->transition( $post, 'review', 'approved', $editor ) );
+
+		$context = $this->activity->latest_for_post( $post, 'status_changed', 'approved' )->get_context();
+
+		$this->assertSame( $hash, $context['content_hash'] );
+		$this->assertSame( $revision, $context['revision_id'] );
+	}
+
+	/**
+	 * With revisions off, the approval still records the hash.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_approval_without_a_revision_omits_revision_id() {
+		$editor = $this->make_user( 'editor' );
+		$post   = $this->make_post( $this->make_user( 'author' ), 'review' );
+
+		$this->assertTrue( $this->workflow->transition( $post, 'review', 'approved', $editor ) );
+
+		$context = $this->activity->latest_for_post( $post, 'status_changed', 'approved' )->get_context();
+
+		$this->assertArrayHasKey( 'content_hash', $context );
+		$this->assertArrayNotHasKey( 'revision_id', $context );
+	}
+
+	/**
+	 * Only an approval records a hash.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_other_transitions_record_no_hash() {
+		$author = $this->make_user( 'author' );
+		$post   = $this->make_post( $author, 'writing' );
+
+		$this->assertTrue( $this->workflow->transition( $post, 'writing', 'review', $author ) );
+
+		$this->assertArrayNotHasKey( 'content_hash', $this->activity->latest_for_post( $post, 'status_changed', 'review' )->get_context() );
+	}
+
+	/**
 	 * With attestation required, approving needs boolean `attested` true, and
 	 * the attested approval stores the statement in its activity row (F10).
 	 *

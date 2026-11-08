@@ -111,6 +111,14 @@ final class GovernanceReportPage implements Bootable {
 	private $shell;
 
 	/**
+	 * Promotion of Pro (the export hint), if wired.
+	 *
+	 * @since 1.2.0
+	 * @var Promotions|null
+	 */
+	private $promotions;
+
+	/**
 	 * Hook suffix of the registered page; empty until the menu is added.
 	 *
 	 * @since 1.2.0
@@ -127,12 +135,14 @@ final class GovernanceReportPage implements Bootable {
 	 * @param PermissionManager $permissions Workflow authorization.
 	 * @param ActivityExport    $export      Activity log export form.
 	 * @param AdminShell        $shell       Shared admin header.
+	 * @param Promotions|null   $promotions  Promotion of Pro; null prints no hint.
 	 */
-	public function __construct( Assets $assets, PermissionManager $permissions, ActivityExport $export, AdminShell $shell ) {
+	public function __construct( Assets $assets, PermissionManager $permissions, ActivityExport $export, AdminShell $shell, ?Promotions $promotions = null ) {
 		$this->assets      = $assets;
 		$this->permissions = $permissions;
 		$this->export      = $export;
 		$this->shell       = $shell;
+		$this->promotions  = $promotions;
 	}
 
 	/**
@@ -224,6 +234,11 @@ final class GovernanceReportPage implements Bootable {
 		);
 
 		echo $head; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- page_head() escapes the text; the actions are built from escaped parts.
+
+		// Right under the title row that holds the CSV export button.
+		if ( null !== $this->promotions ) {
+			echo $this->promotions->hint( 'export' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hint() returns escaped markup.
+		}
 
 		printf( '<div id="%s"></div></div>', esc_attr( self::ROOT_ID ) );
 	}

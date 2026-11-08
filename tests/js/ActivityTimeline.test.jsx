@@ -480,6 +480,55 @@ describe( 'ActivityItem AI use sentences', () => {
 		] );
 	} );
 
+	it( 'writes an add-on action as "user — label"', () => {
+		const { container } = render(
+			<ul>
+				<ActivityItem
+					entry={ entry( 1, {
+						action: 'pro_signed_off',
+						action_label: 'Signed off',
+						user: { id: 9, name: 'Ana' },
+					} ) }
+				/>
+			</ul>
+		);
+
+		expect( itemTexts( container ) ).toEqual( [ 'Ana — Signed off' ] );
+	} );
+
+	it( 'writes Free’s own edit row as "user: label"', () => {
+		const { container } = render(
+			<ul>
+				<ActivityItem
+					entry={ entry( 1, {
+						action: 'content_changed',
+						action_label: 'Content edited after review started',
+					} ) }
+				/>
+			</ul>
+		);
+
+		expect( itemTexts( container ) ).toEqual( [
+			'Jane: Content edited after review started',
+		] );
+	} );
+
+	it( 'shows the raw action when an add-on action has no label', () => {
+		const { container } = render(
+			<ul>
+				<ActivityItem
+					entry={ entry( 1, {
+						action: 'pro_signed_off',
+						action_label: '',
+						user: { id: 9, name: 'Ana' },
+					} ) }
+				/>
+			</ul>
+		);
+
+		expect( itemTexts( container ) ).toEqual( [ 'Ana — pro_signed_off' ] );
+	} );
+
 	it( 'falls back to the label when the value is unknown', () => {
 		const { container } = render(
 			<ul>

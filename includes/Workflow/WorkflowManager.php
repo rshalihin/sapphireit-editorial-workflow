@@ -414,11 +414,16 @@ final class WorkflowManager {
 
 		$context = array();
 
-		if ( 'approved' === $to && null !== $this->attestation && true === ( $args['attested'] ?? null ) ) {
+		if ( 'approved' === $to ) {
 			$context = array(
-				'attested'    => '1',
-				'attestation' => $this->attestation->statement(),
+				'content_hash' => $this->posts->content_fingerprint( $post_id ),
+				'revision_id'  => $this->posts->latest_revision_id( $post_id ),
 			);
+		}
+
+		if ( 'approved' === $to && null !== $this->attestation && true === ( $args['attested'] ?? null ) ) {
+			$context['attested']    = '1';
+			$context['attestation'] = $this->attestation->statement();
 		}
 
 		$this->activity->log_status_change( $post_id, $from, $to, $user_id, $context );

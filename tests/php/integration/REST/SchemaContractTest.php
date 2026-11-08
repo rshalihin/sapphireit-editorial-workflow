@@ -13,6 +13,10 @@ use Sit_Cwm\Governance\GovernanceReport;
 use Sit_Cwm\Publishing\GateDecision;
 use Sit_Cwm\Publishing\PublishGate;
 use Sit_Cwm\Tests\TestCase;
+use Sit_Cwm\Core\Settings;
+use Sit_Cwm\REST\ActivityFormatter;
+use Sit_Cwm\REST\PostsController;
+use Sit_Cwm\REST\UserSummaries;
 use WP_REST_Request;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -127,6 +131,69 @@ final class SchemaContractTest extends TestCase {
 				$this->assert_matches_schema( $item, $this->schema( $route ), $route );
 			}
 		}
+	}
+
+	/**
+	 * `sit_cwm_posts_item_schema` adds properties and cannot change core ones.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_item_schema_filter_adds_properties_only() {
+		add_filter(
+			'sit_cwm_posts_item_schema',
+			static function ( $properties ) {
+				$properties['pro_workflow'] = array(
+					'type'     => 'string',
+					'readonly' => true,
+				);
+				$properties['status']       = array( 'type' => 'integer' );
+
+				return $properties;
+			}
+		);
+
+		$properties = $this->fresh_posts_schema()['properties'];
+
+		$this->assertSame( 'string', $properties['pro_workflow']['type'] );
+		$this->assertSame( 'string', $properties['status']['type'] );
+	}
+
+	/**
+	 * A filter that returns something other than an array changes nothing.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_non_array_item_schema_result_is_ignored() {
+		add_filter( 'sit_cwm_posts_item_schema', '__return_null' );
+
+		$this->assertArrayHasKey( 'status', $this->fresh_posts_schema()['properties'] );
+	}
+
+	/**
+	 * The item schema of a newly built controller; the booted one caches its own.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return array
+	 */
+	private function fresh_posts_schema(): array {
+		$container  = sit_cwm_container();
+		$controller = new PostsController(
+			$container->get( 'workflow_manager' ),
+			$container->get( 'permission_manager' ),
+			$container->get( 'status_manager' ),
+			$container->get( 'post_repository' ),
+			$container->get( 'activity_logger' ),
+			new ActivityFormatter( $container->get( 'status_manager' ) ),
+			new UserSummaries(),
+			new Settings()
+		);
+
+		return $controller->get_item_schema();
 	}
 
 	/**

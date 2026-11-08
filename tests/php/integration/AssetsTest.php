@@ -78,6 +78,72 @@ final class AssetsTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A handle added for one entry loads before that entry only.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_filter_adds_a_dependency_to_one_entry() {
+		wp_register_script( 'probe-before-sidebar', 'http://example.org/editor.js', array(), '1', true );
+		add_filter(
+			'sit_cwm_script_dependencies',
+			static function ( $deps, $entry ) {
+				if ( 'sidebar' === $entry ) {
+					$deps[] = 'probe-before-sidebar';
+				}
+
+				return $deps;
+			},
+			10,
+			2
+		);
+
+		$assets = $this->make_assets( 'build' );
+		$assets->enqueue( 'sidebar' );
+		$assets->enqueue( 'dashboard' );
+
+		$this->assertSame( array( 'wp-element', 'wp-i18n', 'probe-before-sidebar' ), wp_scripts()->registered['sit-cwm-sidebar-js']->deps );
+		$this->assertNotContains( 'probe-before-sidebar', wp_scripts()->registered['sit-cwm-dashboard-js']->deps );
+	}
+
+	/**
+	 * The filter adds to the entry's dependencies; it cannot replace them.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_entry_dependencies_cannot_be_removed() {
+		add_filter( 'sit_cwm_script_dependencies', '__return_null' );
+
+		$this->make_assets( 'build' )->enqueue( 'sidebar' );
+
+		$this->assertSame( array( 'wp-element', 'wp-i18n' ), wp_scripts()->registered['sit-cwm-sidebar-js']->deps );
+	}
+
+	/**
+	 * WordPress drops a script whose dependency is missing, so a handle nobody
+	 * registered, or a value that is no handle, must not cost Free its script.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_unregistered_dependency_is_ignored() {
+		add_filter(
+			'sit_cwm_script_dependencies',
+			static function () {
+				return array( 'sit-cwm-ghost', 7, 'wp-i18n' );
+			}
+		);
+
+		$this->make_assets( 'build' )->enqueue( 'sidebar' );
+
+		$this->assertSame( array( 'wp-element', 'wp-i18n' ), wp_scripts()->registered['sit-cwm-sidebar-js']->deps );
+	}
+
+	/**
 	 * `register_script()` registers the handle, with translations, without
 	 * enqueueing it (block `editorScript`).
 	 *

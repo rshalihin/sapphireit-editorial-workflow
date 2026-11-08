@@ -30,7 +30,8 @@ const PLUGIN_FILE =
 /**
  * Freemius admin pages that must not exist in 1.2.0 (R10). The SDK names
  * them after its menu slug (Settings since F18's opt-in move), plus a suffix;
- * the Dashboard prefix is checked too.
+ * the Dashboard prefix is checked too. `addons` is not listed: the launch
+ * release turns it on (phase 49), under the Settings prefix only.
  *
  * `contact` and `wp-support-forum` are not listed: for a free build the SDK
  * always registers hidden links to its hosted contact form and to this
@@ -40,10 +41,12 @@ const PLUGIN_FILE =
  *
  * @type {string[]}
  */
-const ABSENT_PAGES = [ 'sit-cwm-settings', 'sit-cwm-dashboard' ].flatMap(
-	( prefix ) =>
-		[ 'addons', 'affiliation' ].map( ( page ) => `${ prefix }-${ page }` )
-);
+const ABSENT_PAGES = [
+	...[ 'sit-cwm-settings', 'sit-cwm-dashboard' ].map(
+		( prefix ) => `${ prefix }-affiliation`
+	),
+	'sit-cwm-dashboard-addons',
+];
 
 /**
  * The SDK's pricing page, replaced by a link to the Dashboard (R10).
@@ -189,7 +192,7 @@ test.describe( 'Freemius opt-in', () => {
 		);
 	} );
 
-	test( 'no Contact, Support, Add-Ons or Pricing pages exist', async ( {
+	test( 'Add-Ons is the only SDK page added: no Contact, Support, Pricing or Upgrade', async ( {
 		admin,
 		page,
 		requestUtils,
@@ -209,7 +212,6 @@ test.describe( 'Freemius opt-in', () => {
 		for ( const absent of [
 			/contact/i,
 			/support/i,
-			/add-?ons/i,
 			/pricing/i,
 			/upgrade/i,
 			/affiliat/i,
@@ -218,6 +220,17 @@ test.describe( 'Freemius opt-in', () => {
 				labels.filter( ( label ) => absent.test( label ) )
 			).toEqual( [] );
 		}
+
+		// Phase 49: the launch release turns on the Add-Ons page, last in the
+		// menu, with no coloured upgrade-mode item beside it.
+		expect(
+			labels.filter( ( label ) => /add-?ons/i.test( label ) )
+		).toEqual( [ 'Add-Ons' ] );
+		await expect(
+			page.locator(
+				'#toplevel_page_sit-cwm-dashboard .wp-submenu .upgrade-mode'
+			)
+		).toHaveCount( 0 );
 
 		// The pricing page's URL leads to the Dashboard, not a pricing app.
 		await page.goto( `/wp-admin/admin.php?page=${ PRICING_PAGE }` );

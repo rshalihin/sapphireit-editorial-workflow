@@ -20,6 +20,7 @@ use Sit_Cwm\Admin\Dashboard;
 use Sit_Cwm\Admin\GettingStartedPage;
 use Sit_Cwm\Admin\GovernanceReportPage;
 use Sit_Cwm\Admin\PluginActionLinks;
+use Sit_Cwm\Admin\Promotions;
 use Sit_Cwm\Admin\Settings as SettingsPage;
 use Sit_Cwm\Audit\ActivityExporter;
 use Sit_Cwm\Content\PostMeta;
@@ -42,6 +43,7 @@ use Sit_Cwm\Publishing\GateRecorder;
 use Sit_Cwm\Publishing\Layers\RestLayer;
 use Sit_Cwm\Publishing\Layers\SaveLayer;
 use Sit_Cwm\Publishing\Layers\ScheduleLayer;
+use Sit_Cwm\Content\ContentChangeLogger;
 use Sit_Cwm\Publishing\PublicationLogger;
 use Sit_Cwm\Publishing\PublishGate;
 use Sit_Cwm\Publishing\RefusalNotices;
@@ -98,6 +100,7 @@ final class Plugin {
 			'publish_gate.recorder',
 			'publish_gate.notices',
 			'publication_logger',
+			'content_change_logger',
 			'publish_gate.layer.save',
 			'publish_gate.layer.rest',
 			'publish_gate.layer.schedule',
@@ -117,6 +120,7 @@ final class Plugin {
 			'admin.export',
 			'admin.getting_started',
 			'admin.report',
+			'admin.promotions',
 		),
 		'rest'  => array(
 			'rest.workflow',
@@ -353,6 +357,13 @@ final class Plugin {
 			'publication_logger',
 			static function ( Container $c ) {
 				return new PublicationLogger( $c->get( 'activity_logger' ), $c->get( 'post_repository' ), $c->get( 'settings' ), $c->get( 'publish_gate' ) );
+			}
+		);
+
+		$this->container->set(
+			'content_change_logger',
+			static function ( Container $c ) {
+				return new ContentChangeLogger( $c->get( 'post_repository' ), $c->get( 'activity_logger' ) );
 			}
 		);
 
@@ -602,12 +613,12 @@ final class Plugin {
 		$this->container->set(
 			'admin.dashboard',
 			static function ( Container $c ) {
-				return new Dashboard( $c->get( 'assets' ), $c->get( 'permission_manager' ), $c->get( 'admin.export' ), $c->get( 'admin.shell' ) );
+				return new Dashboard( $c->get( 'assets' ), $c->get( 'permission_manager' ), $c->get( 'admin.export' ), $c->get( 'admin.shell' ), $c->get( 'admin.promotions' ) );
 			}
 		);
 
 		$this->container->set(
-			'audit.exporter',
+			'activity_exporter',
 			static function ( Container $c ) {
 				return new ActivityExporter( $c->get( 'activity_logger' ), $c->get( 'activity_formatter' ), $c->get( 'user_summaries' ) );
 			}
@@ -616,14 +627,14 @@ final class Plugin {
 		$this->container->set(
 			'admin.export',
 			static function ( Container $c ) {
-				return new ActivityExport( $c->get( 'permission_manager' ), $c->get( 'audit.exporter' ) );
+				return new ActivityExport( $c->get( 'permission_manager' ), $c->get( 'activity_exporter' ) );
 			}
 		);
 
 		$this->container->set(
 			'admin.settings',
 			static function ( Container $c ) {
-				return new SettingsPage( $c->get( 'settings' ), $c->get( 'permission_manager' ), $c->get( 'admin.shell' ) );
+				return new SettingsPage( $c->get( 'settings' ), $c->get( 'permission_manager' ), $c->get( 'admin.shell' ), $c->get( 'admin.promotions' ) );
 			}
 		);
 
@@ -637,7 +648,23 @@ final class Plugin {
 		$this->container->set(
 			'admin.shell',
 			static function ( Container $c ) {
-				return new AdminShell( $c->get( 'assets' ) );
+				return new AdminShell( $c->get( 'assets' ), $c->get( 'admin.promotions' ) );
+			}
+		);
+
+		// The only promotion code (roadmap §4.5); depends on nothing admin-side.
+		$this->container->set(
+			'admin.promotions',
+			static function ( Container $c ) {
+				return new Promotions( $c->get( 'permission_manager' ) );
+			}
+		);
+
+		// The frozen name add-ons use; `admin.shell` stays the internal one.
+		$this->container->set(
+			'admin_shell',
+			static function ( Container $c ) {
+				return $c->get( 'admin.shell' );
 			}
 		);
 
@@ -651,14 +678,14 @@ final class Plugin {
 		$this->container->set(
 			'admin.report',
 			static function ( Container $c ) {
-				return new GovernanceReportPage( $c->get( 'assets' ), $c->get( 'permission_manager' ), $c->get( 'admin.export' ), $c->get( 'admin.shell' ) );
+				return new GovernanceReportPage( $c->get( 'assets' ), $c->get( 'permission_manager' ), $c->get( 'admin.export' ), $c->get( 'admin.shell' ), $c->get( 'admin.promotions' ) );
 			}
 		);
 
 		$this->container->set(
 			'admin.action_links',
 			static function ( Container $c ) {
-				return new PluginActionLinks( $c->get( 'permission_manager' ) );
+				return new PluginActionLinks( $c->get( 'permission_manager' ), $c->get( 'admin.promotions' ) );
 			}
 		);
 

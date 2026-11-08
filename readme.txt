@@ -308,11 +308,28 @@ a CDN and sets no cookies of its own.
 It includes the Freemius SDK. When an administrator first activates the
 plugin, it asks whether to share some usage data with Freemius; you can click
 **Skip** and the plugin works exactly the same. Nothing is sent unless an
-administrator opts in, or chooses to fill in the optional feedback form when
-deactivating. See **Privacy** below for exactly what is shared.
+administrator opts in, chooses to fill in the optional feedback form when
+deactivating, opens **Workflow → Add-Ons**, or activates a licence for the
+paid Pro add-on. See **Privacy** below for exactly what is shared.
 
 Email notifications, when you turn them on, go out through WordPress's own
 `wp_mail()`, the same way your site sends password-reset emails.
+
+= Is there a Pro version? =
+
+Yes. SapphireIT Editorial Workflow Pro is a separate, paid add-on for teams
+that coordinate many reviews: multi-stage approval, several workflows per
+content type or category, reviewer groups, checklist and sign-off gating,
+reminders and escalation, Slack and Microsoft Teams, per-user notification
+preferences and digests, and compliance exports with a tamper-evident log.
+This plugin is complete without it.
+
+Administrators find it under **Workflow → Add-Ons**, and managers see a few
+one-line hints on the plugin's own screens, each of which can be dismissed for
+good. Nothing about Pro appears in the editor, in site-wide notices or on your
+site's front end, and none of it shows once Pro is active. This plugin never
+downloads or installs Pro: after buying, you get the Pro zip from the purchase
+email or your Freemius account and upload it under **Plugins → Add New**.
 
 = Where is the source code for the JavaScript? =
 
@@ -353,6 +370,17 @@ Plugins screen, or from **Workflow → Account**.
 When you deactivate the plugin you may be offered a short, optional feedback
 form. If you answer it, your answer is sent to Freemius, anonymously unless
 you choose otherwise, even if you never opted in.
+
+If you buy the Pro add-on and activate its licence, that connects the site to
+Freemius and also registers this plugin there, even if you clicked **Skip**.
+The usage data listed above is then shared, as if you had opted in.
+
+**Add-Ons page.** Opening **Workflow → Add-Ons** loads the list of add-ons from
+Freemius; on a site that has not opted in, the page says so. That request
+sends your site's homepage URL (in the SDK's user agent) and none of the other
+usage data listed above. When a manager dismisses one of the plugin's hints
+about Pro, the choice is stored in that user's profile (user meta
+`sit_cwm_dismissed_hints`) on your site and is never sent anywhere.
 
 Freemius's privacy policy: https://freemius.com/privacy/
 

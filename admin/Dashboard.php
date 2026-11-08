@@ -96,6 +96,14 @@ final class Dashboard implements Bootable {
 	private $shell;
 
 	/**
+	 * Promotion of Pro (the overdue hint), if wired.
+	 *
+	 * @since 1.2.0
+	 * @var Promotions|null
+	 */
+	private $promotions;
+
+	/**
 	 * Hook suffix of the registered page; empty until the menu is added.
 	 *
 	 * @since 1.0.0
@@ -107,18 +115,20 @@ final class Dashboard implements Bootable {
 	 * Constructor.
 	 *
 	 * @since 1.0.0
-	 * @since 1.2.0 Added $export and $shell.
+	 * @since 1.2.0 Added $export, $shell and $promotions.
 	 *
 	 * @param Assets            $assets      Asset loader.
 	 * @param PermissionManager $permissions Workflow authorization.
 	 * @param ActivityExport    $export      Activity log export form.
 	 * @param AdminShell        $shell       Shared admin header.
+	 * @param Promotions|null   $promotions  Promotion of Pro; null prints no hint.
 	 */
-	public function __construct( Assets $assets, PermissionManager $permissions, ActivityExport $export, AdminShell $shell ) {
+	public function __construct( Assets $assets, PermissionManager $permissions, ActivityExport $export, AdminShell $shell, ?Promotions $promotions = null ) {
 		$this->assets      = $assets;
 		$this->permissions = $permissions;
 		$this->export      = $export;
 		$this->shell       = $shell;
+		$this->promotions  = $promotions;
 	}
 
 	/**
@@ -242,6 +252,11 @@ final class Dashboard implements Bootable {
 		);
 
 		echo $head; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- page_head() escapes the text; render_form() returns escaped markup.
+
+		// Above the root, so it sits over the summary tiles and their Overdue tile.
+		if ( null !== $this->promotions ) {
+			echo $this->promotions->hint( 'overdue' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hint() returns escaped markup.
+		}
 
 		printf( '<div id="%s"></div></div>', esc_attr( self::ROOT_ID ) );
 	}

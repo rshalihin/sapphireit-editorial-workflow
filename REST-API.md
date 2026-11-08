@@ -602,6 +602,9 @@ title — escape it at output. `edit_link` is `""` when the user cannot edit the
 post. `ai_origin` (since 1.2) is the declared value, `""` when nothing was
 declared; unlike the workflow route it is a bare string, with no label or hint.
 
+Since 1.2, a row may carry extra keys from an add-on (`sit_cwm_posts_item`). The
+keys above are always Free's, so ignore any you do not know.
+
 One page costs a fixed number of queries regardless of its size: the reviewer,
 author and last-activity lookups are batch-loaded, not per row.
 
@@ -617,18 +620,19 @@ apply.
 
 | Field | Meaning |
 |---|---|
-| `in_review` | Content in Review |
-| `in_review_mine` | Content in Review with the current user as reviewer |
+| `in_review` | Content in Review, or a status an add-on counts as review |
+| `in_review_mine` | The same content, with the current user as reviewer |
 | `needs_changes` | Content in Needs Changes |
 | `overdue` | Content past its due date and not in a final status |
 | `approved` | Content Approved and not yet Published in the workflow |
+| `review_statuses` | The status slugs `in_review` counts; `["review"]` unless an add-on adds to it |
 
 ```bash
 curl -sS -u "$CWM_AUTH" "$CWM_SITE/wp-json/sit-cwm/v1/posts/summary" | jq
 ```
 
 ```json
-{ "in_review": 12, "in_review_mine": 3, "needs_changes": 4, "overdue": 3, "approved": 5 }
+{ "in_review": 12, "in_review_mine": 3, "needs_changes": 4, "overdue": 3, "approved": 5, "review_statuses": [ "review" ] }
 ```
 
 Errors: `rest_forbidden` (401) when logged out, `sit_cwm_forbidden` (403)

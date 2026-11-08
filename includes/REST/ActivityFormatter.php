@@ -188,6 +188,8 @@ final class ActivityFormatter {
 			'due_date_cleared'      => __( 'Due date removed', 'sapphireit-editorial-workflow' ),
 			'comment_added'         => __( 'Comment added', 'sapphireit-editorial-workflow' ),
 			'ai_origin_changed'     => __( 'AI use declared', 'sapphireit-editorial-workflow' ),
+			'activity_pruned'       => __( 'Activity log pruned', 'sapphireit-editorial-workflow' ),
+			'content_changed'       => __( 'Content edited after review started', 'sapphireit-editorial-workflow' ),
 			'post_published'        => __( 'Published', 'sapphireit-editorial-workflow' ),
 			'post_unpublished'      => __( 'Unpublished', 'sapphireit-editorial-workflow' ),
 			'publish_gate_refused'  => __( 'Publishing blocked', 'sapphireit-editorial-workflow' ),

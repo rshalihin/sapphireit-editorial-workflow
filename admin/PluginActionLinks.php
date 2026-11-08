@@ -35,14 +35,25 @@ final class PluginActionLinks implements Bootable {
 	private $permissions;
 
 	/**
+	 * Promotion of Pro (the "Go Pro" link), if wired.
+	 *
+	 * @since 1.2.0
+	 * @var Promotions|null
+	 */
+	private $promotions;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 1.1.0
+	 * @since 1.2.0 Added $promotions.
 	 *
 	 * @param PermissionManager $permissions Workflow authorization.
+	 * @param Promotions|null   $promotions  Promotion of Pro; null adds no "Go Pro" link.
 	 */
-	public function __construct( PermissionManager $permissions ) {
+	public function __construct( PermissionManager $permissions, ?Promotions $promotions = null ) {
 		$this->permissions = $permissions;
+		$this->promotions  = $promotions;
 	}
 
 	/**
@@ -57,12 +68,14 @@ final class PluginActionLinks implements Bootable {
 	}
 
 	/**
-	 * Puts the Settings link first in the plugin's row.
+	 * Puts the Settings link first in the plugin's row, and, while Pro is on
+	 * sale, a plain "Go Pro" link last.
 	 *
 	 * Skipped for a user who could not open the settings screen anyway, by the
 	 * same check that registers its menu.
 	 *
 	 * @since 1.1.0
+	 * @since 1.2.0 Adds the "Go Pro" link.
 	 *
 	 * @param string[] $links Action links from core or an earlier filter.
 	 * @return string[]
@@ -78,6 +91,13 @@ final class PluginActionLinks implements Bootable {
 			esc_html__( 'Settings', 'sapphireit-editorial-workflow' )
 		);
 
-		return array_merge( array( 'settings' => $settings ), (array) $links );
+		$links = array_merge( array( 'settings' => $settings ), (array) $links );
+		$pro   = null !== $this->promotions ? $this->promotions->action_link() : '';
+
+		if ( '' !== $pro ) {
+			$links['sit_cwm_go_pro'] = $pro;
+		}
+
+		return $links;
 	}
 }

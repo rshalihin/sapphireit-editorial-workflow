@@ -137,6 +137,20 @@ final class PluginTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * `admin_shell` is the frozen name of the same instance as `admin.shell`.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_admin_shell_service_is_the_same_instance() {
+		$plugin = new Plugin( new Container() );
+		$plugin->boot();
+
+		$this->assertSame( $plugin->container()->get( 'admin.shell' ), $plugin->container()->get( 'admin_shell' ) );
+	}
+
+	/**
 	 * The main plugin file boots the plugin on `plugins_loaded`.
 	 *
 	 * @since 1.0.0

@@ -76,6 +76,9 @@ class PostsSummaryTest extends WP_UnitTestCase {
 	public function tear_down() {
 		$GLOBALS['wp_rest_server'] = null; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Core's REST server global.
 
+		remove_all_filters( 'sit_cwm_statuses' );
+		sit_cwm_container()->get( 'status_manager' )->flush();
+
 		$this->restore_plugin_instance();
 
 		parent::tear_down();
@@ -130,11 +133,12 @@ class PostsSummaryTest extends WP_UnitTestCase {
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertSame(
 			array(
-				'in_review'      => 3,
-				'in_review_mine' => 1,
-				'needs_changes'  => 1,
-				'overdue'        => 2,
-				'approved'       => 2,
+				'in_review'       => 3,
+				'in_review_mine'  => 1,
+				'needs_changes'   => 1,
+				'overdue'         => 2,
+				'approved'        => 2,
+				'review_statuses' => array( 'review' ),
 			),
 			$response->get_data()
 		);
@@ -183,6 +187,111 @@ class PostsSummaryTest extends WP_UnitTestCase {
 		( new Settings() )->update( array( 'post_types' => array( 'page' ) ) );
 		$this->assertSame( 0, $this->summary()->get_data()['in_review'] );
 		$this->assertGreaterThan( 0, $post );
+	}
+
+	/**
+	 * A status added through the filter counts in `in_review`, and its slug is
+	 * returned so the tile can filter on it.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @covers ::get_summary
+	 *
+	 * @return void
+	 */
+	public function test_summary_counts_filtered_review_statuses() {
+		$editor = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		$this->add_legal_review_status();
+
+		$this->make_post( $editor, 'review' );
+		$this->make_post( $editor, 'legal_review', $editor );
+
+		add_filter( 'sit_cwm_review_statuses', array( $this, 'add_legal_review' ) );
+		wp_set_current_user( $editor );
+
+		$data = $this->summary()->get_data();
+
+		$this->assertSame( 2, $data['in_review'] );
+		$this->assertSame( 1, $data['in_review_mine'] );
+		$this->assertSame( array( 'review', 'legal_review' ), $data['review_statuses'] );
+	}
+
+	/**
+	 * `review` stays whatever the filter does, and unknown slugs are dropped.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @covers ::get_summary
+	 *
+	 * @return void
+	 */
+	public function test_review_cannot_be_removed_and_unknown_slugs_are_dropped() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		add_filter(
+			'sit_cwm_review_statuses',
+			static function () {
+				return array( 'ghost', 7 );
+			}
+		);
+
+		$this->assertSame( array( 'review' ), $this->summary()->get_data()['review_statuses'] );
+	}
+
+	/**
+	 * A filter that returns something other than an array changes nothing.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @covers ::get_summary
+	 *
+	 * @return void
+	 */
+	public function test_non_array_review_statuses_result_is_ignored() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		add_filter( 'sit_cwm_review_statuses', '__return_null' );
+
+		$this->assertSame( array( 'review' ), $this->summary()->get_data()['review_statuses'] );
+	}
+
+	/**
+	 * Filter callback: the extra review status.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param string[] $statuses Slugs.
+	 * @return string[]
+	 */
+	public function add_legal_review( $statuses ) {
+		$statuses[] = 'legal_review';
+
+		return $statuses;
+	}
+
+	/**
+	 * Registers `legal_review` on the status registry the route reads.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	private function add_legal_review_status() {
+		add_filter(
+			'sit_cwm_statuses',
+			static function ( $statuses ) {
+				$statuses[] = array(
+					'slug'  => 'legal_review',
+					'label' => 'Legal review',
+					'order' => 35,
+				);
+
+				return $statuses;
+			}
+		);
+		sit_cwm_container()->get( 'status_manager' )->flush();
+		$this->posts = new PostRepository( new StatusManager(), new Settings() );
 	}
 
 	/**

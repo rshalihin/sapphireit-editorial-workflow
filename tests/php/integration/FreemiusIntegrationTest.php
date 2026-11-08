@@ -38,15 +38,40 @@ final class FreemiusIntegrationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Free is WordPress.org compliant and sells nothing in 1.2.0 (R10).
+	 * Free is WordPress.org compliant and sells only add-ons: no paid plans of
+	 * its own (phase 49; phase 48, finding 1).
 	 *
 	 * @return void
 	 */
-	public function test_free_is_org_compliant_and_sells_nothing_yet() {
+	public function test_free_is_org_compliant_and_sells_only_addons() {
 		$this->assertTrue( sit_cwm_fs()->is_org_repo_compliant() );
 		$this->assertFalse( sit_cwm_fs()->is_premium() );
 		$this->assertFalse( sit_cwm_fs()->has_paid_plan() );
-		$this->assertFalse( sit_cwm_fs()->has_addons() );
+		$this->assertTrue( sit_cwm_fs()->has_addons() );
+	}
+
+	/**
+	 * The Add-Ons page is on; the pricing page and its "Upgrade" item are not,
+	 * so Free adds no `upgrade-mode` menu item and no "Activate License" link.
+	 *
+	 * @return void
+	 */
+	public function test_addons_menu_on_and_no_pricing_or_upgrade_item() {
+		$this->assertTrue( sit_cwm_fs()->is_submenu_item_visible( 'addons' ) );
+		$this->assertFalse( sit_cwm_fs()->is_submenu_item_visible( 'pricing' ) );
+		$this->assertFalse( sit_cwm_fs()->is_pricing_page_visible() );
+	}
+
+	/**
+	 * Guideline 8: Free never installs Pro. The SDK's Add-Ons page offers
+	 * "Install Now" only to a premium or non-org-compliant parent, or for an
+	 * org-compliant add-on; Free is neither and Pro is not. The real purchase
+	 * check is `tests/e2e/promotions.spec.js` on staging.
+	 *
+	 * @return void
+	 */
+	public function test_free_is_not_allowed_to_install_addons() {
+		$this->assertFalse( sit_cwm_fs()->is_allowed_to_install() );
 	}
 
 	/**
