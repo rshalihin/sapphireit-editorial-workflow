@@ -150,6 +150,22 @@ if ( ! function_exists( 'sit_cwm_fs' ) ) {
 
 	sit_cwm_fs();
 
+	if ( ! function_exists( 'sit_cwm_fs_is_checkout' ) ) {
+		/**
+		 * Whether this request is the Add-Ons page's Purchase button.
+		 *
+		 * That button opens the SDK's pricing page with `checkout=true`.
+		 *
+		 * @internal
+		 * @since 1.2.0
+		 *
+		 * @return bool
+		 */
+		function sit_cwm_fs_is_checkout() {
+			return sit_cwm_fs()->is_admin_page( 'pricing' ) && 'true' === fs_request_get( 'checkout' );
+		}
+	}
+
 	if ( ! function_exists( 'sit_cwm_fs_pricing_url' ) ) {
 		/**
 		 * Points the SDK's pricing link at the Dashboard.
@@ -157,19 +173,46 @@ if ( ! function_exists( 'sit_cwm_fs' ) ) {
 		 * Free has no paid plans of its own (R10), but the SDK still registers
 		 * a hidden pricing page. With a pricing URL set it adds a link instead,
 		 * and its page URL redirects here rather than loading the pricing app.
-		 * Pro is sold from the Add-Ons page, so this filter stays.
+		 *
+		 * The add-on checkout runs on that same page, so a checkout request
+		 * keeps the SDK's own page, or Pro could not be bought from Add-Ons.
 		 *
 		 * @internal
 		 * @since 1.2.0
 		 *
-		 * @return string Dashboard URL.
+		 * @param string|null $url The SDK's pricing URL.
+		 * @return string|null Dashboard URL, or `$url` for a checkout.
 		 */
-		function sit_cwm_fs_pricing_url() {
-			return admin_url( 'admin.php?page=sit-cwm-dashboard' );
+		function sit_cwm_fs_pricing_url( $url ) {
+			return sit_cwm_fs_is_checkout() ? $url : admin_url( 'admin.php?page=sit-cwm-dashboard' );
 		}
 	}
 
 	sit_cwm_fs()->add_filter( 'pricing_url', 'sit_cwm_fs_pricing_url' );
+
+	if ( ! function_exists( 'sit_cwm_fs_checkout_title' ) ) {
+		/**
+		 * Gives the SDK's hidden checkout page a title.
+		 *
+		 * The page is in no menu, so core finds no title for it and passes
+		 * null to `strip_tags()` in admin-header.php, a deprecation on PHP 8.1+.
+		 *
+		 * @internal
+		 * @since 1.2.0
+		 *
+		 * @return void
+		 */
+		function sit_cwm_fs_checkout_title() {
+			global $title;
+
+			if ( empty( $title ) && sit_cwm_fs_is_checkout() ) {
+				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Core reads this global for the page title.
+				$title = sit_cwm_fs()->get_plugin_name();
+			}
+		}
+	}
+
+	add_action( 'admin_init', 'sit_cwm_fs_checkout_title' );
 
 	if ( ! function_exists( 'sit_cwm_fs_optin_for_admins_only' ) ) {
 		/**

@@ -101,8 +101,13 @@ body.sit-cwm-admin {
 	flex: 1 1 auto;
 	flex-wrap: wrap;
 	align-items: stretch;
-	column-gap: 24px;
+	column-gap: 18px;
 	min-width: 0;
+}
+
+// Core puts its Help button over the header's end: keep the tabs clear of it.
+body:has(#screen-meta-links .screen-meta-toggle) .sit-cwm-shell__tabs {
+	padding-inline-end: 90px;
 }
 
 .sit-cwm-shell__tab {
@@ -113,15 +118,23 @@ body.sit-cwm-admin {
 	border-bottom: 2px solid transparent;
 	color: var(--sit-cwm-muted);
 	font-size: 14px;
+	// The same weight on every tab: a bolder current tab is wider, which moves
+	// every tab after it each time the page changes.
+	font-weight: 500;
 	text-decoration: none;
 
 	&:hover {
 		color: var(--sit-cwm-text);
 	}
 
+	// A click shows no outline; the keyboard still does.
 	&:focus {
 		color: var(--sit-cwm-text);
 		box-shadow: none;
+		outline: none;
+	}
+
+	&:focus-visible {
 		outline: 2px solid var(--sit-cwm-accent);
 		outline-offset: -2px;
 	}
@@ -129,7 +142,6 @@ body.sit-cwm-admin {
 	&.is-current {
 		border-bottom-color: var(--sit-cwm-accent);
 		color: var(--sit-cwm-text);
-		font-weight: 600;
 	}
 }
 

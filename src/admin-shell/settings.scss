@@ -58,8 +58,13 @@
 		}
 	}
 
+	// A click shows no outline; the keyboard still does.
 	&:focus {
 		box-shadow: none;
+		outline: none;
+	}
+
+	&:focus-visible {
 		outline: 2px solid var(--sit-cwm-accent);
 		outline-offset: 1px;
 	}

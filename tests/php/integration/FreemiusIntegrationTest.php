@@ -123,6 +123,99 @@ final class FreemiusIntegrationTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The add-on checkout runs on that hidden page, so the Purchase button
+	 * keeps the SDK's page instead of being sent to the Dashboard.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_a_checkout_request_keeps_the_sdks_pricing_page() {
+		$this->request_the_checkout();
+
+		$this->assertNull( sit_cwm_fs()->apply_filters( 'pricing_url', null ) );
+	}
+
+	/**
+	 * Only the checkout does: the page without `checkout=true` still redirects,
+	 * and so does `checkout=true` on another page.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_only_the_checkout_keeps_the_sdks_pricing_page() {
+		$dashboard = admin_url( 'admin.php?page=' . \Sit_Cwm\Admin\Dashboard::MENU_SLUG );
+
+		$this->request_the_checkout();
+		unset( $_REQUEST['checkout'] );
+
+		$this->assertSame( $dashboard, sit_cwm_fs()->apply_filters( 'pricing_url', null ) );
+
+		$this->request_the_checkout();
+		$_GET['page'] = \Sit_Cwm\Admin\Dashboard::MENU_SLUG;
+
+		$this->assertSame( $dashboard, sit_cwm_fs()->apply_filters( 'pricing_url', null ) );
+	}
+
+	/**
+	 * The checkout page is in no menu, so without a title core would pass null
+	 * to `strip_tags()`, a deprecation on PHP 8.1+.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_the_checkout_page_gets_a_title() {
+		global $title;
+
+		$title = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The state under test.
+
+		$this->request_the_checkout();
+		sit_cwm_fs_checkout_title();
+
+		$this->assertSame( sit_cwm_fs()->get_plugin_name(), $title );
+	}
+
+	/**
+	 * Other screens keep the title core gives them.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_other_pages_keep_their_title() {
+		global $title;
+
+		$title = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The state under test.
+
+		sit_cwm_fs_checkout_title();
+
+		$this->assertNull( $title );
+	}
+
+	/**
+	 * Makes this request the Add-Ons page's Purchase button.
+	 *
+	 * @return void
+	 */
+	private function request_the_checkout() {
+		$_GET['page']         = sit_cwm_fs()->get_menu_slug() . '-pricing';
+		$_REQUEST['checkout'] = 'true';
+	}
+
+	/**
+	 * Clears what a test put in the request.
+	 *
+	 * @return void
+	 */
+	public function tear_down() {
+		unset( $_GET['page'], $_REQUEST['checkout'] );
+
+		parent::tear_down();
+	}
+
+	/**
 	 * Free is updated by WordPress.org only: the SDK's updater is not
 	 * started for a non-premium build, so nothing of Freemius hooks the
 	 * plugin update transient.
