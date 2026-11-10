@@ -5,13 +5,112 @@ All notable changes to SapphireIT Editorial Workflow are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 1.2.0 - 2026-11-10
+
+"Seams + governance." Add-ons can now change the workflow per post without
+editing core, and site owners can show who approved what, how AI was used,
+and export the whole audit trail.
+
+Every new feature is off until a site owner turns it on. Upgrading from 1.1.0
+changes no behaviour and needs no database migration: the schema is unchanged,
+`sit_cwm_db_version` stays `1.0.0`, and no capability is added. Existing posts
+read *Not declared* for AI use.
+
+### Added
+
+**Declared AI use**
+
+- Each post can record how AI was used: *Human-written*, *AI-assisted* or
+  *AI-generated*. It is declared by people, never detected: the plugin never
+  inspects content.
+- Set it from the editor sidebar, the classic editor meta box, the
+  `sit-cwm/v1` workflow route (`ai_origin`) or the new `wp/v2` field
+  `sit_cwm_ai_origin`, so an agent can declare it when it creates a post.
+- An optional per-post-type default stamps new posts. A value declared on
+  create always wins over the default.
+- Every change is written to the activity history as *AI use declared*, with
+  how it was made (`workflow`, `post_api` or `default`). A declaration can be
+  changed but not withdrawn back to *Not declared*.
+- Publication log rows record the AI use at the moment of publishing.
+
+**Review attestation**
+
+- Optional *Review attestation* setting (*Require approvers to confirm they
+  reviewed the content*). When it is on, approving needs the approver to tick
+  a confirmation, in the sidebar,
+  the classic meta box and the dashboard bulk action alike.
+- Approving without it returns `sit_cwm_attestation_required` (HTTP 422). A
+  user who may not approve still gets 403.
+- The confirmation and its exact wording are stored with the approval in the
+  activity history.
+
+**Front-end review disclosure**
+
+- Opt-in *Review disclosure* block and `[sit_cwm_review_disclosure]` shortcode
+  that print "Reviewed by {name} on {date}." and the declared AI use.
+- Shown only on published content that was approved in the workflow and is
+  still approved, so the front end never claims a review the audit trail
+  cannot back. Off by default; the block is hidden from the inserter while the
+  setting is off.
+
+**Governance report**
+
+- New *Governance report* screen under the Workflow menu, for users who can
+  view activity and manage workflows (administrators by default). Over 30, 90
+  or 365 days it shows how much was published after approval, publishing the
+  gate blocked or let through, declared AI use now and at publication, and
+  overdue content.
+- Backed by `GET /sit-cwm/v1/reports/governance`.
+
+**CSV audit export**
+
+- Export the full activity history as CSV from the dashboard or the report,
+  for the same users. Streamed in batches, so large histories don't exhaust
+  memory. Cells that start with `=`, `+`, `-`, `@`, tab or CR are neutralised
+  so spreadsheets open them as text.
+
+**Admin**
+
+- A shared header and tabs across every plugin screen, with a refreshed
+  dashboard, settings and report.
+- A *Getting Started* page, opened from the header's *Help* link, with setup
+  steps worked out from your real settings, plus links to tutorials and docs.
+- The Freemius SDK, in WordPress.org-compliant mode. New installs are asked
+  once, by administrators only, whether to share usage data; *Skip* is always
+  available, and sites upgrading from 1.1 are not asked. Nothing is sold or
+  promoted. See the readme FAQ for what opting in shares.
+
+**Extensibility (frozen add-on API)**
+
+- The status registry, transition and rollback maps and the capability map
+  receive the post id, so an add-on can give different posts different
+  workflows. Results are memoised per post.
+- `sit_cwm_can_transition` may return a `WP_Error`; its message reaches the
+  sidebar verbatim, and the workflow response gains `blocked_transitions`.
+- New action `sit_cwm_loaded` and function `sit_cwm_container()` give add-ons
+  a safe bootstrap point and the service container.
+- New filters: `sit_cwm_posts_query_args`, `sit_cwm_require_attestation` and
+  `sit_cwm_admin_menu_position`. New actions: `sit_cwm_ai_origin_changed` and
+  `sit_cwm_fs_loaded`.
+- Every class is tagged `@api` or `@internal`, and the public surface is
+  listed in [ARCHITECTURE.md](ARCHITECTURE.md). Breaking an `@api` signature
+  now needs a major version. All changes are additive, so 1.0 and 1.1
+  extensions keep working.
 
 ### Changed
 
 - The *Editorial Workflow* admin menu now sits right after *Comments*
   (position 26) instead of at the bottom of the sidebar. Move it with the new
   `sit_cwm_admin_menu_position` filter.
+- `uninstall.php` is gone; the same cleanup now runs through Freemius's
+  uninstall hook. Data handling is unchanged: workflow data is deleted only
+  when *Delete all workflow data* is on.
+- The settings screen's Help pull-down moved to the Getting Started page.
+- The workflow status post meta schema uses a `pattern` instead of a fixed
+  `enum`, so add-on statuses validate.
+- The WordPress.org listing, README, WORKFLOW.md, REST-API.md and
+  ARCHITECTURE.md cover the new features, with an agent recipe (n8n and MCP)
+  for declaring AI use over REST. Screenshots were replaced.
 
 ## 1.1.0 - 2026-10-29
 

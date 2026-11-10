@@ -4,7 +4,7 @@ Tags: editorial workflow, approval workflow, content review, reviewer, publishin
 Requires at least: 6.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -401,6 +401,26 @@ Freemius's privacy policy: https://freemius.com/privacy/
 
 == Changelog ==
 
+= 1.2.0 =
+* New: declare how AI was used on each post (human-written, AI-assisted or
+  AI-generated), from the editor, the classic editor or the REST API, with an
+  optional default per content type. Declared by people, never detected.
+* New: optional review confirmation an approver ticks before approving,
+  stored with the approval in the activity history.
+* New: optional review disclosure block and shortcode showing who approved
+  the content, when, and the declared AI use.
+* New: governance report showing how much was published after approval,
+  publishing the publish gate blocked or let through, declared AI use and
+  overdue content.
+* New: export the full activity history as CSV.
+* New: Getting Started page and a refreshed look on every plugin screen.
+* New: optional, admin-only usage-data opt-in (Freemius) on new installs.
+  Sites upgrading from 1.1 are not asked.
+* Change: the Editorial Workflow menu now sits right after Comments.
+* Developer: per-post workflows, veto reasons that reach the editor, a
+  dashboard query filter, an add-on bootstrap hook, and a frozen public API.
+  See ARCHITECTURE.md.
+
 = 1.1.0 =
 * New: publish gate per content type (Off, Log only, Enforce). In Enforce mode,
   content has to be approved in the workflow before it can be published or
@@ -440,6 +460,9 @@ Freemius's privacy policy: https://freemius.com/privacy/
   plugin.
 
 == Upgrade Notice ==
+
+= 1.2.0 =
+Adds declared AI use, review confirmation, a front-end review disclosure, a governance report and CSV export. All new options start off, so nothing changes until you turn them on.
 
 = 1.1.0 =
 Adds an optional publish gate, publication logging, email notifications and a self-approval setting. All new options start off, so nothing changes until you turn them on.
