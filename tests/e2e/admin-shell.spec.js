@@ -19,8 +19,16 @@ const ADMIN_TABS = [
 	[ 'Dashboard', 'sit-cwm-dashboard' ],
 	[ 'Governance report', 'sit-cwm-report' ],
 	[ 'Settings', 'sit-cwm-settings' ],
-	[ 'Getting Started', 'sit-cwm-getting-started' ],
 ];
+
+/**
+ * The header's Help link, which opens Getting Started (not a tab).
+ *
+ * @param {Object} page Playwright page.
+ * @return {Object} Locator.
+ */
+const helpLink = ( page ) =>
+	page.locator( '.sit-cwm-shell__aside a.sit-cwm-shell__help' );
 
 /**
  * Hosts core itself may load on any admin screen (the admin bar avatar and
@@ -50,7 +58,7 @@ test.describe( 'Admin shell and Getting Started', () => {
 		await requestUtils.deleteAllUsers();
 	} );
 
-	test( 'admin sees Dashboard, Governance report, Settings and Getting Started tabs in that order', async ( {
+	test( 'admin sees Dashboard, Governance report and Settings tabs in that order, and a Help link', async ( {
 		admin,
 		page,
 		requestUtils,
@@ -63,12 +71,39 @@ test.describe( 'Admin shell and Getting Started', () => {
 
 		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-dashboard' );
 
-		// Pro is on sale and not active here, so the SDK's Add-Ons page is
-		// the last tab (phase 49); promotions.spec.js covers it.
-		await expect( tabs( page ).getByRole( 'link' ) ).toHaveText( [
-			...ADMIN_TABS.map( ( [ label ] ) => label ),
-			'Add-Ons',
-		] );
+		// Pro is on sale here, but promoted only by links to the author's
+		// site, never by an Add-Ons tab; promotions.spec.js covers them.
+		await expect( tabs( page ).getByRole( 'link' ) ).toHaveText(
+			ADMIN_TABS.map( ( [ label ] ) => label )
+		);
+		await expect( helpLink( page ) ).toHaveText( 'Help' );
+	} );
+
+	test( 'the Help link opens Getting Started and is marked current there', async ( {
+		admin,
+		page,
+	} ) => {
+		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-settings' );
+
+		// One Help only: Settings adds no core Help pull-down.
+		await expect( page.locator( '#contextual-help-link' ) ).toHaveCount(
+			0
+		);
+
+		await helpLink( page ).click();
+		await expect( page ).toHaveURL( /page=sit-cwm-getting-started/ );
+		await expect( helpLink( page ) ).toHaveAttribute(
+			'aria-current',
+			'page'
+		);
+		await expect(
+			tabs( page ).locator( '[aria-current="page"]' )
+		).toHaveCount( 0 );
+		await expect(
+			page.getByRole( 'heading', {
+				name: 'Who can do what, and what the settings do',
+			} )
+		).toBeVisible();
 	} );
 
 	test( 'with Pro active, Free keeps its tabs in order and Add-Ons goes', async ( {
@@ -93,7 +128,7 @@ test.describe( 'Admin shell and Getting Started', () => {
 		expect( labels ).not.toContain( 'Add-Ons' );
 	} );
 
-	test( 'editor sees only Dashboard and Getting Started, and no setup steps', async ( {
+	test( 'editor sees only the Dashboard tab and Help, and no setup steps', async ( {
 		page,
 	} ) => {
 		await loginAs( page, EDITOR );
@@ -101,8 +136,8 @@ test.describe( 'Admin shell and Getting Started', () => {
 
 		await expect( tabs( page ).getByRole( 'link' ) ).toHaveText( [
 			'Dashboard',
-			'Getting Started',
 		] );
+		await expect( helpLink( page ) ).toHaveText( 'Help' );
 		await expect(
 			page.getByRole( 'heading', { name: 'Getting Started', level: 1 } )
 		).toBeVisible();
@@ -198,7 +233,9 @@ test.describe( 'Admin shell and Getting Started', () => {
 		page,
 		requestUtils,
 	} ) => {
+		// Pages too: Pro's specs leave managed pages behind.
 		await requestUtils.deleteAllPosts();
+		await requestUtils.deleteAllPages();
 		await admin.visitAdminPage( 'admin.php', 'page=sit-cwm-dashboard' );
 
 		const callout = page.locator( '.sit-cwm-gs-callout' );

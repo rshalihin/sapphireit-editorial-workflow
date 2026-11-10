@@ -31,8 +31,9 @@ const PLUGIN_FILE =
 /**
  * Freemius admin pages that must not exist in 1.2.0 (R10). The SDK names
  * them after its menu slug (Settings since F18's opt-in move), plus a suffix;
- * the Dashboard prefix is checked too. `addons` is not listed: the launch
- * release turns it on (phase 49), under the Settings prefix only.
+ * the Dashboard prefix is checked too. `addons` under the Settings prefix is
+ * not listed: the SDK registers it while `has_addons` is on, and Free sends
+ * it to the Dashboard (`promotions.spec.js`).
  *
  * `contact` and `wp-support-forum` are not listed: for a free build the SDK
  * always registers hidden links to its hosted contact form and to this
@@ -193,7 +194,7 @@ test.describe( 'Freemius opt-in', () => {
 		);
 	} );
 
-	test( 'Add-Ons is the only SDK page added: no Contact, Support, Pricing or Upgrade', async ( {
+	test( 'no SDK page is added: no Add-Ons, Contact, Support, Pricing or Upgrade', async ( {
 		admin,
 		page,
 		requestUtils,
@@ -210,7 +211,10 @@ test.describe( 'Freemius opt-in', () => {
 
 		expect( labels.length ).toBeGreaterThan( 0 );
 
+		// Guideline 8: Pro is sold on the author's site, so the SDK's Add-Ons
+		// page, which leads to its in-dashboard checkout, has no menu item.
 		for ( const absent of [
+			/add-?ons/i,
 			/contact/i,
 			/support/i,
 			/pricing/i,
@@ -222,11 +226,6 @@ test.describe( 'Freemius opt-in', () => {
 			).toEqual( [] );
 		}
 
-		// Phase 49: the launch release turns on the Add-Ons page, last in the
-		// menu, with no coloured upgrade-mode item beside it.
-		expect(
-			labels.filter( ( label ) => /add-?ons/i.test( label ) )
-		).toEqual( [ 'Add-Ons' ] );
 		await expect(
 			page.locator(
 				'#toplevel_page_sit-cwm-dashboard .wp-submenu .upgrade-mode'

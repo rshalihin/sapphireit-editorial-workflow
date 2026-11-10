@@ -1142,22 +1142,14 @@ final class SettingsPageTest extends TestCase {
 	}
 
 	/**
-	 * The help tab explains the status flow and permissions.
+	 * Settings adds no core Help pull-down: its reference is on Getting
+	 * Started, which the header's Help link opens.
 	 *
 	 * @return void
 	 */
-	public function test_help_tab() {
-		set_current_screen( 'editorial-workflow_page_sit-cwm-settings' );
-
-		$this->page->add_help_tab();
-
-		$tab = get_current_screen()->get_help_tab( SettingsPage::HELP_TAB_ID );
-
-		$this->assertNotNull( $tab );
-		$this->assertStringContainsString( 'Needs Changes', $tab['content'] );
-		$this->assertStringContainsString( 'Publish gate:', $tab['content'] );
-		$this->assertStringContainsString( 'Email notifications:', $tab['content'] );
-		$this->assertStringContainsString( 'AI use is declared by people or tools, never detected.', $tab['content'] );
+	public function test_no_core_help_tab() {
+		$this->assertFalse( method_exists( $this->page, 'add_help_tab' ) );
+		$this->assertFalse( defined( SettingsPage::class . '::HELP_TAB_ID' ) );
 	}
 
 	/**

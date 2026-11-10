@@ -291,3 +291,23 @@
 	margin: var(--sit-cwm-gap) 0 0;
 	color: var(--sit-cwm-muted);
 }
+
+// Who can do what, and what the settings do (Settings' Help before 1.2.0).
+.sit-cwm-gs__reference {
+	max-width: 80ch;
+
+	p,
+	li {
+		margin: 0 0 calc(var(--sit-cwm-gap) / 2);
+	}
+
+	p:last-child {
+		margin-bottom: 0;
+	}
+}
+
+.sit-cwm-gs__reference-list {
+	margin: 0 0 var(--sit-cwm-gap);
+	padding-left: 1.25em;
+	list-style: disc;
+}

@@ -233,14 +233,14 @@ never moves the workflow.
 | `GovernanceReportPage` | `Workflow → Governance report`, the tab after Dashboard, for auditors only (`can_audit()`; 403 otherwise). Prints the shell header, the heading, the export form and an empty React root; the `report` bundle (period selector, five KPI tiles, two AI-use breakdowns) reads `GET /sit-cwm/v1/reports/governance` and only formats its numbers. |
 | `ActivityExport` | The "Export activity log (CSV)" form and its `admin_post_sit_cwm_export_activity` handler: nonce, then `can_audit()`, then the stream. |
 | `Settings` | The settings screen, via the Settings API only — `options.php` handles the nonce, and `option_page_capability_sit_cwm_settings_group` makes it require `sit_cwm_manage_workflows` instead of `manage_options`. |
-| `GettingStartedPage` | `Workflow → Getting Started`, the last tab: setup steps (managers only, worked out from real settings and content on every render), video tour, tutorials, docs, help links and "How content moves". Plain PHP; no React, no embed, no remote request. Freemius's `first-path` lands here. |
+| `GettingStartedPage` | `Workflow → Getting Started`, opened by the header's **Help** link (not a tab, so the tab row stays short with Pro's five tabs): setup steps (managers only, worked out from real settings and content on every render), video tour, tutorials, docs, help links, "How content moves" and "Who can do what, and what the settings do" (the reference that was the Settings screen's core Help pull-down before 1.2.0; Settings adds no help tab now, so there is one Help). Plain PHP; no React, no embed, no remote request. Freemius's `first-path` lands here. |
 | `AdminFooter` | The review request and plugin version in the footer, on plugin screens only (asks `AdminShell`). |
-| `Promotions` | The only promotion code (roadmap §4.5, phase 49). `stage()` is derived, never fetched: `owned` when Pro is loaded (`sit_cwm_pro_fs()` exists or `sit_cwm_pro_loaded` fired) or `sit_cwm_show_promotions` returns false; `none` when the SDK reports no add-ons or paid plans; otherwise `on_sale`. Only in `on_sale`, for `can_manage()` users, on core plugin screens: the Add-Ons tab (last), a plain "Pro" text link in `.sit-cwm-shell__aside`, the "Go Pro" plugin-row link (Plugins screen), and four one-line hints (`export` on the governance report, `overdue` on the dashboard above the tiles, `notifications` and `workflows` in Settings). Each hint is dismissed per user, for good, through `admin_post_sit_cwm_dismiss_hint` (nonce, then `can_manage()`), stored in user meta `sit_cwm_dismissed_hints`. Nothing in the editors, no notices, no dashboard widgets, nothing on the front end. No founding-customer notice: the SDK does not expose the coupons left. |
+| `Promotions` | The only promotion code (roadmap §4.5, phase 49). `stage()` is derived, never fetched: `owned` when Pro is loaded (`sit_cwm_pro_fs()` exists or `sit_cwm_pro_loaded` fired) or `sit_cwm_show_promotions` returns false; `none` when the SDK reports no add-ons or paid plans; otherwise `on_sale`. Only in `on_sale`, for `can_manage()` users, on core plugin screens: a plain "Pro" text link in `.sit-cwm-shell__aside`, the "Go Pro" plugin-row link (Plugins screen), and four one-line hints (`export` on the governance report, `overdue` on the dashboard above the tiles, `notifications` and `workflows` in Settings). Each hint is dismissed per user, for good, through `admin_post_sit_cwm_dismiss_hint` (nonce, then `can_manage()`), stored in user meta `sit_cwm_dismissed_hints`. Nothing in the editors, no notices, no dashboard widgets, nothing on the front end. No founding-customer notice: the SDK does not expose the coupons left. Every link opens `PRO_URL` (the author's site) in a new tab: Pro is bought there, never inside WordPress (guideline 8), and there is no Add-Ons tab; see `sit_cwm_fs()` for how the SDK's Add-Ons page, checkout and auto-install are closed. |
 
 ### The admin shell
 
-- **Plugin screens are an allow-list.** `AdminShell::TAB_SLUGS` (Dashboard,
-  Settings, Getting Started, in tab order) is compared with the global
+- **Plugin screens are an allow-list.** `AdminShell::SCREEN_SLUGS` (Dashboard,
+  Governance report, Settings, Getting Started) is compared with the global
   `$plugin_page`, which WordPress sets from `?page=` before `admin_menu`. The
   value is only compared, never printed. Pages others add under our menu
   (Freemius's Account) are not plugin screens: no header, no body class, no
@@ -248,19 +248,20 @@ never moves the workflow.
 - **The shell does not depend on the pages.** Every page calls
   `render_header()`, so the shell takes only `Assets` and `Promotions`;
   depending on the pages would put a cycle in the container. `Promotions` takes
-  only `PermissionManager` and compares `$plugin_page` with `TAB_SLUGS` itself,
+  only `PermissionManager` and compares `$plugin_page` with `SCREEN_SLUGS` itself,
   so it does not need the shell either. `admin.shell` boots first in the
   `admin` phase.
-- **Tabs mirror the submenu.** A tab shows when its slug is in `TAB_SLUGS` or
+- **Tabs mirror the submenu.** Tabs are `TAB_SLUGS` (Dashboard, Governance
+  report, Settings) then add-on tabs; Getting Started (`HELP_SLUG`) is the
+  "Help" link in `.sit-cwm-shell__aside`, before the "Pro" link, under the same
+  checks. A tab shows when its slug is in `TAB_SLUGS` or
   comes from `sit_cwm_admin_tabs`, is
   registered under `sit-cwm-dashboard` in `$submenu`, and `current_user_can()`
   passes for the capability that submenu item was registered with — the same
   check core uses to print the menu. Editors see Dashboard and Getting Started;
   managers see every tab. The tabs are a `<nav>` of links with
   `aria-current="page"` on the current one, not ARIA tabs, since each loads a
-  page. While Pro is on sale, `Promotions::addons_tab()` adds the SDK's
-  Add-Ons page (`sit-cwm-settings-addons`, `manage_options`) as the last tab,
-  under the same checks; it is a tab, not a plugin screen.
+  page. The SDK's Add-Ons page is never a tab (see `sit_cwm_fs()`).
 - **Tokens.** `src/admin-shell/tokens.scss` declares every colour and spacing
   value as `--sit-cwm-*` on `.sit-cwm-admin`; the shell, Getting Started and
   later screens use only those variables.
@@ -759,13 +760,34 @@ Global functions:
   plugin has booted.
 - `sit_cwm_fs(): Freemius` (1.2.0), the Freemius SDK instance of Free. It is
   initialised when the main file loads, before `plugins_loaded`. The Pro add-on
-  names this product as its `parent` (F18). Free sells nothing in 1.2.0:
-  `has_addons` and `has_paid_plans` are `false` until the Pro launch release.
-  Its menu slug is Settings (`sit-cwm-settings`, under `Workflow`), because
-  the SDK shows the opt-in in place of that page for anyone who can open it,
-  and only managers can open Settings; the Dashboard is never replaced. The
-  internal `sit_cwm_fs_pricing_url()` filter points the SDK's pricing link at
-  the Dashboard, so its hidden pricing page is never loaded (R10).
+  names this product as its `parent` (F18). `has_addons` is `true`, which
+  Pro's licence activation needs; `has_paid_plans` is `false`. Its menu slug
+  is Settings (`sit-cwm-settings`, under `Workflow`), because the SDK shows
+  the opt-in in place of that page for anyone who can open it, and only
+  managers can open Settings; the Dashboard is never replaced.
+
+  Free never sells or installs Pro inside WordPress (guideline 8: no
+  installing plugins from servers other than WordPress.org). Pro is sold on
+  the author's site through `Promotions`' links; the buyer uploads the Pro
+  zip and enters the licence key in Pro. Four internal hooks in the main file
+  close the SDK's in-dashboard routes, without touching `freemius/`:
+  - `sit_cwm_fs_pricing_url()` (filter `pricing_url`) always returns the
+    Dashboard URL, so the SDK registers no pricing page, which is also where
+    its checkout and "Automatically install the add-on" option run (R10).
+  - `sit_cwm_fs_skip_addons_page()` (`admin_init`) redirects the SDK's
+    Add-Ons page (`sit-cwm-settings-addons`, registered while `has_addons`
+    is on; `menu.addons` is `false`, so it has no menu item) to the
+    Dashboard. `sit_cwm_fs_addons_page_redirect()` holds the decision.
+  - `sit_cwm_fs_drop_auto_install()` (`init`, priority 0) removes
+    `auto_install` from requests for Free's SDK pages (page slug starting with
+    the menu slug, or an `fs_action` with Free's affix) before the SDK reads
+    it while building the admin menu. The purchase email's "Activate Account &
+    Auto Install" button then activates the account and installs nothing.
+    Other plugins' requests keep the flag.
+  - `sit_cwm_fs_refuse_premium_install()` answers the SDK's
+    `fs_install_premium_version_43919` AJAX action at priority 1, before the
+    SDK's handler, with a 403 `sit_cwm_install_not_offered`. Every SDK route
+    that installs an add-on ends in that call.
 
 #### `Core\Plugin`
 
@@ -1019,6 +1041,7 @@ through `sit_cwm_admin_tabs`, then print `render_header()` and `page_head()`.
 | `Admin\AdminShell::page_head(` | `page_head( string $title, string $subtitle = '', string $actions = '' ): string` | `string` | 1.2.0 |
 | `Admin\AdminShell::is_plugin_screen(` | `is_plugin_screen(): bool` | `bool` | 1.2.0 |
 | `Admin\AdminShell::tabs(` | `tabs(): array` | `array<string, string>` | 1.2.0 |
+| `Admin\AdminShell::help_link(` | `help_link(): string` | `string` | 1.2.0 |
 
 ### Service ids
 

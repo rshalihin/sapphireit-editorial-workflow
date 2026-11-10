@@ -51,13 +51,14 @@ final class FreemiusIntegrationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The Add-Ons page is on; the pricing page and its "Upgrade" item are not,
-	 * so Free adds no `upgrade-mode` menu item and no "Activate License" link.
+	 * No SDK menu item sells anything: the Add-Ons page, the pricing page and
+	 * its "Upgrade" item are all hidden, so Free adds no `upgrade-mode` menu
+	 * item and no "Activate License" link.
 	 *
 	 * @return void
 	 */
-	public function test_addons_menu_on_and_no_pricing_or_upgrade_item() {
-		$this->assertTrue( sit_cwm_fs()->is_submenu_item_visible( 'addons' ) );
+	public function test_no_addons_pricing_or_upgrade_item() {
+		$this->assertFalse( sit_cwm_fs()->is_submenu_item_visible( 'addons' ) );
 		$this->assertFalse( sit_cwm_fs()->is_submenu_item_visible( 'pricing' ) );
 		$this->assertFalse( sit_cwm_fs()->is_pricing_page_visible() );
 	}
@@ -123,85 +124,194 @@ final class FreemiusIntegrationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The add-on checkout runs on that hidden page, so the Purchase button
-	 * keeps the SDK's page instead of being sent to the Dashboard.
+	 * Guideline 8: the SDK's in-dashboard checkout, where it offers to
+	 * install the add-on after payment, never runs. A checkout request to
+	 * the pricing page gets the Dashboard link too, so the SDK registers no
+	 * page to run it on.
 	 *
 	 * @since 1.2.0
 	 *
 	 * @return void
 	 */
-	public function test_a_checkout_request_keeps_the_sdks_pricing_page() {
-		$this->request_the_checkout();
-
-		$this->assertNull( sit_cwm_fs()->apply_filters( 'pricing_url', null ) );
-	}
-
-	/**
-	 * Only the checkout does: the page without `checkout=true` still redirects,
-	 * and so does `checkout=true` on another page.
-	 *
-	 * @since 1.2.0
-	 *
-	 * @return void
-	 */
-	public function test_only_the_checkout_keeps_the_sdks_pricing_page() {
-		$dashboard = admin_url( 'admin.php?page=' . \Sit_Cwm\Admin\Dashboard::MENU_SLUG );
-
-		$this->request_the_checkout();
-		unset( $_REQUEST['checkout'] );
-
-		$this->assertSame( $dashboard, sit_cwm_fs()->apply_filters( 'pricing_url', null ) );
-
-		$this->request_the_checkout();
-		$_GET['page'] = \Sit_Cwm\Admin\Dashboard::MENU_SLUG;
-
-		$this->assertSame( $dashboard, sit_cwm_fs()->apply_filters( 'pricing_url', null ) );
-	}
-
-	/**
-	 * The checkout page is in no menu, so without a title core would pass null
-	 * to `strip_tags()`, a deprecation on PHP 8.1+.
-	 *
-	 * @since 1.2.0
-	 *
-	 * @return void
-	 */
-	public function test_the_checkout_page_gets_a_title() {
-		global $title;
-
-		$title = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The state under test.
-
-		$this->request_the_checkout();
-		sit_cwm_fs_checkout_title();
-
-		$this->assertSame( sit_cwm_fs()->get_plugin_name(), $title );
-	}
-
-	/**
-	 * Other screens keep the title core gives them.
-	 *
-	 * @since 1.2.0
-	 *
-	 * @return void
-	 */
-	public function test_other_pages_keep_their_title() {
-		global $title;
-
-		$title = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The state under test.
-
-		sit_cwm_fs_checkout_title();
-
-		$this->assertNull( $title );
-	}
-
-	/**
-	 * Makes this request the Add-Ons page's Purchase button.
-	 *
-	 * @return void
-	 */
-	private function request_the_checkout() {
+	public function test_a_checkout_request_gets_no_pricing_page() {
 		$_GET['page']         = sit_cwm_fs()->get_menu_slug() . '-pricing';
 		$_REQUEST['checkout'] = 'true';
+
+		$this->assertSame(
+			admin_url( 'admin.php?page=' . \Sit_Cwm\Admin\Dashboard::MENU_SLUG ),
+			sit_cwm_fs()->apply_filters( 'pricing_url', null )
+		);
+	}
+
+	/**
+	 * The SDK's Add-Ons page, whose cards lead to that checkout, is sent to
+	 * the Dashboard before it loads. Other pages are left alone.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_the_addons_page_is_sent_to_the_dashboard() {
+		$this->assertSame( 10, has_action( 'admin_init', 'sit_cwm_fs_skip_addons_page' ) );
+
+		$_GET['page'] = sit_cwm_fs()->get_menu_slug() . '-addons';
+		$this->assertSame( admin_url( 'admin.php?page=' . \Sit_Cwm\Admin\Dashboard::MENU_SLUG ), sit_cwm_fs_addons_page_redirect() );
+
+		foreach ( array( \Sit_Cwm\Admin\Dashboard::MENU_SLUG, sit_cwm_fs()->get_menu_slug(), sit_cwm_fs()->get_menu_slug() . '-account' ) as $page ) {
+			$_GET['page'] = $page;
+			$this->assertNull( sit_cwm_fs_addons_page_redirect(), $page );
+		}
+	}
+
+	/**
+	 * The purchase email's "Auto Install" button reaches Free's SDK pages
+	 * with `auto_install=true`. The flag is dropped there, before the SDK
+	 * reads it, while the rest of the activation request is kept.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_auto_install_is_dropped_from_free_sdk_requests() {
+		set_current_screen( 'dashboard' );
+		$this->assertSame( 0, has_action( 'init', 'sit_cwm_fs_drop_auto_install' ) );
+
+		$requests = array(
+			array( 'page' => sit_cwm_fs()->get_menu_slug() . '-account' ),
+			array( 'page' => sit_cwm_fs()->get_menu_slug() ),
+			array( 'fs_action' => sit_cwm_fs()->get_unique_affix() . '_activate_new' ),
+		);
+
+		foreach ( $requests as $request ) {
+			$this->request( $request + array( 'auto_install' => 'true' ) );
+			sit_cwm_fs_drop_auto_install();
+
+			$this->assertFalse( isset( $_GET['auto_install'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reads back the request this test built.
+			$this->assertFalse( fs_request_has( 'auto_install' ) );
+			$this->assertFalse( fs_request_get_bool( 'auto_install' ) );
+			$this->assertSame( reset( $request ), fs_request_get( key( $request ) ) );
+		}
+	}
+
+	/**
+	 * Other plugins' requests keep the flag: they may install their own
+	 * premium code.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_auto_install_is_kept_for_other_requests() {
+		set_current_screen( 'dashboard' );
+
+		foreach ( array( array( 'page' => 'another-plugin-account' ), array( 'fs_action' => 'another-plugin_activate_new' ), array() ) as $request ) {
+			$this->request( $request + array( 'auto_install' => 'true' ) );
+			sit_cwm_fs_drop_auto_install();
+
+			$this->assertTrue( fs_request_get_bool( 'auto_install' ) );
+		}
+	}
+
+	/**
+	 * Every SDK route that installs an add-on ends in its "install premium
+	 * version" AJAX call. Free answers it first, with a refusal.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_the_premium_install_ajax_call_is_refused_first() {
+		$hook = 'wp_ajax_' . sit_cwm_fs()->get_ajax_action( 'install_premium_version' );
+
+		$this->assertSame( 1, has_action( $hook, 'sit_cwm_fs_refuse_premium_install' ) );
+
+		add_filter( 'wp_doing_ajax', '__return_true' );
+		add_filter( 'wp_die_ajax_handler', array( $this, 'ajax_die_handler' ) );
+		ob_start();
+
+		try {
+			sit_cwm_fs_refuse_premium_install();
+			$this->fail( 'The refusal did not end the request.' );
+		} catch ( \WPDieException $e ) {
+			$response = json_decode( (string) ob_get_contents(), true );
+			$this->assertFalse( $response['success'] );
+			$this->assertSame( 'sit_cwm_install_not_offered', $response['data']['code'] );
+		} finally {
+			ob_end_clean();
+			remove_filter( 'wp_doing_ajax', '__return_true' );
+			remove_filter( 'wp_die_ajax_handler', array( $this, 'ajax_die_handler' ) );
+		}
+	}
+
+	/**
+	 * The Account page's "Download Latest" for an add-on opens the Freemius
+	 * customer portal, so Free never fetches Pro's zip through the site.
+	 * Free's own link is left alone.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_addon_download_links_go_to_the_customer_portal() {
+		$this->assertSame( 'https://users.freemius.com/', sit_cwm_fs()->_get_latest_download_local_url( 43920 ) );
+
+		$own = sit_cwm_fs()->_get_latest_download_local_url();
+		$this->assertStringContainsString( 'download_latest', $own );
+		$this->assertStringNotContainsString( 'users.freemius.com', $own );
+	}
+
+	/**
+	 * The SDK's "Add-on was successfully purchased. Download the latest
+	 * version" notice is hidden; other notices are not.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_addon_purchase_notice_is_hidden() {
+		$tag = sit_cwm_fs()->get_action_tag( 'show_admin_notice' );
+
+		// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- The SDK's own hook for this plugin.
+		$this->assertFalse( apply_filters( $tag, true, array( 'id' => 'addon_plan_upgraded_sapphireit-editorial-workflow-pro' ) ) );
+		$this->assertTrue( apply_filters( $tag, true, array( 'id' => 'activation_complete' ) ) );
+		// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound
+	}
+
+	/**
+	 * The SDK's Account page shows no Account / Add-Ons tabs.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return void
+	 */
+	public function test_account_page_has_no_addons_tab() {
+		$this->assertTrue( sit_cwm_fs()->apply_filters( 'hide_account_tabs', false ) );
+	}
+
+	/**
+	 * Turns `wp_die()` in an AJAX response into an exception.
+	 *
+	 * @return callable
+	 */
+	public function ajax_die_handler() {
+		return static function () {
+			throw new \WPDieException( 'ajax' );
+		};
+	}
+
+	/**
+	 * Replaces the request with the given parameters.
+	 *
+	 * @param array<string, string> $params Request parameters.
+	 * @return void
+	 */
+	private function request( array $params ) {
+		unset( $_GET['page'], $_GET['fs_action'], $_GET['auto_install'], $_REQUEST['page'], $_REQUEST['fs_action'], $_REQUEST['auto_install'] );
+
+		foreach ( $params as $key => $value ) {
+			$_GET[ $key ]     = $value;
+			$_REQUEST[ $key ] = $value;
+		}
 	}
 
 	/**
@@ -210,7 +320,8 @@ final class FreemiusIntegrationTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function tear_down() {
-		unset( $_GET['page'], $_REQUEST['checkout'] );
+		unset( $_GET['page'], $_GET['fs_action'], $_GET['auto_install'], $_REQUEST['page'], $_REQUEST['fs_action'], $_REQUEST['auto_install'], $_REQUEST['checkout'] );
+		set_current_screen( 'front' );
 
 		parent::tear_down();
 	}

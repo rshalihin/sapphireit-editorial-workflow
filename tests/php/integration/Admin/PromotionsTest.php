@@ -273,7 +273,6 @@ final class PromotionsTest extends TestCase {
 
 			$this->assertSame( '', $this->promotions->hint( 'export' ), 'Hint shown on ' . var_export( $page, true ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Assertion message.
 			$this->assertSame( '', $this->promotions->header_link() );
-			$this->assertSame( array(), $this->promotions->addons_tab() );
 		}
 	}
 
@@ -425,53 +424,42 @@ final class PromotionsTest extends TestCase {
 	}
 
 	/**
-	 * The header gets one plain "Pro" link and the Add-Ons tab last, for a
-	 * manager who can open the Add-Ons page.
+	 * The header gets one plain "Pro" link to the author's site, in a new tab,
+	 * and never a tab for the SDK's Add-Ons page, even when the SDK registers
+	 * it: Pro is bought outside WordPress (guideline 8).
 	 *
 	 * @return void
 	 */
-	public function test_header_has_a_plain_pro_link_and_the_addons_tab_last() {
+	public function test_header_has_a_plain_pro_link_and_no_addons_tab() {
 		wp_set_current_user( self::fixture_user( 'admin' ) );
 		$this->register_menus();
-		$addons = sit_cwm_fs()->get_menu_slug() . '-' . Promotions::ADDONS_PAGE;
+		$addons = sit_cwm_fs()->get_menu_slug() . '-addons';
 		add_submenu_page( Dashboard::MENU_SLUG, 'Add-Ons', 'Add-Ons', 'manage_options', $addons, '__return_null' );
-
-		$this->assertSame( 'sit-cwm-settings-addons', $addons );
 
 		$this->on_screen( Dashboard::MENU_SLUG, false );
 		$html = $this->header();
 
 		$this->assertSame( 1, substr_count( $html, 'class="sit-cwm-shell__pro"' ) );
-		$this->assertMatchesRegularExpression( '#<div class="sit-cwm-shell__aside"><a class="sit-cwm-shell__pro" href="[^"]+"[^>]*>Pro<#', $html );
+		$this->assertMatchesRegularExpression( '#<div class="sit-cwm-shell__aside"><a class="sit-cwm-shell__help"[^>]*>Help</a><a class="sit-cwm-shell__pro" href="[^"]+"[^>]*>Pro<#', $html );
+		$this->assertStringContainsString( 'href="' . esc_url( Promotions::PRO_URL ) . '" target="_blank"', $html );
 		$this->assertStringNotContainsString( 'button', $html );
 
-		$tabs = $this->shell->tabs();
-		$this->assertSame( $addons, array_key_last( $tabs ) );
-		$this->assertSame( 'Add-Ons', $tabs[ $addons ] );
-		$this->assertStringContainsString( 'page=' . $addons . '"', $html );
+		$this->assertArrayNotHasKey( $addons, $this->shell->tabs() );
+		$this->assertStringNotContainsString( 'page=' . $addons, $html );
 	}
 
 	/**
-	 * Without the Add-Ons page's own capability the tab stays hidden; without
-	 * promotion the aside stays empty.
+	 * Without promotion the aside holds only the Help link.
 	 *
 	 * @return void
 	 */
-	public function test_addons_tab_follows_the_page_capability_and_the_stage() {
-		$manager = $this->create_user_with_caps( array( 'sit_cwm_manage_workflows' ) );
-		wp_set_current_user( $manager );
-		$this->register_menus();
-		$addons = sit_cwm_fs()->get_menu_slug() . '-' . Promotions::ADDONS_PAGE;
-		add_submenu_page( Dashboard::MENU_SLUG, 'Add-Ons', 'Add-Ons', 'manage_options', $addons, '__return_null' );
-
-		$this->on_screen( SettingsPage::MENU_SLUG, false );
-		$this->assertArrayNotHasKey( $addons, $this->shell->tabs() );
-
+	public function test_header_aside_has_no_pro_link_without_promotion() {
 		wp_set_current_user( self::fixture_user( 'admin' ) );
+		$this->register_menus();
+		$this->on_screen( SettingsPage::MENU_SLUG, false );
 		add_filter( 'sit_cwm_show_promotions', '__return_false' );
 
-		$this->assertArrayNotHasKey( $addons, $this->shell->tabs() );
-		$this->assertStringContainsString( '<div class="sit-cwm-shell__aside"></div>', $this->header() );
+		$this->assertMatchesRegularExpression( '#<div class="sit-cwm-shell__aside"><a class="sit-cwm-shell__help"[^>]*>Help</a></div>#', $this->header() );
 	}
 
 	/**
@@ -581,7 +569,6 @@ final class PromotionsTest extends TestCase {
 		}
 
 		$this->assertSame( '', $this->promotions->header_link() );
-		$this->assertSame( array(), $this->promotions->addons_tab() );
 		$this->assertSame( '', $this->promotions->action_link() );
 	}
 

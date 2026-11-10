@@ -366,8 +366,8 @@ script installs it); `probe-addon.spec.js` activates it for its own tests.
 
 | Spec | Covers |
 |---|---|
-| `admin-shell.spec.js` | The design A header and tabs per role, the current tab, Getting Started (setup steps for managers only, links open in a new tab, no third-party request), the empty dashboard's Getting Started link, admin notices under the header |
-| `freemius-optin.spec.js` | The opt-in for admins only, Skip landing on Getting Started, no redirect on bulk activation, no Contact/Support/Add-Ons/Pricing pages, a skippable deactivation form |
+| `admin-shell.spec.js` | The design A header and tabs per role, the current tab, the Help link (opens Getting Started, no core Help pull-down on Settings), Getting Started (setup steps for managers only, links open in a new tab, no third-party request), the empty dashboard's Getting Started link, admin notices under the header |
+| `freemius-optin.spec.js` | The opt-in for admins only, Skip landing on Getting Started, no redirect on bulk activation, no Contact/Support/Add-Ons/Pricing menu items, a skippable deactivation form |
 | `probe-addon.spec.js` | An injected status and its colour in the sidebar and dashboard, a veto's reason in the sidebar (on load and on click) and the classic box, the rewired transition map |
 | `audit-export.spec.js` | The CSV download (name, BOM, F8 header, neutralised formula cells); no button and a 403 for non-auditors |
 | `ai-origin.spec.js` | Declaring AI use in both editors, the per-type default stamped on new posts, the dashboard column, read-only for users without the workflow capability |

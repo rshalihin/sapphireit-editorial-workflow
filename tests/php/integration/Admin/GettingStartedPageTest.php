@@ -457,6 +457,26 @@ final class GettingStartedPageTest extends TestCase {
 	}
 
 	/**
+	 * The page carries the workflow reference that was the Settings screen's
+	 * Help pull-down: who can do what, and what each setting does.
+	 *
+	 * @return void
+	 */
+	public function test_reference_explains_permissions_and_settings() {
+		wp_set_current_user( self::fixture_user( 'editor' ) );
+
+		$html = $this->render_page();
+
+		$this->assertStringContainsString( 'id="sit-cwm-gs-reference"', $html );
+		$this->assertStringContainsString( 'Who can do what, and what the settings do', $html );
+		$this->assertStringContainsString( 'Needs Changes: users who can review content', $html );
+		$this->assertStringContainsString( 'Publish gate:', $html );
+		$this->assertStringContainsString( 'Email notifications:', $html );
+		$this->assertStringContainsString( 'AI use is declared by people or tools, never detected.', $html );
+		$this->assertLessThan( strpos( $html, 'id="sit-cwm-gs-reference"' ), strpos( $html, 'How content moves' ) );
+	}
+
+	/**
 	 * The container builds the page for the admin phase, after the shell.
 	 *
 	 * @return void

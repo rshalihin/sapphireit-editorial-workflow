@@ -121,7 +121,7 @@ final class AdminShellTest extends TestCase {
 	}
 
 	/**
-	 * Editors get the Dashboard and Getting Started tabs, not Settings.
+	 * Editors get the Dashboard tab and the Help link, not Settings.
 	 *
 	 * @return void
 	 */
@@ -135,7 +135,8 @@ final class AdminShellTest extends TestCase {
 	}
 
 	/**
-	 * Managers get every tab, in `TAB_SLUGS` order, labelled with the menu titles.
+	 * Managers get every tab, in `TAB_SLUGS` order, labelled with the menu
+	 * titles. Getting Started is no tab: it is the Help link in the aside.
 	 *
 	 * @return void
 	 */
@@ -145,16 +146,49 @@ final class AdminShellTest extends TestCase {
 
 		$dashboard = strpos( $html, 'page=sit-cwm-dashboard"' );
 		$settings  = strpos( $html, 'page=sit-cwm-settings"' );
-		$started   = strpos( $html, 'page=sit-cwm-getting-started"' );
 
 		$this->assertNotFalse( $dashboard );
 		$this->assertNotFalse( $settings );
-		$this->assertNotFalse( $started );
 		$this->assertLessThan( $settings, $dashboard );
-		$this->assertLessThan( $started, $settings );
 		$this->assertStringContainsString( '<nav class="sit-cwm-shell__tabs" aria-label="Editorial Workflow">', $html );
-		$this->assertStringContainsString( '>Getting Started</a>', $html );
-		$this->assertSame( array( Dashboard::MENU_SLUG, GovernanceReportPage::MENU_SLUG, SettingsPage::MENU_SLUG, GettingStartedPage::MENU_SLUG ), AdminShell::TAB_SLUGS );
+		$this->assertSame( array( Dashboard::MENU_SLUG, GovernanceReportPage::MENU_SLUG, SettingsPage::MENU_SLUG ), AdminShell::TAB_SLUGS );
+		$this->assertSame( array( Dashboard::MENU_SLUG, SettingsPage::MENU_SLUG ), array_keys( $this->shell->tabs() ) );
+		$this->assertStringNotContainsString( '>Getting Started</a>', $html );
+	}
+
+	/**
+	 * The Help link opens Getting Started, sits in the aside after the tabs,
+	 * and is marked current on its own page.
+	 *
+	 * @return void
+	 */
+	public function test_help_link_opens_getting_started() {
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+		$html = $this->header_on( Dashboard::MENU_SLUG );
+
+		$this->assertMatchesRegularExpression( '#<div class="sit-cwm-shell__aside"><a class="sit-cwm-shell__help" href="[^"]*page=sit-cwm-getting-started">Help</a>#', $html );
+		$this->assertGreaterThan( strpos( $html, '</nav>' ), strpos( $html, 'sit-cwm-shell__help' ) );
+
+		$html = $this->header_on( GettingStartedPage::MENU_SLUG );
+
+		$this->assertMatchesRegularExpression( '#<a class="sit-cwm-shell__help is-current" href="[^"]*page=sit-cwm-getting-started" aria-current="page">Help</a>#', $html );
+		$this->assertSame( 1, substr_count( $html, 'aria-current="page"' ) );
+		$this->assertSame( AdminShell::HELP_SLUG, GettingStartedPage::MENU_SLUG );
+		$this->assertContains( AdminShell::HELP_SLUG, AdminShell::SCREEN_SLUGS );
+	}
+
+	/**
+	 * Without the Getting Started page registered, there is no Help link.
+	 *
+	 * @return void
+	 */
+	public function test_no_help_link_without_the_page() {
+		wp_set_current_user( self::fixture_user( 'admin' ) );
+		$this->reset_admin_state();
+		$this->dashboard->add_menu();
+		$GLOBALS['plugin_page'] = Dashboard::MENU_SLUG; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Simulates the requested page.
+
+		$this->assertSame( '', $this->shell->help_link() );
 	}
 
 	/**
@@ -191,7 +225,7 @@ final class AdminShellTest extends TestCase {
 		$GLOBALS['plugin_page'] = null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Simulates a core screen.
 		$this->assertFalse( $this->shell->is_plugin_screen() );
 
-		foreach ( AdminShell::TAB_SLUGS as $slug ) {
+		foreach ( AdminShell::SCREEN_SLUGS as $slug ) {
 			$GLOBALS['plugin_page'] = $slug; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Simulates the plugin screen.
 			$this->assertTrue( $this->shell->is_plugin_screen(), $slug );
 		}
@@ -242,7 +276,7 @@ final class AdminShellTest extends TestCase {
 		$this->assertStringContainsString( '<span class="sit-cwm-shell__version">' . esc_html( SIT_CWM_VERSION ) . '</span>', $html );
 		$this->assertStringContainsString( 'src="' . esc_url( SIT_CWM_PLUGIN_URL . 'assets/images/logo.svg' ) . '" width="32" height="32" alt=""', $html );
 		$this->assertStringContainsString( 'Editorial Workflow', $html );
-		$this->assertStringContainsString( '<div class="sit-cwm-shell__aside"></div>', $html );
+		$this->assertMatchesRegularExpression( '#<div class="sit-cwm-shell__aside"><a class="sit-cwm-shell__help"[^>]*>Help</a></div>#', $html );
 	}
 
 	/**
@@ -303,13 +337,13 @@ final class AdminShellTest extends TestCase {
 	}
 
 	/**
-	 * An add-on's tab sits after the core tabs and before Getting Started.
+	 * An add-on's tab sits after the core tabs.
 	 *
 	 * @since 1.2.0
 	 *
 	 * @return void
 	 */
-	public function test_filtered_tab_appears_after_core_tabs_and_before_getting_started() {
+	public function test_filtered_tab_appears_after_core_tabs() {
 		wp_set_current_user( self::fixture_user( 'admin' ) );
 		$this->register_menus();
 		$this->register_submenu( 'sit-cwm-pro-workflows', 'sit_cwm_manage_workflows' );
@@ -317,7 +351,7 @@ final class AdminShellTest extends TestCase {
 
 		$slugs = array_keys( $this->shell->tabs() );
 
-		$this->assertSame( 'sit-cwm-getting-started', end( $slugs ) );
+		$this->assertSame( 'sit-cwm-pro-workflows', end( $slugs ) );
 		$this->assertSame( array_search( 'sit-cwm-settings', $slugs, true ) + 1, array_search( 'sit-cwm-pro-workflows', $slugs, true ) );
 		$this->assertSame( 'Workflows', $this->shell->tabs()['sit-cwm-pro-workflows'] );
 	}
@@ -376,7 +410,7 @@ final class AdminShellTest extends TestCase {
 
 		$this->assertNotSame( 'Hacked', $tabs['sit-cwm-dashboard'] );
 		$this->assertArrayHasKey( 'sit-cwm-settings', $tabs );
-		$this->assertSame( array( 'sit-cwm-dashboard', 'sit-cwm-settings', 'sit-cwm-getting-started' ), array_keys( $tabs ) );
+		$this->assertSame( array( 'sit-cwm-dashboard', 'sit-cwm-settings' ), array_keys( $tabs ) );
 	}
 
 	/**

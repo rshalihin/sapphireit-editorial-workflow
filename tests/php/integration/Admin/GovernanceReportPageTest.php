@@ -190,8 +190,12 @@ final class GovernanceReportPageTest extends TestCase {
 	 */
 	public function test_tab_follows_the_dashboard() {
 		$this->assertSame(
-			array( Dashboard::MENU_SLUG, GovernanceReportPage::MENU_SLUG, SettingsPage::MENU_SLUG, GettingStartedPage::MENU_SLUG ),
+			array( Dashboard::MENU_SLUG, GovernanceReportPage::MENU_SLUG, SettingsPage::MENU_SLUG ),
 			AdminShell::TAB_SLUGS
+		);
+		$this->assertSame(
+			array( Dashboard::MENU_SLUG, GovernanceReportPage::MENU_SLUG, SettingsPage::MENU_SLUG, GettingStartedPage::MENU_SLUG ),
+			AdminShell::SCREEN_SLUGS
 		);
 	}
 

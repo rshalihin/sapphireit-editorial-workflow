@@ -232,6 +232,7 @@ class GettingStartedPage implements Bootable {
 
 		echo $this->help_section(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts.
 		echo $this->flow_section(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts.
+		echo $this->reference_section(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts.
 
 		echo '</div></div>';
 	}
@@ -619,6 +620,50 @@ class GettingStartedPage implements Bootable {
 			null === $changes ? '' : sprintf( '<span class="sit-cwm-gs__dot" style="background-color: %s" aria-hidden="true"></span>', esc_attr( $changes['color'] ) ),
 			esc_html__( 'Needs Changes: a reviewer sends it back to the author, who returns it to Review.', 'sapphireit-editorial-workflow' )
 		);
+	}
+
+	/**
+	 * "Who can do what, and what the settings do": the reference that was the
+	 * Settings screen's Help pull-down until 1.2.0, so every Help is in one place.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return string Escaped markup.
+	 */
+	public function reference_section(): string {
+		$rules = array(
+			__( 'Draft, Writing and Review: users who can change the workflow (by default administrators, editors, authors and contributors).', 'sapphireit-editorial-workflow' ),
+			__( 'Needs Changes: users who can review content (by default administrators and editors).', 'sapphireit-editorial-workflow' ),
+			__( 'Approved: users who can approve content (by default administrators and editors).', 'sapphireit-editorial-workflow' ),
+			__( 'Published: users who can approve content and can also publish that post.', 'sapphireit-editorial-workflow' ),
+			__( 'Reviewers and due dates: users who can assign reviewers (by default administrators and editors).', 'sapphireit-editorial-workflow' ),
+		);
+
+		$settings = array(
+			__( 'Publish gate: Off changes nothing, Log only records every publish that skipped approval, and Enforce blocks publishing until the content is approved. Administrators can still publish, and that is recorded.', 'sapphireit-editorial-workflow' ),
+			__( 'Self-approval: when prevented, nobody can move content they wrote to Approved, administrators included, and the author is not offered as its reviewer. Someone else with approval rights has to approve it.', 'sapphireit-editorial-workflow' ),
+			__( 'Email notifications: each event can be switched on separately. Nobody is emailed about their own actions, and comment text is only included for people allowed to read the activity history.', 'sapphireit-editorial-workflow' ),
+			__( 'AI use is declared by people or tools, never detected.', 'sapphireit-editorial-workflow' ),
+			__( 'Review attestation: when required, approving needs an explicit confirmation that the content was reviewed. The confirmation is stored with the approval in the activity log.', 'sapphireit-editorial-workflow' ),
+			__( 'Front-end disclosure: when on, the Review disclosure block and shortcode show who approved published content and when, plus its declared AI use. They show nothing until the content is approved and published.', 'sapphireit-editorial-workflow' ),
+		);
+
+		$html  = '<section class="sit-cwm-gs__card sit-cwm-gs__reference" id="sit-cwm-gs-reference">';
+		$html .= '<h2 class="sit-cwm-gs__title">' . esc_html__( 'Who can do what, and what the settings do', 'sapphireit-editorial-workflow' ) . '</h2>';
+		$html .= '<ul class="sit-cwm-gs__reference-list">';
+
+		foreach ( $rules as $rule ) {
+			$html .= '<li>' . esc_html( $rule ) . '</li>';
+		}
+
+		$html .= '</ul>';
+		$html .= '<p>' . esc_html__( 'Every action also requires permission to edit that piece of content. See WORKFLOW.md in the plugin folder for the full reference.', 'sapphireit-editorial-workflow' ) . '</p>';
+
+		foreach ( $settings as $line ) {
+			$html .= '<p>' . esc_html( $line ) . '</p>';
+		}
+
+		return $html . '</section>';
 	}
 
 	/**

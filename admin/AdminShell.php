@@ -16,9 +16,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Prints the branded header (logo, plugin name, version chip and one tab per
- * Workflow page) and marks plugin screens with the `sit-cwm-admin` body class
- * that the design tokens hang on (F15).
+ * Prints the branded header (logo, plugin name, version chip, one tab per
+ * Workflow page, and a Help link to Getting Started at the right) and marks
+ * plugin screens with the `sit-cwm-admin` body class that the design tokens
+ * hang on (F15).
  *
  * The shell reads the global `$plugin_page` instead of taking the pages as
  * dependencies: every page calls the shell, so depending on them would put a
@@ -54,13 +55,32 @@ final class AdminShell implements Bootable {
 	const BODY_CLASS = 'sit-cwm-admin';
 
 	/**
-	 * Core plugin screens, in tab order.
+	 * Core plugin screens that are tabs, in tab order.
 	 *
 	 * @since 1.2.0
 	 * @internal
 	 * @var string[]
 	 */
-	const TAB_SLUGS = array( Dashboard::MENU_SLUG, GovernanceReportPage::MENU_SLUG, Settings::MENU_SLUG, GettingStartedPage::MENU_SLUG );
+	const TAB_SLUGS = array( Dashboard::MENU_SLUG, GovernanceReportPage::MENU_SLUG, Settings::MENU_SLUG );
+
+	/**
+	 * The screen the header's Help link opens, at the right of the header
+	 * instead of a tab, so the tab row stays short with an add-on's tabs.
+	 *
+	 * @since 1.2.0
+	 * @internal
+	 * @var string
+	 */
+	const HELP_SLUG = GettingStartedPage::MENU_SLUG;
+
+	/**
+	 * Every core plugin screen: the tabs and the Help screen.
+	 *
+	 * @since 1.2.0
+	 * @internal
+	 * @var string[]
+	 */
+	const SCREEN_SLUGS = array( Dashboard::MENU_SLUG, GovernanceReportPage::MENU_SLUG, Settings::MENU_SLUG, GettingStartedPage::MENU_SLUG );
 
 	/**
 	 * Asset loader.
@@ -71,7 +91,7 @@ final class AdminShell implements Bootable {
 	private $assets;
 
 	/**
-	 * Promotion of Pro (the Add-Ons tab and the "Pro" link), if wired.
+	 * Promotion of Pro (the "Pro" link), if wired.
 	 *
 	 * @since 1.2.0
 	 * @var Promotions|null
@@ -196,6 +216,8 @@ final class AdminShell implements Bootable {
 
 		echo '</nav><div class="sit-cwm-shell__aside">';
 
+		echo $this->help_link(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- help_link() returns escaped markup.
+
 		if ( null !== $this->promotions ) {
 			echo $this->promotions->header_link(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- header_link() returns escaped markup.
 		}
@@ -229,9 +251,8 @@ final class AdminShell implements Bootable {
 	}
 
 	/**
-	 * Tabs the current user can open: the core tabs in `TAB_SLUGS` order, with
-	 * add-on tabs between Settings and Getting Started, and, while Pro is on
-	 * sale, the Freemius Add-Ons page last.
+	 * Tabs the current user can open: the core tabs in `TAB_SLUGS` order, then
+	 * add-on tabs. Getting Started is not a tab: see `help_link()`.
 	 *
 	 * @since 1.2.0
 	 * @api
@@ -239,6 +260,60 @@ final class AdminShell implements Bootable {
 	 * @return array<string, string> Page slug => label (already translated).
 	 */
 	public function tabs(): array {
+		$registered = $this->registered();
+		$tabs       = array();
+
+		foreach ( self::TAB_SLUGS as $slug ) {
+			if ( $this->can_open( $registered, $slug ) ) {
+				$tabs[ $slug ] = wp_strip_all_tags( (string) $registered[ $slug ][0] );
+			}
+		}
+
+		foreach ( $this->filtered_tabs() as $slug => $label ) {
+			if ( $this->can_open( $registered, $slug ) ) {
+				$tabs[ $slug ] = $label;
+			}
+		}
+
+		return $tabs;
+	}
+
+	/**
+	 * The "Help" link at the right of the header, to Getting Started (setup
+	 * steps, tutorials, docs, support and the workflow reference), for users
+	 * who can open it; `''` otherwise.
+	 *
+	 * @since 1.2.0
+	 * @api
+	 *
+	 * @return string Escaped markup.
+	 */
+	public function help_link(): string {
+		global $plugin_page;
+
+		if ( ! $this->can_open( $this->registered(), self::HELP_SLUG ) ) {
+			return '';
+		}
+
+		$current = self::HELP_SLUG === $plugin_page;
+
+		return sprintf(
+			'<a class="sit-cwm-shell__help%1$s" href="%2$s"%3$s>%4$s</a>',
+			$current ? ' is-current' : '',
+			esc_url( menu_page_url( self::HELP_SLUG, false ) ),
+			$current ? ' aria-current="page"' : '',
+			esc_html__( 'Help', 'sapphireit-editorial-workflow' )
+		);
+	}
+
+	/**
+	 * The Workflow menu's registered submenu items, by slug.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @return array<string, array> Slug => submenu item (title, capability, slug).
+	 */
+	private function registered(): array {
 		global $submenu;
 
 		$registered = array();
@@ -249,33 +324,21 @@ final class AdminShell implements Bootable {
 			}
 		}
 
-		$extra = $this->filtered_tabs();
-		$tabs  = array();
+		return $registered;
+	}
 
-		foreach ( self::TAB_SLUGS as $slug ) {
-			if ( GettingStartedPage::MENU_SLUG === $slug ) {
-				foreach ( $extra as $extra_slug => $label ) {
-					if ( isset( $registered[ $extra_slug ] ) && current_user_can( $registered[ $extra_slug ][1] ) ) {
-						$tabs[ $extra_slug ] = $label;
-					}
-				}
-			}
-
-			if ( ! isset( $registered[ $slug ] ) || ! current_user_can( $registered[ $slug ][1] ) ) {
-				continue;
-			}
-
-			$tabs[ $slug ] = wp_strip_all_tags( (string) $registered[ $slug ][0] );
-		}
-
-		// The Add-Ons page is the SDK's, so it is a tab but not a plugin screen.
-		foreach ( null !== $this->promotions ? $this->promotions->addons_tab() : array() as $addons_slug => $label ) {
-			if ( isset( $registered[ $addons_slug ] ) && current_user_can( $registered[ $addons_slug ][1] ) && ! isset( $tabs[ $addons_slug ] ) ) {
-				$tabs[ $addons_slug ] = $label;
-			}
-		}
-
-		return $tabs;
+	/**
+	 * Whether a page is registered under the Workflow menu and the current
+	 * user has the capability it was registered with.
+	 *
+	 * @since 1.2.0
+	 *
+	 * @param array<string, array> $registered From `registered()`.
+	 * @param string               $slug       Page slug.
+	 * @return bool
+	 */
+	private function can_open( array $registered, string $slug ): bool {
+		return isset( $registered[ $slug ] ) && current_user_can( $registered[ $slug ][1] );
 	}
 
 	/**
@@ -286,7 +349,7 @@ final class AdminShell implements Bootable {
 	 * @return string[]
 	 */
 	private function allowed_slugs(): array {
-		return array_merge( self::TAB_SLUGS, array_keys( $this->filtered_tabs() ) );
+		return array_merge( self::SCREEN_SLUGS, array_keys( $this->filtered_tabs() ) );
 	}
 
 	/**
@@ -313,7 +376,7 @@ final class AdminShell implements Bootable {
 		$tabs     = array();
 
 		foreach ( is_array( $filtered ) ? $filtered : array() as $slug => $label ) {
-			if ( ! is_string( $slug ) || ! is_string( $label ) || in_array( $slug, self::TAB_SLUGS, true ) || 1 !== preg_match( '/^sit-cwm-[a-z0-9-]+$/', $slug ) ) {
+			if ( ! is_string( $slug ) || ! is_string( $label ) || in_array( $slug, self::SCREEN_SLUGS, true ) || 1 !== preg_match( '/^sit-cwm-[a-z0-9-]+$/', $slug ) ) {
 				continue;
 			}
 

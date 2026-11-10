@@ -94,8 +94,10 @@ if ( ! function_exists( 'sit_cwm_fs' ) ) {
 	 * first call. The Pro add-on names this product as its parent.
 	 *
 	 * Free is WordPress.org compliant: nothing is sent unless an
-	 * administrator opts in. From the Pro launch, `has_addons` is on, so the
-	 * SDK's Add-Ons page sells Pro; Free has no paid plans of its own, so
+	 * administrator opts in. From the Pro launch, `has_addons` is on, which
+	 * Pro's licence activation needs, but the SDK's Add-Ons page is hidden
+	 * and redirected: Pro is sold on the author's site, never inside
+	 * WordPress (guideline 8). Free has no paid plans of its own, so
 	 * `has_paid_plans` and `menu.pricing` stay off and no "Upgrade" item or
 	 * "Activate License" link is added (F17, F18; phase 48, finding 1).
 	 *
@@ -137,7 +139,7 @@ if ( ! function_exists( 'sit_cwm_fs' ) ) {
 						'account'     => true,
 						'contact'     => false,
 						'support'     => false,
-						'addons'      => true,
+						'addons'      => false,
 						'pricing'     => false,
 						'affiliation' => false,
 					),
@@ -150,69 +152,196 @@ if ( ! function_exists( 'sit_cwm_fs' ) ) {
 
 	sit_cwm_fs();
 
-	if ( ! function_exists( 'sit_cwm_fs_is_checkout' ) ) {
-		/**
-		 * Whether this request is the Add-Ons page's Purchase button.
-		 *
-		 * That button opens the SDK's pricing page with `checkout=true`.
-		 *
-		 * @internal
-		 * @since 1.2.0
-		 *
-		 * @return bool
-		 */
-		function sit_cwm_fs_is_checkout() {
-			return sit_cwm_fs()->is_admin_page( 'pricing' ) && 'true' === fs_request_get( 'checkout' );
-		}
-	}
+	/*
+	 * Free never sells or installs Pro inside WordPress (guideline 8: no
+	 * installing plugins from servers other than WordPress.org). Pro is sold
+	 * on the author's site, reached through Free's own links (Promotions);
+	 * the buyer uploads the Pro zip and enters the licence key in Pro. The
+	 * three functions below close the SDK's in-dashboard routes: its checkout,
+	 * its Add-Ons page and its "auto install" step after a purchase.
+	 */
 
 	if ( ! function_exists( 'sit_cwm_fs_pricing_url' ) ) {
 		/**
 		 * Points the SDK's pricing link at the Dashboard.
 		 *
 		 * Free has no paid plans of its own (R10), but the SDK still registers
-		 * a hidden pricing page. With a pricing URL set it adds a link instead,
-		 * and its page URL redirects here rather than loading the pricing app.
-		 *
-		 * The add-on checkout runs on that same page, so a checkout request
-		 * keeps the SDK's own page, or Pro could not be bought from Add-Ons.
+		 * a hidden pricing page, which is also where it runs its in-dashboard
+		 * checkout and the "Automatically install the add-on" option. With a
+		 * pricing URL set, the SDK registers no such page, so no checkout can
+		 * run inside WordPress.
 		 *
 		 * @internal
 		 * @since 1.2.0
 		 *
-		 * @param string|null $url The SDK's pricing URL.
-		 * @return string|null Dashboard URL, or `$url` for a checkout.
+		 * @return string Dashboard URL.
 		 */
-		function sit_cwm_fs_pricing_url( $url ) {
-			return sit_cwm_fs_is_checkout() ? $url : admin_url( 'admin.php?page=sit-cwm-dashboard' );
+		function sit_cwm_fs_pricing_url() {
+			return admin_url( 'admin.php?page=sit-cwm-dashboard' );
 		}
 	}
 
 	sit_cwm_fs()->add_filter( 'pricing_url', 'sit_cwm_fs_pricing_url' );
 
-	if ( ! function_exists( 'sit_cwm_fs_checkout_title' ) ) {
+	if ( ! function_exists( 'sit_cwm_fs_addons_page_redirect' ) ) {
 		/**
-		 * Gives the SDK's hidden checkout page a title.
+		 * Where to send a request for the SDK's Add-Ons page, if this is one.
 		 *
-		 * The page is in no menu, so core finds no title for it and passes
-		 * null to `strip_tags()` in admin-header.php, a deprecation on PHP 8.1+.
+		 * The SDK registers that page whenever `has_addons` is on, which Pro's
+		 * licence activation needs. Its cards lead to the SDK's checkout and
+		 * can offer to install the add-on, so Free never shows it.
+		 *
+		 * @internal
+		 * @since 1.2.0
+		 *
+		 * @return string|null Dashboard URL, or null when this is another page.
+		 */
+		function sit_cwm_fs_addons_page_redirect() {
+			return sit_cwm_fs()->is_admin_page( 'addons' ) ? admin_url( 'admin.php?page=sit-cwm-dashboard' ) : null;
+		}
+	}
+
+	if ( ! function_exists( 'sit_cwm_fs_skip_addons_page' ) ) {
+		/**
+		 * Sends the SDK's Add-Ons page to the Dashboard, before it loads.
 		 *
 		 * @internal
 		 * @since 1.2.0
 		 *
 		 * @return void
 		 */
-		function sit_cwm_fs_checkout_title() {
-			global $title;
+		function sit_cwm_fs_skip_addons_page() {
+			$url = sit_cwm_fs_addons_page_redirect();
 
-			if ( empty( $title ) && sit_cwm_fs_is_checkout() ) {
-				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Core reads this global for the page title.
-				$title = sit_cwm_fs()->get_plugin_name();
+			if ( null !== $url ) {
+				wp_safe_redirect( $url );
+				exit;
 			}
 		}
 	}
 
-	add_action( 'admin_init', 'sit_cwm_fs_checkout_title' );
+	add_action( 'admin_init', 'sit_cwm_fs_skip_addons_page' );
+
+	if ( ! function_exists( 'sit_cwm_fs_drop_auto_install' ) ) {
+		/**
+		 * Drops the SDK's `auto_install` flag from requests for Free's SDK pages.
+		 *
+		 * The purchase email's "Activate Account & Auto Install" button opens
+		 * Free's SDK pages with `auto_install=true`, and the SDK would then
+		 * download and install Pro. Without the flag the account is still
+		 * activated, and nothing is installed. Other plugins' requests keep it.
+		 *
+		 * Runs on `init`, before the SDK reads the flag while building the
+		 * admin menu.
+		 *
+		 * @internal
+		 * @since 1.2.0
+		 *
+		 * @return void
+		 */
+		function sit_cwm_fs_drop_auto_install() {
+			// phpcs:disable WordPress.Security.NonceVerification -- Nothing is processed: the flag is only removed.
+			if ( ! is_admin() || ! isset( $_REQUEST['auto_install'] ) ) {
+				return;
+			}
+
+			$fs     = sit_cwm_fs();
+			$page   = isset( $_REQUEST['page'] ) ? sanitize_key( wp_unslash( $_REQUEST['page'] ) ) : '';
+			$action = isset( $_REQUEST['fs_action'] ) ? sanitize_key( wp_unslash( $_REQUEST['fs_action'] ) ) : '';
+
+			if ( 0 === strpos( $page, $fs->get_menu_slug() ) || 0 === strpos( $action, $fs->get_unique_affix() . '_' ) ) {
+				unset( $_GET['auto_install'], $_POST['auto_install'], $_REQUEST['auto_install'] );
+			}
+			// phpcs:enable WordPress.Security.NonceVerification
+		}
+	}
+
+	add_action( 'init', 'sit_cwm_fs_drop_auto_install', 0 );
+
+	if ( ! function_exists( 'sit_cwm_fs_refuse_premium_install' ) ) {
+		/**
+		 * Refuses the SDK's "install premium version" AJAX call for Free.
+		 *
+		 * Every SDK route that installs an add-on ends in this call, so it is
+		 * answered before the SDK's own handler runs, whatever screen offered
+		 * the install.
+		 *
+		 * @internal
+		 * @since 1.2.0
+		 *
+		 * @return void
+		 */
+		function sit_cwm_fs_refuse_premium_install() {
+			wp_send_json_error(
+				array(
+					'code'    => 'sit_cwm_install_not_offered',
+					'message' => __( 'Install Pro from Plugins → Add New → Upload Plugin, using the zip from your purchase email.', 'sapphireit-editorial-workflow' ),
+				),
+				403
+			);
+		}
+	}
+
+	/*
+	 * The SDK's Account page and notices, after a purchase, offer to download
+	 * the add-on through this site. Free sends those links to the Freemius
+	 * customer portal instead, and hides the add-on tabs and purchase notice.
+	 */
+
+	if ( ! function_exists( 'sit_cwm_fs_download_latest_url' ) ) {
+		/**
+		 * Sends the SDK's "Download Latest" links for an add-on to the Freemius
+		 * customer portal, so Free never fetches Pro's zip through the site.
+		 *
+		 * Links for Free itself are left alone.
+		 *
+		 * @internal
+		 * @since 1.2.0
+		 *
+		 * @param string $url The SDK's local download URL.
+		 * @return string
+		 */
+		function sit_cwm_fs_download_latest_url( $url ) {
+			$params = array();
+			parse_str( (string) wp_parse_url( (string) $url, PHP_URL_QUERY ), $params );
+
+			if ( empty( $params['plugin_id'] ) || (string) sit_cwm_fs()->get_id() === (string) $params['plugin_id'] ) {
+				return $url;
+			}
+
+			return 'https://users.freemius.com/';
+		}
+	}
+
+	sit_cwm_fs()->add_filter( 'download_latest_url', 'sit_cwm_fs_download_latest_url' );
+
+	if ( ! function_exists( 'sit_cwm_fs_show_admin_notice' ) ) {
+		/**
+		 * Hides the SDK's "Add-on was successfully purchased. Download the latest
+		 * version" notice: the purchase email already says how to get Pro.
+		 *
+		 * @internal
+		 * @since 1.2.0
+		 *
+		 * @param bool                 $show Whether the notice shows.
+		 * @param array<string, mixed> $msg  The notice; `id` is its key.
+		 * @return bool
+		 */
+		function sit_cwm_fs_show_admin_notice( $show, $msg ) {
+			if ( is_array( $msg ) && isset( $msg['id'] ) && 0 === strpos( (string) $msg['id'], 'addon_plan_upgraded_' ) ) {
+				return false;
+			}
+
+			return $show;
+		}
+	}
+
+	sit_cwm_fs()->add_filter( 'show_admin_notice', 'sit_cwm_fs_show_admin_notice', 10, 2 );
+
+	// The SDK's Account page has no Add-Ons tab beside it.
+	sit_cwm_fs()->add_filter( 'hide_account_tabs', '__return_true' );
+
+	add_action( 'wp_ajax_' . sit_cwm_fs()->get_ajax_action( 'install_premium_version' ), 'sit_cwm_fs_refuse_premium_install', 1 );
 
 	if ( ! function_exists( 'sit_cwm_fs_optin_for_admins_only' ) ) {
 		/**

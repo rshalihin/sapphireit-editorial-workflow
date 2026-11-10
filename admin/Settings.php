@@ -121,14 +121,6 @@ final class Settings implements Bootable {
 	const WIDE_FIELD = 'is-wide';
 
 	/**
-	 * Contextual help tab id.
-	 *
-	 * @since 1.0.0
-	 * @var string
-	 */
-	const HELP_TAB_ID = 'sit-cwm-workflow-help';
-
-	/**
 	 * Settings store.
 	 *
 	 * @since 1.0.0
@@ -227,9 +219,9 @@ final class Settings implements Bootable {
 			return;
 		}
 
+		// The reference that was core's Help pull-down here (1.0.0 to 1.1.x)
+		// is on Getting Started, which the header's Help link opens.
 		$this->hook_suffix = (string) $hook_suffix;
-
-		add_action( 'load-' . $this->hook_suffix, array( $this, 'add_help_tab' ) );
 	}
 
 	/**
@@ -985,66 +977,6 @@ final class Settings implements Bootable {
 		}
 
 		echo '</fieldset>';
-	}
-
-	/**
-	 * Adds the contextual help tab to the settings screen.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @return void
-	 */
-	public function add_help_tab(): void {
-		$screen = get_current_screen();
-
-		if ( null === $screen ) {
-			return;
-		}
-
-		$screen->add_help_tab(
-			array(
-				'id'      => self::HELP_TAB_ID,
-				'title'   => __( 'Workflow', 'sapphireit-editorial-workflow' ),
-				'content' => $this->help_content(),
-			)
-		);
-	}
-
-	/**
-	 * Help tab markup: the status flow and who can do what by default (D5).
-	 *
-	 * @since 1.0.0
-	 * @since 1.1.0 Explains the publish gate, self-approval and email notifications.
-	 * @since 1.2.0 Explains that AI use is declared, review attestation and the front-end disclosure.
-	 *
-	 * @return string Escaped HTML.
-	 */
-	public function help_content(): string {
-		$rules = array(
-			__( 'Draft, Writing and Review: users who can change the workflow (by default administrators, editors, authors and contributors).', 'sapphireit-editorial-workflow' ),
-			__( 'Needs Changes: users who can review content (by default administrators and editors).', 'sapphireit-editorial-workflow' ),
-			__( 'Approved: users who can approve content (by default administrators and editors).', 'sapphireit-editorial-workflow' ),
-			__( 'Published: users who can approve content and can also publish that post.', 'sapphireit-editorial-workflow' ),
-			__( 'Reviewers and due dates: users who can assign reviewers (by default administrators and editors).', 'sapphireit-editorial-workflow' ),
-		);
-
-		$html  = '<p>' . esc_html__( 'Draft → Writing → Review → Approved → Published. A reviewer can send content in Review back to Needs Changes, which returns to Writing. Published content starts a new cycle in Writing.', 'sapphireit-editorial-workflow' ) . '</p>';
-		$html .= '<ul>';
-
-		foreach ( $rules as $rule ) {
-			$html .= '<li>' . esc_html( $rule ) . '</li>';
-		}
-
-		$html .= '</ul>';
-		$html .= '<p>' . esc_html__( 'Every action also requires permission to edit that piece of content. See WORKFLOW.md in the plugin folder for the full reference.', 'sapphireit-editorial-workflow' ) . '</p>';
-		$html .= '<p>' . esc_html__( 'Publish gate: Off changes nothing, Log only records every publish that skipped approval, and Enforce blocks publishing until the content is approved. Administrators can still publish, and that is recorded.', 'sapphireit-editorial-workflow' ) . '</p>';
-		$html .= '<p>' . esc_html__( 'Self-approval: when prevented, nobody can move content they wrote to Approved, administrators included, and the author is not offered as its reviewer. Someone else with approval rights has to approve it.', 'sapphireit-editorial-workflow' ) . '</p>';
-		$html .= '<p>' . esc_html__( 'Email notifications: each event can be switched on separately. Nobody is emailed about their own actions, and comment text is only included for people allowed to read the activity history.', 'sapphireit-editorial-workflow' ) . '</p>';
-		$html .= '<p>' . esc_html__( 'AI use is declared by people or tools, never detected.', 'sapphireit-editorial-workflow' ) . '</p>';
-		$html .= '<p>' . esc_html__( 'Review attestation: when required, approving needs an explicit confirmation that the content was reviewed. The confirmation is stored with the approval in the activity log.', 'sapphireit-editorial-workflow' ) . '</p>';
-		$html .= '<p>' . esc_html__( 'Front-end disclosure: when on, the Review disclosure block and shortcode show who approved published content and when, plus its declared AI use. They show nothing until the content is approved and published.', 'sapphireit-editorial-workflow' ) . '</p>';
-
-		return $html;
 	}
 
 	/**

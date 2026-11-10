@@ -16,6 +16,8 @@
 
 # Agent / editor state
 .claude
+.claude-base
+.commandcode
 .superpowers
 .editorconfig
 .idea

@@ -23,7 +23,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * server. Everything is shown only to managers, only on the plugin's own
  * screens and only while Pro is on sale and not active:
  *
- * - one header tab for the SDK's Add-Ons page, last;
  * - one plain "Pro" link at the right of the header;
  * - one "Go Pro" link in the plugin's row on the Plugins screen;
  * - four one-line hints, each dismissible per user, permanently.
@@ -31,6 +30,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Never in the block editor or the classic meta box, never site-wide, never on
  * the front end. The founding-customer notice is left out: the SDK does not
  * expose how many coupons remain, and a guessed count would be fake urgency.
+ *
+ * Every link opens the author's site in a new tab. Pro is bought there, never
+ * inside WordPress, so Free never offers to install it (guideline 8); the SDK's
+ * Add-Ons page and checkout are closed in the main plugin file.
  *
  * @since 1.2.0
  * @internal
@@ -92,14 +95,6 @@ class Promotions implements Bootable {
 	 * @var string
 	 */
 	const PRO_URL = 'https://sapphireitlabs.com/editorial-workflow/';
-
-	/**
-	 * The SDK's page id for its Add-Ons screen.
-	 *
-	 * @since 1.2.0
-	 * @var string
-	 */
-	const ADDONS_PAGE = 'addons';
 
 	/**
 	 * Workflow authorization.
@@ -227,24 +222,6 @@ class Promotions implements Bootable {
 	}
 
 	/**
-	 * The header tab for the SDK's Add-Ons page, shown last.
-	 *
-	 * The shell still checks that the page is registered and that the user has
-	 * its capability, as for every other tab.
-	 *
-	 * @since 1.2.0
-	 *
-	 * @return array<string, string> Page slug => label; empty when it must not show.
-	 */
-	public function addons_tab(): array {
-		if ( ! $this->may_promote() ) {
-			return array();
-		}
-
-		return array( sit_cwm_fs()->get_menu_slug() . '-' . self::ADDONS_PAGE => __( 'Add-Ons', 'sapphireit-editorial-workflow' ) );
-	}
-
-	/**
 	 * The "Go Pro" link for the plugin's row on the Plugins screen, or `''`.
 	 *
 	 * The Plugins screen is the one place outside the plugin screens where a
@@ -360,7 +337,7 @@ class Promotions implements Bootable {
 	/**
 	 * Whether the current page is one of Free's own screens.
 	 *
-	 * Compared with `AdminShell::TAB_SLUGS` rather than asked of the shell,
+	 * Compared with `AdminShell::SCREEN_SLUGS` rather than asked of the shell,
 	 * because the shell depends on this class. Add-on screens never count:
 	 * an add-on that adds screens is owned already.
 	 *
@@ -371,7 +348,7 @@ class Promotions implements Bootable {
 	private function is_plugin_screen(): bool {
 		global $plugin_page;
 
-		return is_string( $plugin_page ) && in_array( $plugin_page, AdminShell::TAB_SLUGS, true );
+		return is_string( $plugin_page ) && in_array( $plugin_page, AdminShell::SCREEN_SLUGS, true );
 	}
 
 	/**

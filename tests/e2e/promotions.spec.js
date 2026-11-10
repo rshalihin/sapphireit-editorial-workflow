@@ -5,10 +5,13 @@
  * is `on_sale`. With Pro active, Pro's own suite asserts that none of this
  * shows (`sit_cwm_show_promotions`).
  *
- * The guideline-8 purchase check needs a staging site, a Freemius sandbox and
- * a person at the checkout, so it runs only with
- * `SIT_CWM_E2E_PURCHASE=manual` and pauses for the tester to buy Pro from the
- * Add-Ons page. Every other test runs on any local site.
+ * Pro is sold on the author's site, never inside WordPress (guideline 8):
+ * Free links out, and closes the SDK's Add-Ons page, checkout and auto-install.
+ *
+ * The purchase check needs a Freemius sandbox and a person at the checkout,
+ * so it runs only with `SIT_CWM_E2E_PURCHASE=manual` and pauses for the
+ * tester to buy Pro and open the purchase email's links in the paused
+ * browser. Every other test runs on any local site.
  */
 
 /**
@@ -208,7 +211,7 @@ test.describe( 'Promotion of Pro (phase 49)', () => {
 		await expect( hint( page, 'export' ) ).toHaveCount( 1 );
 	} );
 
-	test( 'the header has a plain Pro link and Add-Ons as the last tab', async ( {
+	test( 'the header has a plain Pro link to the author site and no Add-Ons tab', async ( {
 		page,
 	} ) => {
 		// eslint-disable-next-line playwright/no-skipped-test -- Deliberate: Pro active is its own test below.
@@ -222,6 +225,11 @@ test.describe( 'Promotion of Pro (phase 49)', () => {
 		);
 		await expect( pro ).toHaveCount( 1 );
 		await expect( pro ).toHaveText( /^Pro/ );
+		await expect( pro ).toHaveAttribute(
+			'href',
+			/^https:\/\/sapphireitlabs\.com\//
+		);
+		await expect( pro ).toHaveAttribute( 'target', '_blank' );
 		await expect(
 			page.locator( '.sit-cwm-shell__aside .button' )
 		).toHaveCount( 0 );
@@ -229,11 +237,10 @@ test.describe( 'Promotion of Pro (phase 49)', () => {
 		const tabs = page
 			.getByRole( 'navigation', { name: 'Editorial Workflow' } )
 			.getByRole( 'link' );
-		await expect( tabs.last() ).toHaveText( 'Add-Ons' );
-		await expect( tabs.last() ).toHaveAttribute(
-			'href',
-			/page=sit-cwm-settings-addons/
-		);
+		await expect( tabs.filter( { hasText: 'Add-Ons' } ) ).toHaveCount( 0 );
+		await expect(
+			page.locator( 'a[href*="page=sit-cwm-settings-addons"]' )
+		).toHaveCount( 0 );
 	} );
 
 	test( 'non-managers see no promotion at all', async ( { page } ) => {
@@ -317,20 +324,55 @@ test.describe( 'Promotion of Pro (phase 49)', () => {
 		);
 	} );
 
-	test( 'the Add-Ons page offers no install of Pro', async ( { page } ) => {
+	test( 'the SDK Add-Ons page and checkout lead to the Dashboard', async ( {
+		page,
+	} ) => {
 		await loginAs( page, ADMIN.username, ADMIN.password );
 
 		const requests = [];
 		page.on( 'request', ( request ) => requests.push( request.url() ) );
 
-		await visit( page, 'admin.php', 'page=sit-cwm-settings-addons' );
+		for ( const query of [
+			'page=sit-cwm-settings-addons',
+			'page=sit-cwm-settings-pricing&checkout=true&plugin_id=43920',
+		] ) {
+			await visit( page, 'admin.php', query );
+
+			await expect( page, query ).toHaveURL(
+				/page=sit-cwm-dashboard(&|$)/
+			);
+		}
 
 		await expect(
 			page.locator( 'a[href*="action=install-plugin"]' )
 		).toHaveCount( 0 );
 		expect(
-			requests.filter( ( url ) => INSTALL_REQUEST.test( url ) )
+			requests.filter(
+				( url ) =>
+					INSTALL_REQUEST.test( url ) ||
+					/checkout\.freemius\.com/.test( url )
+			)
 		).toEqual( [] );
+	} );
+
+	test( 'the SDK auto-install AJAX call is refused', async ( { page } ) => {
+		await loginAs( page, ADMIN.username, ADMIN.password );
+		await visit( page, 'admin.php', 'page=sit-cwm-dashboard' );
+
+		// Resolved against the current wp-admin URL, so a site in a
+		// subdirectory keeps its path.
+		const ajaxUrl = new URL( 'admin-ajax.php', page.url() ).href;
+		const response = await page.request.post( ajaxUrl, {
+			form: {
+				action: 'fs_install_premium_version_43919',
+				target_module_id: '43920',
+			},
+		} );
+
+		expect( response.status() ).toBe( 403 );
+		expect( ( await response.json() ).data.code ).toBe(
+			'sit_cwm_install_not_offered'
+		);
 	} );
 
 	test( 'guideline 8: buying Pro from Free never makes Free install it', async ( {
@@ -350,11 +392,13 @@ test.describe( 'Promotion of Pro (phase 49)', () => {
 			requests.push( request.url() )
 		);
 
-		await visit( page, 'admin.php', 'page=sit-cwm-settings-addons' );
+		await visit( page, 'admin.php', 'page=sit-cwm-dashboard' );
 
-		// The tester buys Pro in the SDK's checkout, then resumes the run.
-		// If the page offers a one-click install, stop the release and report
-		// it (roadmap §4.5). Never patch freemius/.
+		// In this paused browser the tester opens the Freemius sandbox
+		// checkout link for Pro, buys it, then opens the purchase email's
+		// "Activate Account & Auto Install" link, and resumes the run. If
+		// anything installs Pro, stop the release and report it (roadmap
+		// §4.5). Never patch freemius/.
 		// eslint-disable-next-line playwright/no-page-pause -- Deliberate: a person completes the real checkout here.
 		await page.pause();
 

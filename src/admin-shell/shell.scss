@@ -105,8 +105,11 @@ body.sit-cwm-admin {
 	min-width: 0;
 }
 
-// Core puts its Help button over the header's end: keep the tabs clear of it.
-body:has(#screen-meta-links .screen-meta-toggle) .sit-cwm-shell__tabs {
+// Core puts its Screen Options or Help button over the header's end (no core
+// screen of this plugin adds one, but another plugin might): keep the tabs and
+// the aside clear of it.
+body:has(#screen-meta-links .screen-meta-toggle) .sit-cwm-shell__tabs,
+body:has(#screen-meta-links .screen-meta-toggle) .sit-cwm-shell__aside {
 	padding-inline-end: 90px;
 }
 
@@ -154,6 +157,39 @@ body:has(#screen-meta-links .screen-meta-toggle) .sit-cwm-shell__tabs {
 
 	&:empty {
 		display: none;
+	}
+}
+
+// "Help": Getting Started, as a text link instead of a tab. On its own page it
+// is underlined in the accent, like a current tab.
+.sit-cwm-shell__help {
+	display: flex;
+	align-items: center;
+	align-self: stretch;
+	border-bottom: 2px solid transparent;
+	color: var(--sit-cwm-muted);
+	font-size: 14px;
+	font-weight: 500;
+	text-decoration: none;
+
+	&:hover {
+		color: var(--sit-cwm-text);
+	}
+
+	&:focus {
+		color: var(--sit-cwm-text);
+		box-shadow: none;
+		outline: none;
+	}
+
+	&:focus-visible {
+		outline: 2px solid var(--sit-cwm-accent);
+		outline-offset: -2px;
+	}
+
+	&.is-current {
+		border-bottom-color: var(--sit-cwm-accent);
+		color: var(--sit-cwm-text);
 	}
 }
 
